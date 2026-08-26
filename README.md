@@ -4,6 +4,8 @@ EST Studio 是基于 [OpenBlock Desktop](https://github.com/openblockcc/openbloc
 
 当前项目处于开发阶段，目标是让一台电脑自动连接一台 EST 设备，并提供接近 EV3 Classroom 的积木编程体验。
 
+编辑器无需先选择通用硬件即可进入编程。EST Studio 固定使用唯一的上传模式（可编辑代码并上传用户程序），不允许切换到模拟/实时模式；顶部的通用硬件选择和编程模式切换入口已隐藏，EST 连接状态入口继续保留。
+
 ## 当前进度
 
 - 通过 USB HID 自动发现并连接 EST（VID `0483`，PID `5750`）。

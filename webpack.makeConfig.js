@@ -13,6 +13,7 @@ const EST_MENU_BAR_LOADER = path.resolve(__dirname, './scripts/est-menu-bar-load
 const EST_BLOCKS_LOADER = path.resolve(__dirname, './scripts/est-blocks-loader.js');
 const EST_TOOLBOX_LOADER = path.resolve(__dirname, './scripts/est-toolbox-loader.js');
 const EST_VM_RUNTIME_LOADER = path.resolve(__dirname, './scripts/est-vm-runtime-loader.js');
+const EST_PROGRAM_MODE_LOADER = path.resolve(__dirname, './scripts/est-program-mode-loader.js');
 const OPENBLOCK_NATIVE_EDITORS_LOADER = path.resolve(
     __dirname,
     './scripts/openblock-native-editors-loader.js'
@@ -101,6 +102,11 @@ const makeConfig = function (defaultConfig, options) {
                     test: /node_modules[/\\]openblock-gui[/\\]src[/\\]lib[/\\]make-toolbox-xml\.js$/,
                     enforce: 'pre',
                     loader: EST_TOOLBOX_LOADER
+                },
+                {
+                    test: /node_modules[/\\]openblock-gui[/\\]src[/\\]reducers[/\\]program-mode\.js$/,
+                    enforce: 'pre',
+                    loader: EST_PROGRAM_MODE_LOADER
                 },
                 {
                     test: /node_modules[/\\]openblock-gui[/\\]src[/\\](?:containers[/\\](?:blocks|prompt)|components[/\\](?:prompt[/\\]prompt|custom-procedures[/\\]custom-procedures))\.jsx$/,

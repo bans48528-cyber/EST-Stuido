@@ -355,6 +355,52 @@ const transformedToolbox = toolboxLoader(
     "before\n    return everything.join('\\n');\nafter"
 );
 assert.match(transformedToolbox, /getEstToolboxCategories\(\), gap, variablesXML, gap, myBlocksXML/);
+const menuBarLoader = require('./est-menu-bar-loader');
+const menuBarSource = `before
+                    <Divider className={classNames(styles.divider)} />
+                    <div
+                        className={classNames(styles.menuBarItem, styles.hoverable)}
+                        onMouseUp={this.handleSelectDeviceMouseUp}
+                    >
+                        <span>No device selected</span>
+                    </div>
+                    <Divider className={classNames(styles.divider)} />
+                    <div
+                        className={classNames(styles.menuBarItem, styles.hoverable)}
+                        onMouseUp={this.handleConnectionMouseUp}
+                    >
+                        connection
+                    </div>
+                    {/* <div legacy /> */}
+                    <Divider className={classNames(styles.divider)} />
+                    <div className={classNames(styles.menuBarItem, styles.programModeGroup)}>
+                        <Switch />
+                    </div>
+after`;
+const transformedMenuBar = menuBarLoader(menuBarSource);
+assert.ok(!transformedMenuBar.includes('handleSelectDeviceMouseUp'));
+assert.ok(!transformedMenuBar.includes('styles.programModeGroup'));
+assert.match(transformedMenuBar, /<EstStatusPanel \/>/);
+const programModeLoader = require('./est-program-mode-loader');
+const transformedProgramMode = programModeLoader(`const initialState = {
+    isRealtimeMode: true,
+    isSupportSwitchMode: false
+};
+case SET_UPLOAD_MODE:
+        return Object.assign({}, state, {
+            isRealtimeMode: false
+        });
+case SET_REALTIME_MODE:
+        return Object.assign({}, state, {
+            isRealtimeMode: true
+        });
+case SET_SUPPORT_SWITCH_MODE:
+        return Object.assign({}, state, {
+            isSupportSwitchMode: action.state
+        });`);
+assert.ok(!transformedProgramMode.includes('isRealtimeMode: true'));
+assert.match(transformedProgramMode, /const initialState = \{\s*isRealtimeMode: false,/);
+assert.ok(!transformedProgramMode.includes('isSupportSwitchMode: action.state'));
 const nativeEditorsLoader = require('./openblock-native-editors-loader');
 const transformNativeEditor = (resourcePath, source) => nativeEditorsLoader.call({resourcePath}, source);
 const transformedPromptComponent = transformNativeEditor(
@@ -418,10 +464,22 @@ after`
 });
 const runtimeLoader = require('./est-vm-runtime-loader');
 const transformedRuntime = runtimeLoader(
-    "before\n    scratch3_procedures: require('../blocks/scratch3_procedures')\nafter"
+    `before
+        this._isRealtimeMode = true;
+    scratch3_procedures: require('../blocks/scratch3_procedures')
+    setRealtimeMode (sta) {
+        if (this._isRealtimeMode !== sta){
+            this._isRealtimeMode = sta;
+            this.emit(Runtime.PROGRAM_MODE_UPDATE, {isRealtimeMode: this._isRealtimeMode});
+        }
+    }
+after`
 );
 assert.ok(transformedRuntime.indexOf("scratch3_procedures: require('../blocks/scratch3_procedures')") <
     transformedRuntime.indexOf("est: require('est-vm-blocks')"));
+assert.ok(!transformedRuntime.includes('this._isRealtimeMode = sta'));
+assert.ok(!transformedRuntime.includes('this._isRealtimeMode = true'));
+assert.match(transformedRuntime, /isRealtimeMode: false/);
 
 const reports = splitReports(new Uint8Array(1025), 1024);
 assert.strictEqual(reports.length, 2);
