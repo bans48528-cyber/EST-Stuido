@@ -3,15 +3,15 @@ directories:
   output: dist
 extraFiles: ['LICENSE', 'LICENSE.ScratchFoundation', 'TRADEMARK', "tools", "external-resources", 'firmwares', "drivers"]
 
-appId: openblock.cc.openblock-desktop
-productName: "OpenBlockDesktop"
+appId: com.eststudio.desktop
+productName: "EST Studio"
 publish:
   - provider: github
-artifactName: "OpenBlock-Desktop_v${version}_${os}_${arch}.${ext}"
+artifactName: "EST-Studio_v${version}_${os}_${arch}.${ext}"
 
 fileAssociations:
   ext: ob
-  name: OpenBlock project file
+  name: EST Studio project file
   role: Editor
   icon: buildResources/OpenBlockFile.ico
 
@@ -33,7 +33,7 @@ mac:
     - dmg
     # - mas
 dmg:
-  title: "OpenBlock-Desktop_${version}"
+  title: "EST-Studio_${version}"
   format: UDRO
 # mas:
 #   category: public.app-category.education
@@ -67,7 +67,7 @@ linux:
   desktop:
     entry:
       Encoding: UTF-8
-      Name: OpenBlockDesktop
+      Name: EST Studio
       Icon: openblock-desktop
       Type: Application
       Terminal: false

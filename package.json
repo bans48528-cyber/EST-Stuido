@@ -1,7 +1,7 @@
 {
-  "name": "openblock-desktop",
-  "productName": "OpenBlockDesktop",
-  "description": "OpenBlock as a self-contained desktop application",
+  "name": "est-studio",
+  "productName": "EST Studio",
+  "description": "EST graphical programming desktop application based on OpenBlock",
   "author": "Openblock.cc Team <contact@openblock.cc> (http://www.openblock.cc/)",
   "version": "2.6.3",
   "license": "MIT",
@@ -10,8 +10,8 @@
     "clean": "rimraf ./dist ./static ./external-resources ./tools ./translations ./firmwares ./drivers",
     "i18n:src": "mkdirp translations/core && format-message extract --out-file translations/core/en.json src/main/**.js",
     "i18n:push": "tx-push-src openblock-editor desktop translations/core/en.json",
-    "start": "mkdirp ./dist && electron-webpack dev --bail --display-error-details --env.minify=false --no-progress",
-    "compile": "mkdirp ./dist && electron-webpack --bail --display-error-details --env.minify=false --no-progress",
+    "start": "mkdirp ./dist && node scripts/launch-openblock.js",
+    "compile": "mkdirp ./dist && node scripts/compile-openblock.js",
     "fetch:drivers": "rimraf ./drivers && node scripts/download-driver.js",
     "fetch:exts": "rimraf ./external-resources && node ./node_modules/openblock-resource/script/download.js  --repo=openblockcc/external-resources-v3",
     "fetch:firmwares": "rimraf ./firmwares && node ./node_modules/openblock-link/script/download-firmwares.js",
@@ -27,14 +27,20 @@
     "dist": "npm run clean && npm run compile && npm run fetch:all && npm run doBuild -- --mode=dist",
     "publish": "npm run clean && npm run compile && npm run fetch:all  && npm run doBuild -- --mode=publish",
     "test": "npm run test:lint",
-    "test:lint": "eslint --cache --color --ext .jsx,.js src scripts"
+    "test:lint": "eslint --cache --color --ext .jsx,.js src scripts",
+    "test:est": "node scripts/test-est-protocol.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/openblockcc/openblock-desktop.git"
+    "url": "git+https://github.com/bans48528-cyber/EST-Stuido.git"
   },
+  "bugs": {
+    "url": "https://github.com/bans48528-cyber/EST-Stuido/issues"
+  },
+  "homepage": "https://github.com/bans48528-cyber/EST-Stuido#readme",
   "dependencies": {
     "bytes": "^3.1.2",
+    "node-hid": "^2.1.2",
     "openblock-link": "^0.2.0-prerelease.20250608112023",
     "openblock-resource": "^0.2.0-prerelease.20250302101433",
     "source-map-support": "^0.5.19"

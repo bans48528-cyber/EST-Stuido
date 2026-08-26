@@ -1,0 +1,30 @@
+.statusBarItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 3rem;
+    padding: 0 0.75rem;
+    color: #ffffff;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    box-sizing: border-box;
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.connected {
+    background: #22c55e;
+}
+
+.disconnected {
+    background: #ef4444;
+}

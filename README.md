@@ -1,44 +1,65 @@
-# openblock-desktop
+# EST Studio
 
-[![Build and release](https://github.com/openblockcc/openblock-desktop/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/openblockcc/openblock-desktop/actions/workflows/build-and-release.yml)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/openblockcc/openblock-desktop)
-![Total downloads](https://img.shields.io/github/downloads/openblockcc/openblock-desktop/total)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fopenblockcc%2Fopenblock-desktop.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fopenblockcc%2Fopenblock-desktop?ref=badge_shield)
-[![Gitter](https://badges.gitter.im/openblockcc/community.svg)](https://gitter.im/openblockcc/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-[![ko-fi](https://img.shields.io/badge/donate-sponsors-ea4aaa.svg?logo=ko-fi)](https://ko-fi.com/X8X66DATO)
+EST Studio 是基于 [OpenBlock Desktop](https://github.com/openblockcc/openblock-desktop) 构建的 EST 专用图形化编程上位机。
 
-OpenBlock as a standalone desktop application.
+当前项目处于开发阶段，目标是让一台电脑自动连接一台 EST 设备，并提供接近 EV3 Classroom 的积木编程体验。
 
-![screenshot](./doc/screenshot.png)
-![screenshot2](./doc/screenshot2.png)
+## 当前进度
 
-## Getting Start
+- 通过 USB HID 自动发现并连接 EST（VID `0483`，PID `5750`）。
+- 菜单栏直接显示“EST 已连接”或“EST 未连接”，并使用 12 × 12 状态圆点。
+- 已提供 8 个分类、106 个可见 EST 积木。
+- 电机端口、移动端口和事件传感器端口支持下拉选择，也可放入原生变量。
+- 转向积木提供 EV3 Classroom 风格的半圆转盘。
+- 保留 OpenBlock 原生变量、列表和“我的模块”功能。
+- `motor_degrees` 已接入设备状态读取；其余 EST 积木目前完成了界面和运行时占位，尚未全部接入固件指令。
 
-Visit the wiki: [https://wiki.openblock.cc](https://wiki.openblock.cc)
+“终止用户程序”功能需要等待 EST 重构项目提供对应协议，当前暂未实现。
 
-## Join chat
+## 目录结构
 
-- Gitter: [https://gitter.im/openblockcc/community](https://gitter.im/openblockcc/community?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
+| 路径 | 用途 |
+| --- | --- |
+| `src/main/est/` | EST HID 传输、协议解析、设备连接服务 |
+| `src/renderer/est-blocks/` | EST 积木定义、工具箱和运行时入口 |
+| `src/renderer/EstStatusPanel.jsx` | 菜单栏 EST 连接状态 |
+| `scripts/est-*-loader.js` | 将 EST 菜单、积木和运行时接入 OpenBlock |
+| `scripts/test-est-protocol.js` | EST 协议、积木和原生编辑器回归测试 |
 
-- QQ 群 (for chinese): 933484739
+## 开发环境
 
-## Donate
+- Windows 10/11
+- Node.js 16 或更高版本
+- npm
+- Git
 
-Buy me a cup of coffee.
+项目使用 Electron 15 和 Webpack 4。编译脚本会在较新的 Node.js 上自动启用 OpenSSL 兼容参数。
 
-- Ko-fi (PayPal):
+## 安装与启动
 
-    [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X66DATO)
+```powershell
+git clone https://github.com/bans48528-cyber/EST-Stuido.git
+cd EST-Stuido
+npm install
+npm start
+```
 
-- 支付宝:
+`npm start` 会在后台启动 EST Studio，开发日志写入 `dist/openblock-dev.log`。
 
-    ![alipayQRCode](./doc/alipayQRCode.png)
+## 验证
 
-## Bug Report
+```powershell
+npm run test:est
+npm run test:lint
+npm run compile
+```
 
-You can submit the bug log in issues of this project.
+## 硬件约定
 
+- 当前只面向单电脑、单 EST 设备场景。
+- 软件启动后自动连接设备，不提供额外的设备选择步骤。
+- 当前 HID 标识为 VID `0483`、PID `5750`。
 
-## License
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fopenblockcc%2Fopenblock-desktop.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fopenblockcc%2Fopenblock-desktop?ref=badge_large)
+## 上游与许可
+
+本项目基于 OpenBlock Desktop 2.6.3 开发，并保留原项目的 MIT、Scratch Foundation 和商标许可文件。OpenBlock 是其原作者和权利人的商标；EST Studio 的修改内容遵循仓库中的许可文件。

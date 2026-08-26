@@ -13,6 +13,8 @@ import DesktopLink from './OpenblockDesktopLink.js';
 import MacOSMenu from './MacOSMenu';
 import log from '../common/log.js';
 import {productName, version} from '../../package.json';
+import {EstDeviceService} from './est/device-service';
+import {createNodeHidEstTransportFactory} from './est/transports/node-hid';
 
 import {v4 as uuidv4} from 'uuid';
 import ElectronStore from 'electron-store';
@@ -21,6 +23,9 @@ import locales from 'openblock-l10n/locales/desktop-msgs';
 
 const storage = new ElectronStore();
 const desktopLink = new DesktopLink();
+const estDeviceService = new EstDeviceService({
+    transportFactory: createNodeHidEstTransportFactory()
+});
 
 formatMessage.setup({translations: locales});
 
@@ -228,6 +233,25 @@ const createWindow = ({search = null, url = 'index.html', ...browserWindowOption
         ...browserWindowOptions
     });
     const webContents = window.webContents;
+
+    // Keep renderer failures visible in the development terminal. This is
+    // intentionally limited to diagnostics and does not alter the UI.
+    webContents.on('console-message', (event, level, message, line, sourceId) => {
+        if (level >= 2 && !message.includes('Electron Security Warning')) {
+            console.error(`[renderer:${level}] ${message} (${sourceId}:${line})`);
+        }
+    });
+    webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+        console.error('RENDERER_DID_FAIL_LOAD', {
+            errorCode,
+            errorDescription,
+            validatedURL,
+            isMainFrame
+        });
+    });
+    webContents.on('render-process-gone', (event, details) => {
+        console.error('RENDERER_PROCESS_GONE', details);
+    });
 
     webContents.session.setPermissionRequestHandler(handlePermissionRequest);
 
@@ -484,8 +508,21 @@ if (process.platform === 'darwin') {
 }
 
 // quit application when all windows are closed
+let isQuitting = false;
+
 app.on('window-all-closed', () => {
     app.quit();
+});
+
+app.on('before-quit', event => {
+    if (isQuitting) {
+        return;
+    }
+    event.preventDefault();
+    isQuitting = true;
+    estDeviceService.shutdown()
+        .catch(error => console.error('EST shutdown failed', error))
+        .finally(() => app.quit());
 });
 
 app.on('will-quit', () => {
@@ -595,6 +632,12 @@ ipcMain.on('open-privacy-policy-window', () => {
 ipcMain.on('set-locale', (event, arg) => {
     formatMessage.setup({locale: arg});
 });
+
+ipcMain.handle('est-list-devices', () => estDeviceService.listDevices());
+ipcMain.handle('est-connect', (event, device) => estDeviceService.connect(device));
+ipcMain.handle('est-disconnect', () => estDeviceService.disconnect());
+ipcMain.handle('est-get-status', () => estDeviceService.getStatus());
+ipcMain.handle('est-auto-connect', () => estDeviceService.autoConnect());
 
 
 // start loading initial project data before the GUI needs it so the load seems faster

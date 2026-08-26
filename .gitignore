@@ -7,6 +7,8 @@ thumbs.db
 # NPM
 /node_modules
 npm-*
+/*.tgz
+/*.tar.gz
 
 # Testing
 /.nyc_output

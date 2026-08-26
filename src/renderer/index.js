@@ -36,4 +36,17 @@ routeModulePromise.then(routeModule => {
     const appTarget = document.getElementById('app');
     const routeElement = routeModule.default;
     ReactDOM.render(routeElement, appTarget);
+}).catch(error => {
+    // Avoid an unexplained white window when a route bundle fails to load.
+    // The detailed error remains in the development terminal as well.
+    console.error('RENDERER_ROUTE_LOAD_FAILED', error);
+    const appTarget = document.getElementById('app');
+    if (appTarget) {
+        appTarget.innerHTML = `
+            <div style="padding: 32px; color: #fff; background: #1f2430; font-family: sans-serif;">
+                EST Studio 启动失败<br />
+                <small>${String(error && error.message ? error.message : error)}</small>
+            </div>
+        `;
+    }
 });
