@@ -1,7 +1,30 @@
+extends: null
+
 directories:
   buildResources: buildResources
   output: dist
-extraFiles: ['LICENSE', 'LICENSE.ScratchFoundation', 'TRADEMARK', "tools", "external-resources", 'firmwares', "drivers"]
+extraMetadata:
+  main: main.js
+files:
+  - from: .
+    filter:
+      - package.json
+  - from: dist/main
+    to: .
+    filter:
+      - '**/*'
+      - '!**/*.map'
+  - from: dist/renderer
+    to: .
+    filter:
+      - '**/*'
+      - '!**/*.map'
+  - from: dist/renderer-dll
+    to: .
+    filter:
+      - '**/*'
+      - '!**/*.map'
+extraFiles: ['LICENSE', 'LICENSE.ScratchFoundation', 'TRADEMARK']
 
 appId: com.eststudio.desktop
 productName: "EST Studio"
@@ -10,7 +33,7 @@ publish:
 artifactName: "EST-Studio_v${version}_${os}_${arch}.${ext}"
 
 fileAssociations:
-  ext: ob
+  ext: ests
   name: EST Studio project file
   role: Editor
   icon: buildResources/OpenBlockFile.ico

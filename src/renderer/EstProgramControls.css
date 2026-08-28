@@ -1,0 +1,248 @@
+@import "../../node_modules/openblock-gui/src/css/z-index.css";
+
+.controls {
+    position: absolute;
+    z-index: $z-index-add-button;
+    right: 1rem;
+    bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.45rem;
+    border: 1px solid rgba(87, 94, 117, 0.12);
+    border-radius: 2.25rem;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 0.25rem 0.75rem rgba(47, 55, 79, 0.18);
+    user-select: none;
+}
+
+.slot-selector,
+.action-buttons {
+    display: flex;
+    align-items: center;
+}
+
+.slot-selector {
+    gap: 0.2rem;
+    padding-right: 0.65rem;
+    border-right: 1px solid rgba(87, 94, 117, 0.18);
+}
+
+.slot-picker {
+    position: relative;
+    display: flex;
+}
+
+.action-buttons {
+    gap: 0.55rem;
+}
+
+.slot-arrow,
+.slot-display,
+.slot-option {
+    border: 1px solid rgba(87, 94, 117, 0.2);
+    background: #ffffff;
+    color: #575e75;
+    cursor: pointer;
+    outline: none;
+}
+
+.slot-arrow {
+    width: 1.75rem;
+    height: 3.5rem;
+    padding: 0;
+    border-color: transparent;
+    border-radius: 0.5rem;
+    background: transparent;
+    font-family: Arial, sans-serif;
+    font-size: 2rem;
+    font-weight: 300;
+    line-height: 1;
+}
+
+.slot-arrow:hover:not(:disabled) {
+    background: rgba(76, 151, 255, 0.1);
+    color: #4c97ff;
+}
+
+.slot-arrow:disabled {
+    color: rgba(87, 94, 117, 0.25);
+    cursor: default;
+}
+
+.slot-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    padding: 0;
+    border: 2px solid #855cd6;
+    border-radius: 0.75rem;
+    box-shadow: inset 0 0 0 2px rgba(133, 92, 214, 0.08);
+}
+
+.slot-display:hover {
+    background: #f7f3ff;
+}
+
+.slot-label {
+    color: #855cd6;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.52rem;
+    font-weight: 700;
+    letter-spacing: 0.06rem;
+    line-height: 1;
+}
+
+.slot-number {
+    margin-top: 0.1rem;
+    color: #575e75;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.slot-menu {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 0.85rem);
+    display: grid;
+    grid-template-columns: repeat(4, 2.35rem);
+    gap: 0.35rem;
+    padding: 0.55rem;
+    border: 1px solid rgba(87, 94, 117, 0.2);
+    border-radius: 0.75rem;
+    background: #ffffff;
+    box-shadow: 0 0.35rem 1rem rgba(47, 55, 79, 0.22);
+    transform: translateX(-50%);
+}
+
+.slot-menu::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -0.4rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-right: 1px solid rgba(87, 94, 117, 0.2);
+    border-bottom: 1px solid rgba(87, 94, 117, 0.2);
+    background: #ffffff;
+    transform: translateX(-50%) rotate(45deg);
+}
+
+.slot-option {
+    position: relative;
+    z-index: 1;
+    width: 2.35rem;
+    height: 2.35rem;
+    padding: 0;
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.slot-option:hover {
+    border-color: #855cd6;
+    background: #f7f3ff;
+}
+
+.slot-option-selected {
+    border-color: #855cd6;
+    background: #855cd6;
+    color: #ffffff;
+}
+
+.control-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: #ffffff;
+    cursor: pointer;
+    outline: none;
+    box-shadow: 0 0.15rem 0.3rem rgba(47, 55, 79, 0.18);
+    transition: filter 100ms ease, transform 100ms ease;
+}
+
+.control-button:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+}
+
+.control-button:active {
+    filter: brightness(0.95);
+    transform: translateY(1px);
+}
+
+.control-button:focus,
+.slot-arrow:focus,
+.slot-display:focus,
+.slot-option:focus {
+    box-shadow: 0 0 0 0.2rem rgba(76, 151, 255, 0.35);
+}
+
+.pause-button {
+    background: linear-gradient(180deg, #ff8a82 0%, #ff5d52 100%);
+}
+
+.run-button {
+    background: linear-gradient(180deg, #39d98a 0%, #20c978 100%);
+}
+
+.download-button {
+    background: linear-gradient(180deg, #ffa85f 0%, #ff8c32 100%);
+}
+
+.pause-icon {
+    width: 1.05rem;
+    height: 1.05rem;
+    border-radius: 0.2rem;
+    background: currentColor;
+}
+
+.play-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    fill: currentColor;
+}
+
+.download-icon {
+    width: 1.65rem;
+    height: 1.65rem;
+    fill: currentColor;
+}
+
+@media (max-height: 700px) {
+    .controls {
+        right: 0.75rem;
+        bottom: 0.75rem;
+        gap: 0.5rem;
+        padding: 0.35rem;
+    }
+
+    .slot-selector {
+        padding-right: 0.45rem;
+    }
+
+    .slot-arrow,
+    .slot-display,
+    .control-button {
+        height: 3rem;
+    }
+
+    .slot-display,
+    .control-button {
+        width: 3rem;
+    }
+
+    .slot-arrow {
+        width: 1.5rem;
+    }
+}

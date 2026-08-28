@@ -1,4 +1,4 @@
-import {app, dialog, shell} from 'electron';
+import {app} from 'electron';
 import {autoUpdater, CancellationToken} from 'electron-updater';
 import log from 'electron-log';
 import bytes from 'bytes';
@@ -7,12 +7,10 @@ import path from 'path';
 import formatMessage from 'format-message';
 import parseReleaseMessage from 'openblock-parse-release-message';
 import {UPDATE_TARGET, UPDATE_MODAL_STATE} from 'openblock-gui/src/lib/update-state.js';
-import {AbortController} from 'node-abort-controller';
 
 class OpenblockDesktopUpdater {
-    constructor (webContents, resourceServer) {
+    constructor (webContents) {
         this._webContents = webContents;
-        this._resourceServer = resourceServer;
 
         autoUpdater.autoDownload = false;
 
@@ -25,7 +23,6 @@ class OpenblockDesktopUpdater {
 
         this.updaterState = null;
         this.updateTarget = null;
-        this.abortController = null;
         this.cancellationToken = null;
     }
 
@@ -51,18 +48,14 @@ class OpenblockDesktopUpdater {
         });
     }
 
-    resourceAvailable (info) {
-        this.updateTarget = UPDATE_TARGET.resource;
-        this.reportUpdateState({
-            phase: UPDATE_MODAL_STATE.resourceUpdateAvailable,
-            info: {
-                version: info.latestVersion,
-                message: info.message
-            }
-        });
-    }
-
     checkUpdateAtStartup () {
+        // Preserve the previous behavior for regions where automatic application
+        // update checks were intentionally skipped. EST Studio no longer falls
+        // back to the OpenBlock external-resource updater.
+        if ((app.getLocaleCountryCode() === 'CN') || (process.platform === 'darwin')) {
+            return;
+        }
+
         autoUpdater.on('error', err => {
             this.removeAllAutoUpdaterListeners();
             console.warn(`Error while checking for application update: ${err}`);
@@ -72,33 +65,16 @@ class OpenblockDesktopUpdater {
             this.applicationAvailable(applicationUpdateInfo);
         });
 
-        const resourceServerCheckUpdate = () => {
-            this._resourceServer.checkUpdate()
-                .then(resourceUpdateInfo => {
-                    if (resourceUpdateInfo.updateble) {
-                        this.resourceAvailable(resourceUpdateInfo);
-                    }
-                })
-                .catch(err => {
-                    console.warn(`Error while checking for resource update: ${err}`);
-                });
-        };
-
         autoUpdater.once('update-not-available', () => {
             this.removeAllAutoUpdaterListeners();
-            resourceServerCheckUpdate();
+            this.updaterState = null;
         });
 
-        if ((app.getLocaleCountryCode() === 'CN') || (process.platform === 'darwin')) {
-            // Due to widespread network issues in China, and the large size of the macOS installer,
-            // we skip checking for application updates and only check for resource updates.
-            resourceServerCheckUpdate();
-        } else {
-            autoUpdater.checkForUpdates();
-        }
+        this.updaterState = UPDATE_MODAL_STATE.checkingApplication;
+        autoUpdater.checkForUpdates();
     }
 
-    reqeustCheckUpdate (_windows) {
+    reqeustCheckUpdate () {
         autoUpdater.on('error', err => {
             this.removeAllAutoUpdaterListeners();
             if (err.message === 'net::ERR_INTERNET_DISCONNECTED') {
@@ -138,107 +114,14 @@ class OpenblockDesktopUpdater {
             this.applicationAvailable(applicationUpdateInfo);
         });
 
-        const resourceServerCheckUpdate = () => {
-            this.abortController = new AbortController();
-            this._resourceServer.checkUpdate({signal: this.abortController.signal})
-                .then(resourceUpdateInfo => {
-                    if (resourceUpdateInfo.updateble) {
-                        this.updaterState = UPDATE_MODAL_STATE.resourceUpdateAvailable;
-                        this.resourceAvailable(resourceUpdateInfo);
-                    } else {
-                        this.reportUpdateState({phase: 'latest'});
-                    }
-                })
-                .catch(err => {
-                    this.reportUpdateState({phase: 'error', message: err});
-                });
-            this.updaterState = UPDATE_MODAL_STATE.checkingResource;
-        };
-
         autoUpdater.once('update-not-available', () => {
             this.removeAllAutoUpdaterListeners();
-            resourceServerCheckUpdate();
+            this.updaterState = null;
+            this.reportUpdateState({phase: 'latest'});
         });
 
-        let skipCheckAppUpdates = 0;
-
-        const SKIP_MAIN_UPDATE_MESSAGE = formatMessage({
-            id: 'index.skipAutoUpdateForMainProgram',
-            default: 'Skip checking for main program updates?',
-            description: 'Prompt asking whether to skip update checks for the main program due some issues.'
-        });
-        const SKIP_MAIN_UPDATE_DETAIL_CN = formatMessage({
-            id: 'index.skipAutoUpdateForMainProgramDetail',
-            default: 'Due to unstable access to the update server in China, it is recommended to skip checking for main program updates. Extension updates will still be checked normally. To update the main program manually, please click "Open Download Page".', // eslint-disable-line max-len
-            description: 'Explains skipping only applies to the main program, and how to update manually.'
-        });
-        const SKIP_MAIN_UPDATE_DETAIL_MAC = formatMessage({
-            id: 'index.skipAutoUpdateForMainProgramDetailMac',
-            default: 'Due to the large size of the macOS installer, the main program automatic update will be skipped. Extension updates will continue as normal. To update the main program manually, please click "Open Download Page".', // eslint-disable-line max-len
-            description: 'Explain why macOS main program cannot be auto-updated and how to manually download'
-        });
-        const SKIP_MAIN_UPDATE_BUTTON = formatMessage({
-            id: 'index.skipMainUpdate',
-            default: 'Skip Main Program Update',
-            description: 'Button to skip main program update'
-        });
-        const CONTINUE_MAIN_UPDATE_BUTTON = formatMessage({
-            id: 'index.continueMainUpdate',
-            default: 'Continue Main Program Update Check',
-            description: 'Button to continue checking for main program update'
-        });
-        const OPEN_DOWNLOAD_LINK_BUTTON = formatMessage({
-            id: 'index.openDownloadLink',
-            default: 'Open Download Page',
-            description: 'Button to open the software download page'
-        });
-
-        const openDownloadPage = () => {
-            shell.openExternal('https://wiki.openblock.cc/install-desktop-version');
-        };
-
-        if (process.platform === 'darwin') {
-            const choice = dialog.showMessageBoxSync(_windows, {
-                type: 'question',
-                message: SKIP_MAIN_UPDATE_MESSAGE,
-                detail: SKIP_MAIN_UPDATE_DETAIL_MAC,
-                buttons: [
-                    SKIP_MAIN_UPDATE_BUTTON,
-                    OPEN_DOWNLOAD_LINK_BUTTON
-                ],
-                cancelId: 0,
-                defaultId: 0
-            });
-            if (choice === 1) {
-                openDownloadPage();
-            }
-            skipCheckAppUpdates = true;
-        } else if (app.getLocaleCountryCode() === 'CN') {
-            const choice = dialog.showMessageBoxSync(_windows, {
-                type: 'question',
-                message: SKIP_MAIN_UPDATE_MESSAGE,
-                detail: SKIP_MAIN_UPDATE_DETAIL_CN,
-                buttons: [
-                    SKIP_MAIN_UPDATE_BUTTON,
-                    CONTINUE_MAIN_UPDATE_BUTTON,
-                    OPEN_DOWNLOAD_LINK_BUTTON
-                ],
-                cancelId: 0,
-                defaultId: 0
-            });
-            if (choice === 2) {
-                openDownloadPage();
-            }
-            skipCheckAppUpdates = (choice !== 1);
-        }
-        if (skipCheckAppUpdates) {
-            console.log('resourceServerCheckUpdate');
-            resourceServerCheckUpdate();
-        } else {
-            console.log('checkForUpdates');
-            this.updaterState = UPDATE_MODAL_STATE.checkingApplication;
-            autoUpdater.checkForUpdates();
-        }
+        this.updaterState = UPDATE_MODAL_STATE.checkingApplication;
+        autoUpdater.checkForUpdates();
     }
 
     reqeustUpdate () {
@@ -312,50 +195,11 @@ class OpenblockDesktopUpdater {
             });
 
         }
-        const reportResourceUpdateState = res => {
-            if (this.updaterState !== UPDATE_MODAL_STATE.abort) {
-                this.reportUpdateState({
-                    phase: UPDATE_MODAL_STATE.resourceUpdating,
-                    info: {
-                        phase: res.phase,
-                        progress: res.progress,
-                        state: res.state
-                    }
-                });
-            }
-        };
-
-        this.abortController = new AbortController();
-
-        this.updaterState = UPDATE_MODAL_STATE.resourceUpdating;
-        return this._resourceServer.update({
-            signal: this.abortController.signal,
-            callback: reportResourceUpdateState
-        })
-            .then(() => {
-                this.reportUpdateState({phase: UPDATE_MODAL_STATE.resourceUpdatFinish});
-                return Promise.resolve();
-            })
-            .catch(err => {
-                if (!err.stack.startsWith('AbortError')) {
-                    this.reportUpdateState({
-                        phase: UPDATE_MODAL_STATE.error,
-                        info: {
-                            message: err.message
-                        }
-                    });
-                }
-                return Promise.reject(err);
-            });
-
+        return Promise.reject(new Error('No EST Studio application update is available.'));
     }
 
     abortUpdate () {
-        if (this.updaterState === UPDATE_MODAL_STATE.checkingResource ||
-            this.updaterState === UPDATE_MODAL_STATE.resourceUpdating) {
-            this.updaterState = UPDATE_MODAL_STATE.abort;
-            this.abortController.abort();
-        } else if (this.updaterState === UPDATE_MODAL_STATE.checkingApplication) {
+        if (this.updaterState === UPDATE_MODAL_STATE.checkingApplication) {
             this.removeAllAutoUpdaterListeners();
         } else if (this.updaterState === UPDATE_MODAL_STATE.applicationDownloading) {
             this.removeAllAutoUpdaterListeners();
@@ -365,9 +209,7 @@ class OpenblockDesktopUpdater {
             }
         }
 
-        if (this.updaterState !== UPDATE_MODAL_STATE.abort) {
-            this.updaterState = null;
-        }
+        this.updaterState = null;
     }
 }
 

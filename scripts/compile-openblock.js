@@ -13,7 +13,7 @@ const nodeOptions = nodeMajorVersion >= 17 && !inheritedNodeOptions.includes(leg
 const result = spawnSync(process.execPath, [
     electronWebpackCli,
     '--bail',
-    '--env.minify=false',
+    '--env.minify=true',
     '--no-progress',
     '--display=errors-only'
 ], {

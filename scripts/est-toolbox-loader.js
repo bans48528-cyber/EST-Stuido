@@ -5,14 +5,21 @@
  * @returns {string} transformed source.
  */
 module.exports = function (source) {
+    const genericDeviceEventsImport = "import {eventBlock} from './libraries/devices/index.jsx';\n";
     const returnStatement = "    return everything.join('\\n');";
+    if (!source.includes(genericDeviceEventsImport)) {
+        throw new Error('Unable to locate the OpenBlock generic device-event import.');
+    }
     if (!source.includes(returnStatement)) {
         throw new Error('Unable to locate the OpenBlock toolbox return point.');
     }
 
-    const transformedSource = source.replace(
-        returnStatement,
-        "    return [xmlOpen, getEstToolboxCategories(), gap, variablesXML, gap, myBlocksXML, xmlClose].join('\\n');"
-    );
+    const transformedSource = source
+        .replace(genericDeviceEventsImport, '')
+        .replace(
+            returnStatement,
+            '    return [xmlOpen, getEstToolboxCategories(), gap, variablesXML, gap, ' +
+                "myBlocksXML, xmlClose].join('\\n');"
+        );
     return `import getEstToolboxCategories from 'est-toolbox';\n${transformedSource}`;
 };

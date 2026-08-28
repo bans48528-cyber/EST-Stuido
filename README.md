@@ -14,7 +14,9 @@ EST Studio 是基于 [OpenBlock Desktop](https://github.com/openblockcc/openbloc
 - 电机端口、移动端口和事件传感器端口支持下拉选择，也可放入原生变量。
 - 转向积木提供 EV3 Classroom 风格的半圆转盘。
 - 保留 OpenBlock 原生变量、列表和“我的模块”功能。
-- `motor_degrees` 已接入设备状态读取；其余 EST 积木目前完成了界面和运行时占位，尚未全部接入固件指令。
+- 代码区固定使用 Python；全部 106 个 EST 积木均已具备 MicroPython 代码生成映射，多程序堆按 `stack_1`、`stack_2` 顺序生成。
+- OpenBlock 原生变量、列表和“我的模块”可直接嵌入 EST 程序堆生成代码。
+- `motor_degrees` 已接入设备状态读取；生成代码实际上传运行仍需 EST 重构项目提供对应的 `est` / `est_runtime` 能力。
 
 “终止用户程序”功能需要等待 EST 重构项目提供对应协议，当前暂未实现。
 

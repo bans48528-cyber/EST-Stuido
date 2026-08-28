@@ -12,7 +12,8 @@ module.exports = function (source) {
 
     const transformedSource = source.replace(
         returnStatement,
-        `    registerEstBlocks(ScratchBlocks);\n\n${returnStatement}`
+        `    registerEstBlocks(ScratchBlocks);\n    registerEstPythonGenerator(ScratchBlocks);\n\n${returnStatement}`
     );
-    return `import {registerEstBlocks} from 'est-block-definitions';\n${transformedSource}`;
+    return `import {registerEstBlocks} from 'est-block-definitions';\n` +
+        `import {registerEstPythonGenerator} from 'est-python-generator';\n${transformedSource}`;
 };

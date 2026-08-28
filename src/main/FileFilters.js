@@ -23,6 +23,10 @@ const saveFilters = {
         name: 'Scratch 3 Project',
         extensions: ['sb3']
     },
+    ESTS: {
+        name: 'EST Studio Project',
+        extensions: ['ests']
+    },
     OB: {
         name: 'OpenBlock Project',
         extensions: ['ob']
@@ -63,12 +67,9 @@ const loadFilters = {
         ]
     },
     AllProjects: {
-        name: 'All OpenBlock Projects',
+        name: 'EST Studio Projects',
         extensions: [
-            ...saveFilters.SB3.extensions,
-            ...saveFilters.SB2.extensions,
-            ...saveFilters.SB.extensions,
-            ...saveFilters.OB.extensions
+            ...saveFilters.ESTS.extensions
         ]
     },
     AllSounds: {

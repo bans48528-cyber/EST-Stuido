@@ -41,11 +41,6 @@ module.exports = defaultConfig =>
                 new CopyWebpackPlugin([{
                     from: 'extension-worker.{js,js.map}',
                     context: path.join(getModulePath('openblock-vm'), 'dist', 'web')
-                }]),
-                new CopyWebpackPlugin([{
-                    from: path.join(getModulePath('openblock-gui'), 'src', 'lib', 'libraries', '*.json'),
-                    to: 'static/libraries',
-                    flatten: true
                 }])
             ]
         }

@@ -1,4 +1,6 @@
 import steeringArrowIcon from './steering-arrow.svg';
+import workspaceRedoIcon from './workspace-redo.svg';
+import workspaceUndoIcon from './workspace-undo.svg';
 
 const CATEGORY_COLOURS = {
     motor: {primary: '#0090F5', secondary: '#0078CC', tertiary: '#005FA0'},
@@ -7,8 +9,7 @@ const CATEGORY_COLOURS = {
     sound: {primary: '#BF70E7', secondary: '#A239D8', tertiary: '#763696'},
     event: {primary: '#F5C400', secondary: '#D9B100', tertiary: '#B89A00'},
     control: {primary: '#FFB515', secondary: '#E39B00', tertiary: '#C18401'},
-    sensing: {primary: '#1DCCF0', secondary: '#00A8C9', tertiary: '#008AA6'},
-    operators: {primary: '#00B94D', secondary: '#00963E', tertiary: '#00722F'}
+    sensing: {primary: '#1DCCF0', secondary: '#00A8C9', tertiary: '#008AA6'}
 };
 
 const CATEGORY_BLOCK_IDS = {
@@ -115,24 +116,6 @@ const CATEGORY_BLOCK_IDS = {
         'sensor_wait_gyro',
         'sensor_timer',
         'sensor_timer_reset'
-    ],
-    operators: [
-        'operator_random',
-        'operator_add',
-        'operator_subtract',
-        'operator_multiply',
-        'operator_divide',
-        'operator_less_than',
-        'operator_equals',
-        'operator_greater_than',
-        'operator_and',
-        'operator_or',
-        'operator_not',
-        'operator_join',
-        'operator_length',
-        'operator_mod',
-        'operator_round',
-        'operator_math'
     ]
 };
 
@@ -140,6 +123,17 @@ const ALL_EST_BLOCK_IDS = Object.values(CATEGORY_BLOCK_IDS).reduce(
     (allIds, categoryIds) => allIds.concat(categoryIds),
     []
 );
+const EST_REPLACED_OPENBLOCK_BLOCK_IDS = [
+    'sound_play',
+    'event_broadcast',
+    'control_wait_until',
+    'control_repeat',
+    'control_forever',
+    'control_repeat_until',
+    'control_if',
+    'control_if_else',
+    'control_stop'
+];
 const EST_STEERING_PICKER_ID = 'est_steering_picker';
 const EST_STEERING_FIELD_TYPE = 'field_est_steering';
 const EST_STEERING_LIMIT = 100;
@@ -237,22 +231,6 @@ const STOP_SCOPE_OPTIONS = [
     ['其它程序堆', 'other_stacks'],
     ['并退出程序', 'exit_program']
 ];
-const MATH_OPERATION_OPTIONS = [
-    ['绝对值', 'abs'],
-    ['向下取整', 'floor'],
-    ['向上取整', 'ceiling'],
-    ['平方根', 'sqrt'],
-    ['sin', 'sin'],
-    ['cos', 'cos'],
-    ['tan', 'tan'],
-    ['asin', 'asin'],
-    ['acos', 'acos'],
-    ['atan', 'atan'],
-    ['ln', 'ln'],
-    ['log', 'log'],
-    ['e ^', 'e_power'],
-    ['10 ^', 'ten_power']
-];
 const dropdown = (name, options) => ({type: 'field_dropdown', name, options});
 const valueInput = (name, check) => {
     const input = {type: 'input_value', name};
@@ -269,8 +247,7 @@ const categoryForStyle = style => {
         sound: 'sounds',
         event: 'events',
         control: 'control',
-        sensing: 'sensing',
-        operators: 'operators'
+        sensing: 'sensing'
     };
     return categories[style];
 };
@@ -815,54 +792,6 @@ const makeSensorDefinitions = ScratchBlocks => [
     command('sensing', 'sensor_timer_reset', '重置计数器')
 ];
 
-const makeOperatorDefinitions = ScratchBlocks => [
-    reporter(ScratchBlocks, 'operators', 'operator_random', '在 %1 和 %2 之间取随机数', [
-        valueInput('FROM'),
-        valueInput('TO')
-    ]),
-    reporter(ScratchBlocks, 'operators', 'operator_add', '%1 + %2', [valueInput('A'), valueInput('B')]),
-    reporter(ScratchBlocks, 'operators', 'operator_subtract', '%1 - %2', [valueInput('A'), valueInput('B')]),
-    reporter(ScratchBlocks, 'operators', 'operator_multiply', '%1 * %2', [valueInput('A'), valueInput('B')]),
-    reporter(ScratchBlocks, 'operators', 'operator_divide', '%1 / %2', [valueInput('A'), valueInput('B')]),
-    booleanReporter(ScratchBlocks, 'operators', 'operator_less_than', '%1 < %2', [
-        valueInput('A'),
-        valueInput('B')
-    ]),
-    booleanReporter(ScratchBlocks, 'operators', 'operator_equals', '%1 = %2', [
-        valueInput('A'),
-        valueInput('B')
-    ]),
-    booleanReporter(ScratchBlocks, 'operators', 'operator_greater_than', '%1 > %2', [
-        valueInput('A'),
-        valueInput('B')
-    ]),
-    booleanReporter(ScratchBlocks, 'operators', 'operator_and', '%1 与 %2', [
-        valueInput('A', 'Boolean'),
-        valueInput('B', 'Boolean')
-    ]),
-    booleanReporter(ScratchBlocks, 'operators', 'operator_or', '%1 或 %2', [
-        valueInput('A', 'Boolean'),
-        valueInput('B', 'Boolean')
-    ]),
-    booleanReporter(ScratchBlocks, 'operators', 'operator_not', '%1 不成立', [
-        valueInput('VALUE', 'Boolean')
-    ]),
-    reporter(ScratchBlocks, 'operators', 'operator_join', '连接 %1 和 %2', [
-        valueInput('A'),
-        valueInput('B')
-    ], 'String'),
-    reporter(ScratchBlocks, 'operators', 'operator_length', '%1 的字符数', [valueInput('VALUE')]),
-    reporter(ScratchBlocks, 'operators', 'operator_mod', '%1 除以 %2 的余数', [
-        valueInput('A'),
-        valueInput('B')
-    ]),
-    reporter(ScratchBlocks, 'operators', 'operator_round', '四舍五入 %1', [valueInput('VALUE')]),
-    reporter(ScratchBlocks, 'operators', 'operator_math', '%1 %2', [
-        dropdown('OPERATION', MATH_OPERATION_OPTIONS),
-        valueInput('VALUE')
-    ])
-];
-
 const makeEstBlockDefinitions = ScratchBlocks => [
     makeSteeringPickerDefinition(ScratchBlocks),
     makeMotorPortPickerDefinition(ScratchBlocks, 'motor', EST_MOTOR_PORT_PICKER_ID),
@@ -874,16 +803,85 @@ const makeEstBlockDefinitions = ScratchBlocks => [
     ...makeSoundDefinitions(),
     ...makeEventDefinitions(),
     ...makeControlDefinitions(),
-    ...makeSensorDefinitions(ScratchBlocks),
-    ...makeOperatorDefinitions(ScratchBlocks)
+    ...makeSensorDefinitions(ScratchBlocks)
 ];
 
 const registeredTargets = new WeakSet();
+const configuredZoomControlTypes = new WeakSet();
+const EST_HISTORY_CONTROL_COUNT = 2;
+const XLINK_NAMESPACE = 'http://www.w3.org/1999/xlink';
+
+const createEstHistoryControl = (ScratchBlocks, zoomControls, icon, index, redo, label) => {
+    const workspace = zoomControls.workspace_;
+    const control = ScratchBlocks.utils.createSvgElement('image', {
+        'width': zoomControls.WIDTH_,
+        'height': zoomControls.WIDTH_,
+        'y': index * (zoomControls.WIDTH_ + zoomControls.MARGIN_BETWEEN_),
+        'role': 'button',
+        'aria-label': label
+    }, zoomControls.svgGroup_);
+    control.setAttributeNS(XLINK_NAMESPACE, 'xlink:href', icon);
+    ScratchBlocks.bindEventWithChecks_(control, 'mousedown', null, event => {
+        workspace.markFocused();
+        workspace.undo(redo);
+        ScratchBlocks.Touch.clearTouchIdentifier();
+        event.stopPropagation();
+        event.preventDefault();
+    });
+};
+
+const configureEstWorkspaceControls = ScratchBlocks => {
+    const ZoomControls = ScratchBlocks && ScratchBlocks.ZoomControls;
+    if (!ZoomControls || !ZoomControls.prototype ||
+        typeof ZoomControls.prototype.createDom !== 'function' ||
+        typeof ZoomControls.prototype.position !== 'function' ||
+        configuredZoomControlTypes.has(ZoomControls)) {
+        return;
+    }
+
+    const openBlockCreateDom = ZoomControls.prototype.createDom;
+    const openBlockPosition = ZoomControls.prototype.position;
+    const historyControlsOffset = EST_HISTORY_CONTROL_COUNT *
+        (ZoomControls.prototype.WIDTH_ + ZoomControls.prototype.MARGIN_BETWEEN_);
+    ZoomControls.prototype.HEIGHT_ += historyControlsOffset;
+    ZoomControls.prototype.createDom = function estCreateWorkspaceControls () {
+        const group = openBlockCreateDom.call(this);
+        const openBlockControls = group.querySelectorAll('image');
+        Array.prototype.forEach.call(openBlockControls, control => {
+            const originalY = Number(control.getAttribute('y'));
+            control.setAttribute('y', originalY + historyControlsOffset);
+        });
+        createEstHistoryControl(ScratchBlocks, this, workspaceUndoIcon, 0, false, '撤回');
+        createEstHistoryControl(ScratchBlocks, this, workspaceRedoIcon, 1, true, '前进');
+        return group;
+    };
+    ZoomControls.prototype.position = function estPositionZoomControls () {
+        openBlockPosition.call(this);
+        const metrics = this.workspace_ && this.workspace_.getMetrics();
+        if (!metrics || !this.svgGroup_) {
+            return;
+        }
+        const toolboxHeight = metrics.toolboxPosition === ScratchBlocks.TOOLBOX_AT_BOTTOM ?
+            metrics.flyoutHeight : 0;
+        const availableHeight = metrics.viewHeight - toolboxHeight;
+        this.top_ = metrics.absoluteTop + Math.max(0, (availableHeight - this.HEIGHT_) / 2);
+        this.svgGroup_.setAttribute('transform', `translate(${this.left_},${this.top_})`);
+    };
+    configuredZoomControlTypes.add(ZoomControls);
+};
 
 export const registerEstBlocks = ScratchBlocks => {
+    configureEstWorkspaceControls(ScratchBlocks);
     if (registeredTargets.has(ScratchBlocks)) return;
     registerEstSteeringField(ScratchBlocks);
-    ScratchBlocks.defineBlocksWithJsonArray(makeEstBlockDefinitions(ScratchBlocks));
+    const definitions = makeEstBlockDefinitions(ScratchBlocks);
+    EST_REPLACED_OPENBLOCK_BLOCK_IDS.forEach(blockId => {
+        if (ScratchBlocks.Blocks &&
+            Object.prototype.hasOwnProperty.call(ScratchBlocks.Blocks, blockId)) {
+            delete ScratchBlocks.Blocks[blockId];
+        }
+    });
+    ScratchBlocks.defineBlocksWithJsonArray(definitions);
     registeredTargets.add(ScratchBlocks);
 };
 
@@ -907,6 +905,7 @@ export {
     EST_DRIVE_PORT_PICKER_ID,
     EST_EVENT_SENSOR_PORT_PICKER_ID,
     EST_MOTOR_PORT_PICKER_ID,
+    EST_REPLACED_OPENBLOCK_BLOCK_IDS,
     EST_SUPPORT_BLOCK_IDS,
     MOTOR_BLOCK_IDS,
     MOTOR_COLOURS,
@@ -915,5 +914,6 @@ export {
     MOTOR_STOP_ACTION_OPTIONS,
     MOTOR_UNIT_OPTIONS,
     SENSOR_PORT_OPTIONS,
+    configureEstWorkspaceControls,
     isSteeringDialMarkVisible
 };

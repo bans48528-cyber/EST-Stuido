@@ -45,7 +45,7 @@ const child = spawn(process.execPath, [
 
 const importantPatterns = [
     /compiled successfully|compiling\.\.\.|project is running/i,
-    /debugger listening|openblock link server|openblock resource server|renderer_/i,
+    /debugger listening|renderer_/i,
     /\berror\b|\bwarning\b|failed|cannot apply update/i,
     /application will be restarted/i
 ];

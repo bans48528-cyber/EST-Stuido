@@ -21,19 +21,15 @@ import {
 import {
     openLoadingProject,
     closeLoadingProject,
-    openTelemetryModal,
     openUpdateModal
 } from 'openblock-gui/src/reducers/modals';
 import {setUpdate} from 'openblock-gui/src/reducers/update';
-import {setDeviceData} from 'openblock-gui/src/reducers/device-data';
 
-import analytics, {initialAnalytics} from 'openblock-gui/src/lib/analytics';
 import MessageBoxType from 'openblock-gui/src/lib/message-box.js';
-import {makeDeviceLibrary} from 'openblock-gui/src//lib/libraries/devices/index.jsx';
-
-import ElectronStorageHelper from '../common/ElectronStorageHelper';
 
 import showPrivacyPolicy from './showPrivacyPolicy';
+
+const ignoreStorageInit = () => {};
 
 /**
  * Higher-order component to add desktop logic to the GUI.
@@ -45,14 +41,12 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
         constructor (props) {
             super(props);
             bindAll(this, [
-                'handleProjectTelemetryEvent',
                 'handleSetTitleFromSave',
                 'handleShowMessageBox',
-                'handleStorageInit',
                 'handleUpdateProjectTitle'
             ]);
             this.props.onLoadingStarted();
-            ipcRenderer.invoke('get-initial-project-data').then(async initialProjectData => {
+            ipcRenderer.invoke('get-initial-project-data').then(initialProjectData => {
                 const hasInitialProject = initialProjectData && (initialProjectData.length > 0);
                 this.props.onHasInitialProject(hasInitialProject, this.props.loadingState);
                 if (!hasInitialProject) {
@@ -60,13 +54,6 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
                     ipcRenderer.send('loading-completed');
                     return;
                 }
-                // Update device list
-                await this.props.vm.extensionManager.getDeviceList().then(data => {
-                    this.props.onSetDeviceData(makeDeviceLibrary(data));
-                })
-                    .catch(() => {
-                        this.props.onSetDeviceData(makeDeviceLibrary());
-                    });
                 this.props.vm.loadProject(initialProjectData).then(
                     () => {
                         this.props.onLoadingCompleted();
@@ -103,11 +90,6 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
             ipcRenderer.on('setUpdate', (event, args) => {
                 this.props.onSetUpdate(args);
             });
-            ipcRenderer.on('setUserId', (event, args) => {
-                initialAnalytics(args);
-                // Register "base" page view
-                analytics.send({hitType: 'pageview', page: '/community/electron'});
-            });
             ipcRenderer.on('setPlatform', (event, args) => {
                 this.platform = args;
             });
@@ -130,20 +112,8 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
         handleAbortUpdate () {
             ipcRenderer.send('abortUpdate');
         }
-        handleClickClearCache () {
-            ipcRenderer.send('clearCache');
-        }
-        handleClickInstallDriver () {
-            ipcRenderer.send('installDriver');
-        }
-        handleProjectTelemetryEvent (event, metadata) {
-            ipcRenderer.send(event, metadata);
-        }
         handleSetTitleFromSave (event, args) {
             this.handleUpdateProjectTitle(args.title);
-        }
-        handleStorageInit (storageInstance) {
-            storageInstance.addHelper(new ElectronStorageHelper(storageInstance));
         }
         handleUpdateProjectTitle (newTitle) {
             this.setState({projectTitle: newTitle});
@@ -182,8 +152,6 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
             const childProps = omit(this.props, Object.keys(ScratchDesktopGUIComponent.propTypes));
 
             return (<WrappedComponent
-                canEditTitle
-                canModifyCloudData={false}
                 canSave={false}
                 isScratchDesktop
                 onClickAbout={[
@@ -210,26 +178,14 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
                             id="gui.menuBar.privacyPolicy"
                         />),
                         onClick: () => showPrivacyPolicy()
-                    },
-                    {
-                        title: (<FormattedMessage
-                            defaultMessage="Data settings"
-                            description="Menu bar item for data settings"
-                            id="gui.menuBar.dataSettings"
-                        />),
-                        onClick: () => this.props.onTelemetrySettingsClicked()
                     }
                 ]}
                 onClickLogo={this.handleClickLogo}
                 onClickCheckUpdate={this.handleClickCheckUpdate}
                 onClickUpdate={this.handleClickUpdate}
                 onAbortUpdate={this.handleAbortUpdate}
-                onClickInstallDriver={this.handleClickInstallDriver}
-                onClickClearCache={this.handleClickClearCache}
-                onProjectTelemetryEvent={this.handleProjectTelemetryEvent}
                 onShowMessageBox={this.handleShowMessageBox}
-                onShowPrivacyPolicy={showPrivacyPolicy}
-                onStorageInit={this.handleStorageInit}
+                onStorageInit={ignoreStorageInit}
                 onUpdateProjectTitle={this.handleUpdateProjectTitle}
 
                 // allow passed-in props to override any of the above
@@ -247,8 +203,6 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
         onLoadingCompleted: PropTypes.func,
         onLoadingStarted: PropTypes.func,
         onRequestNewProject: PropTypes.func,
-        onTelemetrySettingsClicked: PropTypes.func,
-        onSetDeviceData: PropTypes.func.isRequired,
         onSetUpdate: PropTypes.func,
         // using PropTypes.instanceOf(VM) here will cause prop type warnings due to VM mismatch
         vm: GUIComponent.WrappedComponent.propTypes.vm
@@ -281,12 +235,10 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
             return dispatch(onLoadedProject(loadingState, canSaveToServer, loadSuccess));
         },
         onRequestNewProject: () => dispatch(requestNewProject(false)),
-        onSetDeviceData: data => dispatch(setDeviceData(data)),
         onSetUpdate: arg => {
             dispatch(setUpdate(arg));
             dispatch(openUpdateModal());
-        },
-        onTelemetrySettingsClicked: () => dispatch(openTelemetryModal())
+        }
     });
 
     return connect(mapStateToProps, mapDispatchToProps)(ScratchDesktopGUIComponent);

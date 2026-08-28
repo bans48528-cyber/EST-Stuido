@@ -7,22 +7,16 @@ import {promisify} from 'util';
 
 import argv from './argv';
 import {getFilterForExtension} from './FileFilters';
-import telemetry from './OpenblockDesktopTelemetry';
 import Updater from './OpenblockDesktopUpdater';
-import DesktopLink from './OpenblockDesktopLink.js';
 import MacOSMenu from './MacOSMenu';
 import log from '../common/log.js';
 import {productName, version} from '../../package.json';
 import {EstDeviceService} from './est/device-service';
 import {createNodeHidEstTransportFactory} from './est/transports/node-hid';
 
-import {v4 as uuidv4} from 'uuid';
-import ElectronStore from 'electron-store';
 import formatMessage from 'format-message';
 import locales from 'openblock-l10n/locales/desktop-msgs';
 
-const storage = new ElectronStore();
-const desktopLink = new DesktopLink();
 const estDeviceService = new EstDeviceService({
     transportFactory: createNodeHidEstTransportFactory()
 });
@@ -38,8 +32,6 @@ app.commandLine.appendSwitch('allow-insecure-localhost', 'true');
 // enable gpu and ignore gpu blacklist
 app.commandLine.hasSwitch('enable-gpu');
 app.commandLine.hasSwitch('ignore-gpu-blacklist');
-
-telemetry.appWasOpened();
 
 const defaultSize = {width: 1620, height: 900};
 
@@ -63,10 +55,6 @@ const devToolKey = ((process.platform === 'darwin') ?
 
 // global window references prevent them from being garbage-collected
 const _windows = {};
-
-// enable connecting to Scratch Link even if we DNS / Internet access is not available
-// this must happen BEFORE the app ready event!
-app.commandLine.appendSwitch('host-resolver-rules', 'MAP device-manager.scratch.mit.edu 127.0.0.1');
 
 const displayPermissionDeniedWarning = (browserWindow, permissionType) => {
     let title;
@@ -351,7 +339,7 @@ const createMainWindow = () => {
     });
     const webContents = window.webContents;
 
-    const update = new Updater(webContents, desktopLink.resourceServer);
+    const update = new Updater(webContents);
     remote.initialize();
     remote.enable(webContents);
 
@@ -381,7 +369,7 @@ const createMainWindow = () => {
             downloadItem.on('done', async (doneEvent, doneState) => {
                 try {
                     if (doneState !== 'completed') {
-                        // The download was canceled or interrupted. Cancel the telemetry event and delete the file.
+                        // The download was canceled or interrupted. Delete the temporary file.
                         throw new Error(`save ${doneState}`); // "save cancelled" or "save interrupted"
                     }
                     await fs.move(tempPath, userChosenPath, {overwrite: true});
@@ -389,15 +377,8 @@ const createMainWindow = () => {
                         const newProjectTitle = path.basename(userChosenPath, extName);
                         webContents.send('setTitleFromSave', {title: newProjectTitle});
 
-                        // "setTitleFromSave" will set the project title but GUI has already reported the telemetry
-                        // event using the old title. This call lets the telemetry client know that the save was
-                        // actually completed and the event should be committed to the event queue with this new title.
-                        telemetry.projectSaveCompleted(newProjectTitle);
                     }
                 } catch (e) {
-                    if (isProjectSave) {
-                        telemetry.projectSaveCanceled();
-                    }
                     // don't clean up until after the message box to allow troubleshooting / recovery
                     await dialog.showMessageBox(window, {
                         type: 'error',
@@ -422,9 +403,6 @@ const createMainWindow = () => {
             });
         } else {
             downloadItem.cancel();
-            if (isProjectSave) {
-                telemetry.projectSaveCanceled();
-            }
         }
     });
 
@@ -463,19 +441,13 @@ const createMainWindow = () => {
     });
 
     ipcMain.on('loading-completed', () => {
-        if (!storage.has('userId')) {
-            storage.set('userId', uuidv4());
-        }
-        const userId = storage.get('userId');
-        webContents.send('setUserId', userId);
-
         webContents.send('setPlatform', process.platform);
 
         update.checkUpdateAtStartup();
     });
 
     ipcMain.on('reqeustCheckUpdate', () => {
-        update.reqeustCheckUpdate(_windows.main);
+        update.reqeustCheckUpdate();
     });
 
     ipcMain.on('reqeustUpdate', () => {
@@ -525,10 +497,6 @@ app.on('before-quit', event => {
         .finally(() => app.quit());
 });
 
-app.on('will-quit', () => {
-    telemetry.appWillClose();
-});
-
 app.on('activate', () => {
     if (_windows.main === null) {
         createMainWindow();
@@ -567,28 +535,9 @@ app.on('ready', () => {
         });
     }
 
-    ipcMain.on('clearCache', () => {
-        desktopLink.clearCache();
-    });
-
-    ipcMain.on('installDriver', () => {
-        desktopLink.installDriver(() => {
-            dialog.showMessageBox(_windows.main, {
-                type: 'info',
-                message: `${formatMessage({
-                    id: 'index.systemRestartRequired',
-                    default: 'Installation is complete, please restart the system.',
-                    description: 'prompt for restart system'
-                })}`
-            });
-        });
-    });
-
     // create a loading windows let user know the app is starting
     _windows.loading = createLoadingWindow();
     _windows.loading.once('show', () => {
-        desktopLink.start();
-
         _windows.main = createMainWindow();
         _windows.main.on('closed', () => {
             delete _windows.main;

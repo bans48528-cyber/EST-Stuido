@@ -8,6 +8,13 @@ const numberShadow = (name, value) => `
                 </shadow>
             </value>`;
 
+const wholeNumberShadow = (name, value) => `
+            <value name="${name}">
+                <shadow type="math_whole_number">
+                    <field name="NUM">${value}</field>
+                </shadow>
+            </value>`;
+
 const steeringShadow = (name, value) => `
             <value name="${name}">
                 <shadow type="est_steering_picker">
@@ -183,24 +190,37 @@ const sensorCategory = () => category('传感器', 'sensors', 'sensing', [
     block('sensor_timer_reset')
 ]);
 
-const operatorCategory = () => category('运算', 'estOperators', 'operators', [
-    block('operator_random', `${numberShadow('FROM', 1)}${numberShadow('TO', 10)}`),
-    block('operator_add', `${numberShadow('A', 0)}${numberShadow('B', 0)}`),
-    block('operator_subtract', `${numberShadow('A', 0)}${numberShadow('B', 0)}`),
-    block('operator_multiply', `${numberShadow('A', 0)}${numberShadow('B', 0)}`),
-    block('operator_divide', `${numberShadow('A', 0)}${numberShadow('B', 0)}`),
-    block('operator_less_than', `${numberShadow('A', 0)}${numberShadow('B', 100)}`),
-    block('operator_equals', `${numberShadow('A', 0)}${numberShadow('B', 100)}`),
-    block('operator_greater_than', `${numberShadow('A', 0)}${numberShadow('B', 100)}`),
-    block('operator_and'),
-    block('operator_or'),
-    block('operator_not'),
-    block('operator_join', `${textShadow('A', 'apple')}${textShadow('B', 'banana')}`),
-    block('operator_length', textShadow('VALUE', 'apple')),
-    block('operator_mod', `${numberShadow('A', 0)}${numberShadow('B', 0)}`),
-    block('operator_round', numberShadow('VALUE', 0)),
-    block('operator_math', `${field('OPERATION', 'abs')}${numberShadow('VALUE', 0)}`)
-]);
+// Keep this category aligned with OpenBlock's native operator toolbox. These
+// block types and input names are consumed by OpenBlock's built-in definitions
+// and Python generators; EST must not redefine them.
+const operatorCategory = () => `
+    <category name="%{BKY_CATEGORY_OPERATORS}" id="operators" colour="#40BF4A" secondaryColour="#389438">
+        ${block('operator_add', `${numberShadow('NUM1', 0)}${numberShadow('NUM2', 0)}`)}
+        ${block('operator_subtract', `${numberShadow('NUM1', 0)}${numberShadow('NUM2', 0)}`)}
+        ${block('operator_multiply', `${numberShadow('NUM1', 0)}${numberShadow('NUM2', 0)}`)}
+        ${block('operator_divide', `${numberShadow('NUM1', 0)}${numberShadow('NUM2', 0)}`)}
+        ${separator}
+        ${block('operator_random', `${numberShadow('FROM', 1)}${numberShadow('TO', 10)}`)}
+        ${separator}
+        ${block('operator_gt', `${textShadow('OPERAND1', '')}${textShadow('OPERAND2', '50')}`)}
+        ${block('operator_lt', `${textShadow('OPERAND1', '')}${textShadow('OPERAND2', '50')}`)}
+        ${block('operator_equals', `${textShadow('OPERAND1', '')}${textShadow('OPERAND2', '50')}`)}
+        ${separator}
+        ${block('operator_and')}
+        ${block('operator_or')}
+        ${block('operator_not')}
+        ${separator}
+        ${block('operator_join', `${textShadow('STRING1', 'apple')}${textShadow('STRING2', 'banana')}`)}
+        ${block('operator_letter_of', `${wholeNumberShadow('LETTER', 1)}${textShadow('STRING', 'apple')}`)}
+        ${block('operator_length', textShadow('STRING', 'apple'))}
+        ${block('operator_contains', `${textShadow('STRING1', 'apple')}${textShadow('STRING2', 'a')}`)}
+        ${separator}
+        ${block('operator_mod', `${numberShadow('NUM1', 0)}${numberShadow('NUM2', 0)}`)}
+        ${block('operator_round', numberShadow('NUM', 0))}
+        ${separator}
+        ${block('operator_mathop', numberShadow('NUM', 0))}
+        ${separator}
+    </category>`;
 
 export const getEstToolboxCategories = () => [
     motorCategory(),
