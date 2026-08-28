@@ -282,7 +282,21 @@ stopCurrentProgram()
 4. 用户程序运行期间通过 `0x24 STOP` 终止程序。
 5. 用户程序运行期间，`0x19` 状态轮询超时不关闭 HID transport，停止按钮仍能使用原连接发送 `0x24 STOP`；程序停止后恢复正常状态轮询。
 
-本基线对应上位机提交说明：`完成 EST Python 程序下载/运行/停止闭环`。
+联合基线冻结为以下版本组合：
+
+| 基线项目 | 冻结值 |
+| --- | --- |
+| EST Studio | 提交 `9c636c3`（`完成 EST Python 程序下载/运行/停止闭环`） |
+| EST 固件 | `M1.10A` |
+| 固件代码基线 | 提交 `2d27f96`（`feat: freeze initial est runtime module`） |
+| 固件基线文档 | 提交 `1a2c343`（`docs: record M1.10A program loop baseline`） |
+| USB 应用协议 | `1.20` |
+| 设备能力 | `frozen-est-runtime` |
+| M1.10A 发布包 | `est_minimal_upgrade_app_M1.10A.upgrade.bin` |
+| 发布包 SHA-256 | `835ba5342c5b91737f29e36fcd0d2c6af4afb998e8475cbc86ed93c86f16044e` |
+| 联合验收结论 | 纯 `import est` 与积木生成 `import est_runtime as rt` 均通过下载、保存槽位、运行和停止 |
+
+该组合是当前 EST Studio 与 EST 固件的第一版程序闭环联合基线。当前暂停新增功能；后续恢复开发或联调前，先按上述提交、固件版本、协议版本、设备能力和发布包校验环境。
 
 ### 15.2 第一轮：纯 `import est` 程序
 
