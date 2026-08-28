@@ -16,6 +16,25 @@
     user-select: none;
 }
 
+.operation-message {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 0.45rem);
+    max-width: 16rem;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid rgba(87, 94, 117, 0.14);
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.96);
+    color: #575e75;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+    box-shadow: 0 0.2rem 0.6rem rgba(47, 55, 79, 0.16);
+    transform: translateX(-50%);
+}
+
 .slot-selector,
 .action-buttons {
     display: flex;
@@ -181,6 +200,13 @@
     transform: translateY(1px);
 }
 
+.control-button:disabled {
+    cursor: wait;
+    filter: saturate(0.65);
+    opacity: 0.72;
+    transform: none;
+}
+
 .control-button:focus,
 .slot-arrow:focus,
 .slot-display:focus,
@@ -188,7 +214,7 @@
     box-shadow: 0 0 0 0.2rem rgba(76, 151, 255, 0.35);
 }
 
-.pause-button {
+.stop-button {
     background: linear-gradient(180deg, #ff8a82 0%, #ff5d52 100%);
 }
 
@@ -200,7 +226,7 @@
     background: linear-gradient(180deg, #ffa85f 0%, #ff8c32 100%);
 }
 
-.pause-icon {
+.stop-icon {
     width: 1.05rem;
     height: 1.05rem;
     border-radius: 0.2rem;

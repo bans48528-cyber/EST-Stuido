@@ -1,4 +1,6 @@
 import {
+    COMMAND_PERSISTENT_PROGRAM,
+    COMMAND_PYTHON_PROGRAM,
     DEVICE_DIRECTION,
     EST_MIN_PROTOCOL_MINOR,
     EST_PROTOCOL_MAJOR,
@@ -9,7 +11,23 @@ import {
     HIGH_SPEED_REPORT_DATA_SIZE,
     LEGACY_REPORT_SIZE,
     MAX_PAYLOAD,
-    HOST_DIRECTION
+    HOST_DIRECTION,
+    PERSISTENT_PROGRAM_ACTION_CLEAR,
+    PERSISTENT_PROGRAM_ACTION_LOAD,
+    PERSISTENT_PROGRAM_ACTION_SAVE,
+    PERSISTENT_PROGRAM_ACTION_STATUS,
+    PERSISTENT_PROGRAM_NAME_MAX_BYTES,
+    PERSISTENT_PROGRAM_SLOT_COUNT,
+    PYTHON_PROGRAM_ACTION_BEGIN,
+    PYTHON_PROGRAM_ACTION_CHUNK,
+    PYTHON_PROGRAM_ACTION_CLEAR,
+    PYTHON_PROGRAM_ACTION_RUN,
+    PYTHON_PROGRAM_ACTION_STATUS,
+    PYTHON_PROGRAM_ACTION_STOP,
+    PYTHON_PROGRAM_CHUNK_SIZE,
+    PYTHON_PROGRAM_MAX_SIZE,
+    PYTHON_PROGRAM_MAX_TIMEOUT_MS,
+    PYTHON_PROGRAM_MIN_TIMEOUT_MS
 } from './constants';
 
 export const checksum = bytes => Array.from(bytes).reduce((sum, value) => sum + value, 0) & 0xff;
@@ -80,6 +98,247 @@ export const parseFrame = (report, expectedCommand = null) => {
 };
 
 export const buildHeartbeatFrame = () => buildFrame(0x01);
+
+const assertUint32 = (value, label) => {
+    if (!Number.isInteger(value) || value < 0 || value > 0xffffffff) {
+        throw new RangeError(`${label} must fit uint32`);
+    }
+};
+
+const writeUint16LE = (bytes, offset, value) => {
+    bytes[offset] = value & 0xff;
+    bytes[offset + 1] = (value >>> 8) & 0xff;
+};
+
+const writeUint32LE = (bytes, offset, value) => {
+    bytes[offset] = value & 0xff;
+    bytes[offset + 1] = (value >>> 8) & 0xff;
+    bytes[offset + 2] = (value >>> 16) & 0xff;
+    bytes[offset + 3] = (value >>> 24) & 0xff;
+};
+
+const readUint16LE = (bytes, offset) => bytes[offset] | (bytes[offset + 1] << 8);
+const readUint32LE = (bytes, offset) => (
+    (bytes[offset] |
+        (bytes[offset + 1] << 8) |
+        (bytes[offset + 2] << 16) |
+        (bytes[offset + 3] << 24)) >>> 0
+);
+const readInt32LE = (bytes, offset) => readUint32LE(bytes, offset) | 0;
+
+export const crc32 = bytes => {
+    let value = 0xffffffff;
+    for (const byte of Uint8Array.from(bytes)) {
+        value ^= byte;
+        for (let bit = 0; bit < 8; bit++) {
+            value = (value >>> 1) ^ ((value & 1) ? 0xedb88320 : 0);
+        }
+    }
+    return (value ^ 0xffffffff) >>> 0;
+};
+
+export const buildPythonProgramStatusFrame = () => buildFrame(
+    COMMAND_PYTHON_PROGRAM,
+    Uint8Array.from([PYTHON_PROGRAM_ACTION_STATUS])
+);
+
+export const buildPythonProgramBeginFrame = (length, sourceCrc32) => {
+    if (!Number.isInteger(length) || length < 1 || length > PYTHON_PROGRAM_MAX_SIZE) {
+        throw new RangeError(`Python program length must be 1..${PYTHON_PROGRAM_MAX_SIZE} bytes`);
+    }
+    assertUint32(sourceCrc32, 'Python program CRC32');
+    const payload = new Uint8Array(7);
+    payload[0] = PYTHON_PROGRAM_ACTION_BEGIN;
+    writeUint16LE(payload, 1, length);
+    writeUint32LE(payload, 3, sourceCrc32);
+    return buildFrame(COMMAND_PYTHON_PROGRAM, payload);
+};
+
+export const buildPythonProgramChunkFrame = (offset, chunk) => {
+    const chunkBytes = Uint8Array.from(chunk);
+    if (!Number.isInteger(offset) || offset < 0 || offset >= PYTHON_PROGRAM_MAX_SIZE) {
+        throw new RangeError(`Python program offset must be 0..${PYTHON_PROGRAM_MAX_SIZE - 1}`);
+    }
+    if (chunkBytes.length < 1 || chunkBytes.length > PYTHON_PROGRAM_CHUNK_SIZE) {
+        throw new RangeError(`Python program chunk must be 1..${PYTHON_PROGRAM_CHUNK_SIZE} bytes`);
+    }
+    if (offset + chunkBytes.length > PYTHON_PROGRAM_MAX_SIZE) {
+        throw new RangeError(`Python program chunk exceeds ${PYTHON_PROGRAM_MAX_SIZE} bytes`);
+    }
+    const payload = new Uint8Array(3 + chunkBytes.length);
+    payload[0] = PYTHON_PROGRAM_ACTION_CHUNK;
+    writeUint16LE(payload, 1, offset);
+    payload.set(chunkBytes, 3);
+    return buildFrame(COMMAND_PYTHON_PROGRAM, payload);
+};
+
+export const buildPythonProgramRunFrame = timeoutMs => {
+    if (!Number.isInteger(timeoutMs) ||
+        timeoutMs < PYTHON_PROGRAM_MIN_TIMEOUT_MS || timeoutMs > PYTHON_PROGRAM_MAX_TIMEOUT_MS) {
+        throw new RangeError(
+            `Python program timeout must be ${PYTHON_PROGRAM_MIN_TIMEOUT_MS}..` +
+            `${PYTHON_PROGRAM_MAX_TIMEOUT_MS} ms`
+        );
+    }
+    const payload = new Uint8Array(5);
+    payload[0] = PYTHON_PROGRAM_ACTION_RUN;
+    writeUint32LE(payload, 1, timeoutMs);
+    return buildFrame(COMMAND_PYTHON_PROGRAM, payload);
+};
+
+export const buildPythonProgramStopFrame = () => buildFrame(
+    COMMAND_PYTHON_PROGRAM,
+    Uint8Array.from([PYTHON_PROGRAM_ACTION_STOP])
+);
+
+export const buildPythonProgramClearFrame = () => buildFrame(
+    COMMAND_PYTHON_PROGRAM,
+    Uint8Array.from([PYTHON_PROGRAM_ACTION_CLEAR])
+);
+
+const validatePersistentProgramSlot = slot => {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= PERSISTENT_PROGRAM_SLOT_COUNT) {
+        throw new RangeError(`Persistent program slot must be 0..${PERSISTENT_PROGRAM_SLOT_COUNT - 1}`);
+    }
+};
+
+export const buildPersistentProgramStatusFrame = (slot = 0) => {
+    validatePersistentProgramSlot(slot);
+    return buildFrame(
+        COMMAND_PERSISTENT_PROGRAM,
+        slot === 0 ?
+            Uint8Array.from([PERSISTENT_PROGRAM_ACTION_STATUS]) :
+            Uint8Array.from([PERSISTENT_PROGRAM_ACTION_STATUS, slot])
+    );
+};
+
+export const buildPersistentProgramSaveFrame = (slot = 0, programName = null) => {
+    validatePersistentProgramSlot(slot);
+    if (programName === null || typeof programName === 'undefined') {
+        if (slot !== 0) {
+            throw new RangeError('A program name is required outside slot 0');
+        }
+        return buildFrame(
+            COMMAND_PERSISTENT_PROGRAM,
+            Uint8Array.from([PERSISTENT_PROGRAM_ACTION_SAVE])
+        );
+    }
+    const encodedName = Uint8Array.from(Buffer.from(String(programName), 'utf8'));
+    if (encodedName.length < 1 || encodedName.length > PERSISTENT_PROGRAM_NAME_MAX_BYTES) {
+        throw new RangeError(
+            `Persistent program name must be 1..${PERSISTENT_PROGRAM_NAME_MAX_BYTES} UTF-8 bytes`
+        );
+    }
+    if (encodedName.includes(0)) {
+        throw new RangeError('Persistent program name must not contain NUL bytes');
+    }
+    const payload = new Uint8Array(3 + encodedName.length);
+    payload.set([PERSISTENT_PROGRAM_ACTION_SAVE, slot, encodedName.length], 0);
+    payload.set(encodedName, 3);
+    return buildFrame(COMMAND_PERSISTENT_PROGRAM, payload);
+};
+
+export const buildPersistentProgramLoadFrame = (slot = 0) => {
+    validatePersistentProgramSlot(slot);
+    return buildFrame(
+        COMMAND_PERSISTENT_PROGRAM,
+        slot === 0 ?
+            Uint8Array.from([PERSISTENT_PROGRAM_ACTION_LOAD]) :
+            Uint8Array.from([PERSISTENT_PROGRAM_ACTION_LOAD, slot])
+    );
+};
+
+export const buildPersistentProgramClearFrame = (slot = 0) => {
+    validatePersistentProgramSlot(slot);
+    return buildFrame(
+        COMMAND_PERSISTENT_PROGRAM,
+        slot === 0 ?
+            Uint8Array.from([PERSISTENT_PROGRAM_ACTION_CLEAR]) :
+            Uint8Array.from([PERSISTENT_PROGRAM_ACTION_CLEAR, slot])
+    );
+};
+
+export const parsePythonProgramResponse = report => {
+    const parsed = parseFrame(report, COMMAND_PYTHON_PROGRAM);
+    if (!parsed || parsed.payload.length !== 32) {
+        return null;
+    }
+    const payload = parsed.payload;
+    return {
+        schemaVersion: payload[0],
+        result: payload[1],
+        state: payload[2],
+        error: payload[3],
+        flags: payload[4],
+        expectedLength: readUint16LE(payload, 6),
+        receivedLength: readUint16LE(payload, 8),
+        runCount: readUint16LE(payload, 10),
+        expectedCrc32: readUint32LE(payload, 12),
+        actualCrc32: readUint32LE(payload, 16),
+        durationMs: readUint32LE(payload, 20),
+        timeoutMs: readUint32LE(payload, 24),
+        resultValue: readInt32LE(payload, 28)
+    };
+};
+
+export const parsePersistentProgramResponse = report => {
+    const parsed = parseFrame(report, COMMAND_PERSISTENT_PROGRAM);
+    if (!parsed || ![28, 40, 76].includes(parsed.payload.length)) {
+        return null;
+    }
+    const payload = parsed.payload;
+    if (payload.length === 76) {
+        const nameLength = Math.min(payload[14], PERSISTENT_PROGRAM_NAME_MAX_BYTES);
+        return {
+            schemaVersion: payload[0],
+            result: payload[1],
+            state: payload[2],
+            flags: payload[3],
+            programSlotId: payload[4],
+            programSlotCount: payload[5],
+            activeSlot: payload[6],
+            recordType: payload[7],
+            generation: readUint32LE(payload, 8),
+            sourceLength: readUint16LE(payload, 12),
+            programName: Buffer.from(payload.slice(41, 41 + nameLength)).toString('utf8'),
+            lastError: payload[15],
+            sourceCrc32: readUint32LE(payload, 16),
+            regionStart: readUint32LE(payload, 20),
+            regionSize: readUint32LE(payload, 24),
+            slotSize: readUint32LE(payload, 28),
+            flashSize: readUint32LE(payload, 32),
+            jedecId: Array.from(payload.slice(36, 39)),
+            erasedSectorMask: payload[39],
+            occupiedSectorMask: payload[40],
+            slotCount: payload[72],
+            sectorsPerSlot: payload[73]
+        };
+    }
+    return {
+        schemaVersion: payload[0],
+        result: payload[1],
+        state: payload[2],
+        flags: payload[3],
+        erasedSectorMask: payload[4],
+        occupiedSectorMask: payload[5],
+        slotCount: payload[6],
+        sectorsPerSlot: payload[7],
+        regionStart: readUint32LE(payload, 8),
+        regionSize: readUint32LE(payload, 12),
+        slotSize: readUint32LE(payload, 16),
+        flashSize: readUint32LE(payload, 20),
+        jedecId: Array.from(payload.slice(24, 27)),
+        activeSlot: payload.length === 40 ? payload[27] : 0xff,
+        generation: payload.length === 40 ? readUint32LE(payload, 28) : 0,
+        sourceLength: payload.length === 40 ? readUint16LE(payload, 32) : 0,
+        recordType: payload.length === 40 ? payload[34] : 0,
+        lastError: payload.length === 40 ? payload[35] : 0,
+        sourceCrc32: payload.length === 40 ? readUint32LE(payload, 36) : 0,
+        programSlotId: 0,
+        programSlotCount: 1,
+        programName: ''
+    };
+};
 
 export const parseHeartbeatResponse = report => {
     const parsed = parseFrame(report, 0x01);

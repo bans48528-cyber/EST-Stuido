@@ -1,9 +1,13 @@
+import {dialog} from '@electron/remote';
+import * as remote from '@electron/remote/renderer';
 import classNames from 'classnames';
+import {ipcRenderer} from 'electron';
+import PropTypes from 'prop-types';
 import React from 'react';
+import {connect} from 'react-redux';
 
 import styles from './EstProgramControls.css';
 
-const PROGRAM_CONTROL_EVENT = 'est-program-control-request';
 const PROGRAM_SLOT_CHANGE_EVENT = 'est-program-slot-change';
 const SLOT_STORAGE_KEY = 'estStudio.programSlot';
 const SLOT_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7];
@@ -19,17 +23,19 @@ const readStoredSlot = () => {
     }
 };
 
-const requestProgramAction = (action, slot) => {
-    window.dispatchEvent(new CustomEvent(PROGRAM_CONTROL_EVENT, {
-        detail: {action, slot}
-    }));
+const PROGRAM_ACTION_CHANNELS = {
+    download: 'est-download-program',
+    run: 'est-run-program',
+    stop: 'est-stop-program'
 };
 
 class EstProgramControls extends React.Component {
     constructor (props) {
         super(props);
         this.state = {
+            busyAction: null,
             isSlotMenuOpen: false,
+            operationMessage: null,
             selectedSlot: readStoredSlot()
         };
         this.handleAction = this.handleAction.bind(this);
@@ -47,6 +53,9 @@ class EstProgramControls extends React.Component {
 
     componentWillUnmount () {
         document.removeEventListener('mousedown', this.handleDocumentMouseDown);
+        if (this.statusTimer) {
+            window.clearTimeout(this.statusTimer);
+        }
     }
 
     handleContainerRef (element) {
@@ -76,8 +85,54 @@ class EstProgramControls extends React.Component {
         this.selectSlot(Number(event.currentTarget.dataset.slot));
     }
 
-    handleAction (event) {
-        requestProgramAction(event.currentTarget.dataset.action, this.state.selectedSlot);
+    async handleAction (event) {
+        const action = event.currentTarget.dataset.action;
+        if (this.state.busyAction || !PROGRAM_ACTION_CHANNELS[action]) {
+            return;
+        }
+        const slot = this.state.selectedSlot;
+        const operationMessages = {
+            download: [`正在下载到槽位 ${slot}…`, `已下载到槽位 ${slot}`],
+            run: [`正在下载并启动槽位 ${slot}…`, `槽位 ${slot} 的程序已启动`],
+            stop: ['正在停止程序…', '程序已停止']
+        };
+        this.setState({
+            busyAction: action,
+            isSlotMenuOpen: false,
+            operationMessage: operationMessages[action][0]
+        });
+        try {
+            if (action === 'stop') {
+                await ipcRenderer.invoke(PROGRAM_ACTION_CHANNELS[action]);
+            } else {
+                await ipcRenderer.invoke(PROGRAM_ACTION_CHANNELS[action], {
+                    source: this.props.codeEditorValue,
+                    slot
+                });
+            }
+            this.showTemporaryStatus(operationMessages[action][1]);
+        } catch (error) {
+            this.showTemporaryStatus('操作失败');
+            await dialog.showMessageBox(remote.getCurrentWindow(), {
+                type: 'error',
+                title: 'EST 程序操作失败',
+                message: '无法完成程序操作。',
+                detail: error && error.message ? error.message : String(error)
+            });
+        } finally {
+            this.setState({busyAction: null});
+        }
+    }
+
+    showTemporaryStatus (operationMessage) {
+        if (this.statusTimer) {
+            window.clearTimeout(this.statusTimer);
+        }
+        this.setState({operationMessage});
+        this.statusTimer = window.setTimeout(() => {
+            this.statusTimer = null;
+            this.setState({operationMessage: null});
+        }, 2500);
     }
 
     selectSlot (slot) {
@@ -99,7 +154,8 @@ class EstProgramControls extends React.Component {
     }
 
     render () {
-        const {isSlotMenuOpen, selectedSlot} = this.state;
+        const {busyAction, isSlotMenuOpen, operationMessage, selectedSlot} = this.state;
+        const controlsBusy = Boolean(busyAction);
         return (
             <div
                 aria-label="EST program controls"
@@ -107,11 +163,20 @@ class EstProgramControls extends React.Component {
                 ref={this.handleContainerRef}
                 role="group"
             >
+                {operationMessage && (
+                    <div
+                        aria-live="polite"
+                        className={styles.operationMessage}
+                        role="status"
+                    >
+                        {operationMessage}
+                    </div>
+                )}
                 <div className={styles.slotSelector}>
                     <button
                         aria-label="Previous program slot"
                         className={styles.slotArrow}
-                        disabled={selectedSlot === SLOT_OPTIONS[0]}
+                        disabled={controlsBusy || selectedSlot === SLOT_OPTIONS[0]}
                         title="上一个槽位"
                         type="button"
                         onClick={this.handlePreviousSlot}
@@ -146,6 +211,7 @@ class EstProgramControls extends React.Component {
                             aria-expanded={isSlotMenuOpen}
                             aria-label={`Current program slot ${selectedSlot}`}
                             className={styles.slotDisplay}
+                            disabled={controlsBusy}
                             title="选择程序槽位"
                             type="button"
                             onClick={this.handleToggleSlotMenu}
@@ -157,7 +223,7 @@ class EstProgramControls extends React.Component {
                     <button
                         aria-label="Next program slot"
                         className={styles.slotArrow}
-                        disabled={selectedSlot === SLOT_OPTIONS[SLOT_OPTIONS.length - 1]}
+                        disabled={controlsBusy || selectedSlot === SLOT_OPTIONS[SLOT_OPTIONS.length - 1]}
                         title="下一个槽位"
                         type="button"
                         onClick={this.handleNextSlot}
@@ -167,19 +233,23 @@ class EstProgramControls extends React.Component {
                 </div>
                 <div className={styles.actionButtons}>
                     <button
-                        aria-label="Pause program"
-                        className={`${styles.controlButton} ${styles.pauseButton}`}
-                        data-action="pause"
-                        title="暂停程序"
+                        aria-label="Stop program"
+                        aria-busy={busyAction === 'stop'}
+                        className={`${styles.controlButton} ${styles.stopButton}`}
+                        data-action="stop"
+                        disabled={controlsBusy}
+                        title="停止程序"
                         type="button"
                         onClick={this.handleAction}
                     >
-                        <span className={styles.pauseIcon} />
+                        <span className={styles.stopIcon} />
                     </button>
                     <button
                         aria-label="Run program"
+                        aria-busy={busyAction === 'run'}
                         className={`${styles.controlButton} ${styles.runButton}`}
                         data-action="run"
+                        disabled={controlsBusy}
                         title="运行程序"
                         type="button"
                         onClick={this.handleAction}
@@ -194,8 +264,10 @@ class EstProgramControls extends React.Component {
                     </button>
                     <button
                         aria-label="Download program"
+                        aria-busy={busyAction === 'download'}
                         className={`${styles.controlButton} ${styles.downloadButton}`}
                         data-action="download"
+                        disabled={controlsBusy}
                         title="下载程序"
                         type="button"
                         onClick={this.handleAction}
@@ -214,11 +286,18 @@ class EstProgramControls extends React.Component {
     }
 }
 
-export {
-    PROGRAM_CONTROL_EVENT,
-    PROGRAM_SLOT_CHANGE_EVENT,
-    SLOT_OPTIONS,
-    requestProgramAction
+EstProgramControls.propTypes = {
+    codeEditorValue: PropTypes.string.isRequired
 };
 
-export default EstProgramControls;
+const mapStateToProps = state => ({
+    codeEditorValue: state.scratchGui.code.codeEditorValue
+});
+
+export {
+    PROGRAM_ACTION_CHANNELS,
+    PROGRAM_SLOT_CHANGE_EVENT,
+    SLOT_OPTIONS
+};
+
+export default connect(mapStateToProps)(EstProgramControls);

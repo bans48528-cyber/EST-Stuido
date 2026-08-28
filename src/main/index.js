@@ -587,6 +587,9 @@ ipcMain.handle('est-connect', (event, device) => estDeviceService.connect(device
 ipcMain.handle('est-disconnect', () => estDeviceService.disconnect());
 ipcMain.handle('est-get-status', () => estDeviceService.getStatus());
 ipcMain.handle('est-auto-connect', () => estDeviceService.autoConnect());
+ipcMain.handle('est-download-program', (event, request) => estDeviceService.downloadProgram(request));
+ipcMain.handle('est-run-program', (event, request) => estDeviceService.runProgram(request));
+ipcMain.handle('est-stop-program', () => estDeviceService.stopCurrentProgram());
 
 
 // start loading initial project data before the GUI needs it so the load seems faster

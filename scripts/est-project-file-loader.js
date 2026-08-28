@@ -9,7 +9,7 @@ const transformDownloader = source => {
     }
     return source
         .replace(filenameMarker, `return \`${filenameExpression}.ests\`;`)
-        .replace(fallbackMarker, "        filenameTitle = defaultTitle || 'EST Project';");
+        .replace(fallbackMarker, "        filenameTitle = defaultTitle || 'EST Studio Project';");
 };
 
 const transformUploader = source => {
@@ -47,22 +47,13 @@ const transformDefaultTitle = source => {
         !source.includes(defaultTitleMarker)) {
         throw new Error('Unable to locate the OpenBlock default project title logic.');
     }
-    const defaultTitleHelper = `const getDefaultProjectTitle = locale => {
-    const normalizedLocale = String(locale).toLowerCase().replace('_', '-');
-    if (normalizedLocale === 'zh-tw' || normalizedLocale === 'zh-hk') {
-        return 'EST專案';
-    }
-    if (normalizedLocale.startsWith('zh')) {
-        return 'EST作品';
-    }
-    return 'EST Project';
-};`;
+    const defaultTitleHelper = "const DEFAULT_PROJECT_TITLE = 'EST Studio Project';";
     return source
         .replace(intlImportMarker, "import {injectIntl, intlShape} from 'react-intl';")
         .replace(messagesMarker, defaultTitleHelper)
         .replace(
             defaultTitleMarker,
-            '                newTitle = getDefaultProjectTitle(this.props.intl.locale);'
+            '                newTitle = DEFAULT_PROJECT_TITLE;'
         );
 };
 

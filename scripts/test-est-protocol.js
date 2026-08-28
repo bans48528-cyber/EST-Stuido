@@ -32,19 +32,33 @@ const estBlocksRoot = estRoots[1];
 const estProjectRoot = estRoots[2];
 
 const {
+    buildPersistentProgramLoadFrame,
+    buildPersistentProgramSaveFrame,
+    buildPersistentProgramStatusFrame,
+    buildPythonProgramBeginFrame,
+    buildPythonProgramChunkFrame,
+    buildPythonProgramClearFrame,
+    buildPythonProgramRunFrame,
+    buildPythonProgramStatusFrame,
+    buildPythonProgramStopFrame,
     buildFrame,
     checkDeviceCompatibility,
     checksum,
+    crc32,
     isEstDevice,
     parseDeviceStatusResponse,
     parseFrame,
     parseHeartbeatResponse,
+    parsePersistentProgramResponse,
+    parsePythonProgramResponse,
     splitReports
 } = require(path.join(estRoot, 'protocol.js'));
 const {
     CAPABILITY_MOTOR_CONTROL,
     CAPABILITY_MOTOR_PAIR_POSITION,
-    COMMAND_DEVICE_STATUS
+    COMMAND_DEVICE_STATUS,
+    COMMAND_PERSISTENT_PROGRAM,
+    COMMAND_PYTHON_PROGRAM
 } = require(path.join(estRoot, 'constants.js'));
 const {EstDeviceService} = require(path.join(estRoot, 'device-service.js'));
 const {
@@ -150,9 +164,9 @@ assert.strictEqual(parseDeviceStatusResponse(damagedStatusResponse), null);
 
 const oldProtocolCompatibility = checkDeviceCompatibility(deviceStatus);
 assert.strictEqual(oldProtocolCompatibility.compatible, false);
-assert.match(oldProtocolCompatibility.message, /requires 1\.5 or newer/);
+assert.match(oldProtocolCompatibility.message, /requires 1\.19 or newer/);
 
-const supportedStatus = {...deviceStatus, protocolMinor: 6};
+const supportedStatus = {...deviceStatus, protocolMinor: 19};
 assert.strictEqual(checkDeviceCompatibility(supportedStatus).compatible, true);
 assert.strictEqual(
     checkDeviceCompatibility(supportedStatus, CAPABILITY_MOTOR_CONTROL).compatible,
@@ -161,6 +175,62 @@ assert.strictEqual(
 const missingPairControl = checkDeviceCompatibility(supportedStatus, CAPABILITY_MOTOR_PAIR_POSITION);
 assert.strictEqual(missingPairControl.compatible, false);
 assert.strictEqual(missingPairControl.missingCapabilities, CAPABILITY_MOTOR_PAIR_POSITION);
+
+const pythonSource = Buffer.from('import est\nest._program_result(12345)\n', 'utf8');
+const pythonSourceCrc32 = crc32(pythonSource);
+assert.strictEqual(pythonSourceCrc32, 0xd93ce997);
+assert.deepStrictEqual(
+    Array.from(buildPythonProgramBeginFrame(pythonSource.length, pythonSourceCrc32)),
+    Array.from(buildFrame(COMMAND_PYTHON_PROGRAM, Uint8Array.from([
+        1,
+        pythonSource.length & 0xff,
+        pythonSource.length >> 8,
+        pythonSourceCrc32 & 0xff,
+        (pythonSourceCrc32 >>> 8) & 0xff,
+        (pythonSourceCrc32 >>> 16) & 0xff,
+        (pythonSourceCrc32 >>> 24) & 0xff
+    ])))
+);
+assert.deepStrictEqual(
+    Array.from(buildPythonProgramChunkFrame(0, pythonSource)),
+    Array.from(buildFrame(
+        COMMAND_PYTHON_PROGRAM,
+        Uint8Array.from([2, 0, 0, ...pythonSource])
+    ))
+);
+assert.deepStrictEqual(
+    Array.from(buildPythonProgramRunFrame(2000)),
+    Array.from(buildFrame(COMMAND_PYTHON_PROGRAM, Uint8Array.from([3, 0xd0, 0x07, 0, 0])))
+);
+assert.deepStrictEqual(
+    Array.from(buildPythonProgramStatusFrame()),
+    Array.from(buildFrame(COMMAND_PYTHON_PROGRAM, Uint8Array.from([0])))
+);
+assert.deepStrictEqual(
+    Array.from(buildPythonProgramStopFrame()),
+    Array.from(buildFrame(COMMAND_PYTHON_PROGRAM, Uint8Array.from([4])))
+);
+assert.deepStrictEqual(
+    Array.from(buildPythonProgramClearFrame()),
+    Array.from(buildFrame(COMMAND_PYTHON_PROGRAM, Uint8Array.from([5])))
+);
+assert.deepStrictEqual(
+    Array.from(buildPersistentProgramStatusFrame(3)),
+    Array.from(buildFrame(COMMAND_PERSISTENT_PROGRAM, Uint8Array.from([0, 3])))
+);
+assert.deepStrictEqual(
+    Array.from(buildPersistentProgramSaveFrame(3, '巡线')),
+    Array.from(buildFrame(
+        COMMAND_PERSISTENT_PROGRAM,
+        Uint8Array.from([1, 3, 6, ...Buffer.from('巡线', 'utf8')])
+    ))
+);
+assert.deepStrictEqual(
+    Array.from(buildPersistentProgramLoadFrame(3)),
+    Array.from(buildFrame(COMMAND_PERSISTENT_PROGRAM, Uint8Array.from([2, 3])))
+);
+assert.throws(() => buildPersistentProgramStatusFrame(8), /0\.\.7/);
+assert.throws(() => buildPersistentProgramSaveFrame(0, 'x'.repeat(32)), /1\.\.31/);
 
 const registeredBlockDefinitions = [];
 const definitionsPresentBeforeEstRegistration = [];
@@ -925,8 +995,23 @@ const estProgramControlsSource = fs.readFileSync(path.resolve(
     'EstProgramControls.jsx'
 ), 'utf8');
 assert.match(estProgramControlsSource, /SLOT_OPTIONS = \[0, 1, 2, 3, 4, 5, 6, 7\]/);
-assert.match(estProgramControlsSource, /detail: \{action, slot\}/);
+assert.match(estProgramControlsSource, /download: 'est-download-program'/);
+assert.match(estProgramControlsSource, /run: 'est-run-program'/);
+assert.match(estProgramControlsSource, /stop: 'est-stop-program'/);
+assert.match(estProgramControlsSource, /state\.scratchGui\.code\.codeEditorValue/);
+assert.match(estProgramControlsSource, /data-action="stop"/);
+assert.ok(!estProgramControlsSource.includes('data-action="pause"'));
 assert.match(estProgramControlsSource, /PROGRAM_SLOT_CHANGE_EVENT/);
+const estProgramMainSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'main',
+    'index.js'
+), 'utf8');
+assert.match(estProgramMainSource, /ipcMain\.handle\('est-download-program'/);
+assert.match(estProgramMainSource, /ipcMain\.handle\('est-run-program'/);
+assert.match(estProgramMainSource, /ipcMain\.handle\('est-stop-program'/);
 assert.ok(!transformedGui.includes('<CostumeTab'));
 assert.ok(!transformedGui.includes('<SoundTab'));
 assert.ok(!transformedGui.includes('<StageWrapper'));
@@ -1102,15 +1187,15 @@ for (const transformedProjectFileSource of Object.values(transformedProjectFileS
     });
 }
 assert.match(transformedProjectFileSources.downloader, /\.ests`/);
-assert.match(transformedProjectFileSources.downloader, /defaultTitle \|\| 'EST Project'/);
+assert.match(transformedProjectFileSources.downloader, /defaultTitle \|\| 'EST Studio Project'/);
 assert.ok(!transformedProjectFileSources.downloader.includes('.ob`;'));
 assert.match(transformedProjectFileSources.uploader, /accept = '\.ests'/);
 assert.match(transformedProjectFileSources.uploader, /\/\^\(\.\*\)\\\.ests\$\/i/);
 assert.ok(!transformedProjectFileSources.uploader.includes("accept = '.ob,.sb,.sb2,.sb3'"));
-assert.match(transformedProjectFileSources.titled, /return 'EST作品'/);
-assert.match(transformedProjectFileSources.titled, /return 'EST專案'/);
-assert.match(transformedProjectFileSources.titled, /return 'EST Project'/);
-assert.match(transformedProjectFileSources.titled, /getDefaultProjectTitle\(this\.props\.intl\.locale\)/);
+assert.match(transformedProjectFileSources.titled, /DEFAULT_PROJECT_TITLE = 'EST Studio Project'/);
+assert.match(transformedProjectFileSources.titled, /newTitle = DEFAULT_PROJECT_TITLE/);
+assert.ok(!transformedProjectFileSources.titled.includes('EST作品'));
+assert.ok(!transformedProjectFileSources.titled.includes('EST專案'));
 assert.strictEqual('示例工程.ests'.match(/^(.*)\.ests$/i)[1], '示例工程');
 const fileFiltersSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -1584,6 +1669,163 @@ const buildDeviceResponse = (command, payload = new Uint8Array()) => {
     return frame;
 };
 
+const writeUint16LE = (bytes, offset, value) => {
+    bytes[offset] = value & 0xff;
+    bytes[offset + 1] = (value >>> 8) & 0xff;
+};
+
+const writeUint32LE = (bytes, offset, value) => {
+    bytes[offset] = value & 0xff;
+    bytes[offset + 1] = (value >>> 8) & 0xff;
+    bytes[offset + 2] = (value >>> 16) & 0xff;
+    bytes[offset + 3] = (value >>> 24) & 0xff;
+};
+
+class ProgramTestTransport {
+    constructor () {
+        this.actions = [];
+        this.closed = false;
+        this.closeCount = 0;
+        this.python = {
+            actualCrc32: 0,
+            error: 0,
+            expectedCrc32: 0,
+            expectedLength: 0,
+            flags: 0,
+            received: Buffer.alloc(0),
+            runCount: 0,
+            state: 0,
+            stopPending: false,
+            timeoutMs: 0
+        };
+        this.responses = [];
+        this.slots = Array.from({length: 8}, () => ({
+            generation: 0,
+            name: '',
+            source: Buffer.alloc(0)
+        }));
+    }
+
+    write (report) {
+        const command = report[2];
+        const action = report[5];
+        this.actions.push(`${command}:${action}`);
+        if (command === COMMAND_PYTHON_PROGRAM) {
+            this.handlePython(report, action);
+        } else if (command === COMMAND_PERSISTENT_PROGRAM) {
+            this.handlePersistent(report, action);
+        }
+        return Promise.resolve();
+    }
+
+    read () {
+        return Promise.resolve(this.responses.shift() || new Uint8Array());
+    }
+
+    close () {
+        this.closeCount += 1;
+        this.closed = true;
+        return Promise.resolve();
+    }
+
+    handlePython (report, action) {
+        const payloadLength = report[3] | (report[4] << 8);
+        if (action === 0 && this.python.stopPending) {
+            this.python.flags &= ~0x08;
+            this.python.runCount += 1;
+            this.python.stopPending = false;
+        } else if (action === 1) {
+            this.python.expectedLength = report[6] | (report[7] << 8);
+            this.python.expectedCrc32 = (
+                report[8] | (report[9] << 8) | (report[10] << 16) | (report[11] << 24)
+            ) >>> 0;
+            this.python.actualCrc32 = 0;
+            this.python.received = Buffer.alloc(0);
+            this.python.state = 1;
+            this.python.flags = 0;
+        } else if (action === 2) {
+            const offset = report[6] | (report[7] << 8);
+            const chunk = Buffer.from(report.slice(8, 5 + payloadLength));
+            assert.strictEqual(offset, this.python.received.length);
+            this.python.received = Buffer.concat([this.python.received, chunk]);
+            if (this.python.received.length === this.python.expectedLength) {
+                this.python.actualCrc32 = crc32(this.python.received);
+                this.python.state = 2;
+            }
+        } else if (action === 3) {
+            this.python.timeoutMs = (
+                report[6] | (report[7] << 8) | (report[8] << 16) | (report[9] << 24)
+            ) >>> 0;
+            this.python.state = 3;
+            this.python.flags = 0x09;
+        } else if (action === 4) {
+            this.python.state = 7;
+            this.python.error = 4;
+            this.python.flags |= 0x0c;
+            this.python.stopPending = true;
+        }
+        this.responses.push(this.buildPythonResponse());
+    }
+
+    handlePersistent (report, action) {
+        const payloadLength = report[3] | (report[4] << 8);
+        const slot = payloadLength >= 2 ? report[6] : 0;
+        if (action === 1) {
+            const nameLength = payloadLength >= 3 ? report[7] : 0;
+            const programName = nameLength ? Buffer.from(report.slice(8, 8 + nameLength)).toString('utf8') :
+                `Program ${slot}`;
+            this.slots[slot] = {
+                generation: this.slots[slot].generation + 1,
+                name: programName,
+                source: Buffer.from(this.python.received)
+            };
+        } else if (action === 2) {
+            const saved = this.slots[slot];
+            this.python.received = Buffer.from(saved.source);
+            this.python.expectedLength = saved.source.length;
+            this.python.expectedCrc32 = crc32(saved.source);
+            this.python.actualCrc32 = this.python.expectedCrc32;
+            this.python.error = 0;
+            this.python.flags = 1;
+            this.python.state = 2;
+        }
+        this.responses.push(this.buildPersistentResponse(slot));
+    }
+
+    buildPythonResponse () {
+        const payload = new Uint8Array(32);
+        payload.set([1, 1, this.python.state, this.python.error, this.python.flags], 0);
+        writeUint16LE(payload, 6, this.python.expectedLength);
+        writeUint16LE(payload, 8, this.python.received.length);
+        writeUint16LE(payload, 10, this.python.runCount);
+        writeUint32LE(payload, 12, this.python.expectedCrc32);
+        writeUint32LE(payload, 16, this.python.actualCrc32);
+        writeUint32LE(payload, 24, this.python.timeoutMs);
+        return buildDeviceResponse(COMMAND_PYTHON_PROGRAM, payload);
+    }
+
+    buildPersistentResponse (slot) {
+        const saved = this.slots[slot];
+        const name = Buffer.from(saved.name, 'utf8');
+        const payload = new Uint8Array(76);
+        payload.set([3, 1, saved.source.length ? 3 : 2, 0x17, slot, 8, 0xff,
+            saved.source.length ? 1 : 0], 0);
+        writeUint32LE(payload, 8, saved.generation);
+        writeUint16LE(payload, 12, saved.source.length);
+        payload[14] = name.length;
+        writeUint32LE(payload, 16, saved.source.length ? crc32(saved.source) : 0);
+        writeUint32LE(payload, 20, 0x01fe8000);
+        writeUint32LE(payload, 24, 0x18000);
+        writeUint32LE(payload, 28, 12288);
+        writeUint32LE(payload, 32, 0x2000000);
+        payload.set([0xef, 0x40, 0x19, 0x3f, saved.source.length ? 1 : 0], 36);
+        payload.set(name, 41);
+        payload[72] = 2;
+        payload[73] = 3;
+        return buildDeviceResponse(COMMAND_PERSISTENT_PROGRAM, payload);
+    }
+}
+
 const createDeferred = () => {
     let resolve;
     const promise = new Promise(resolvePromise => {
@@ -1659,6 +1901,126 @@ const testCommandQueue = async () => {
     assert.deepStrictEqual(transport.events.slice(-3), ['write:36', 'read:36', 'close']);
 };
 
+const testProgramDownloadRunAndStop = async () => {
+    const transport = new ProgramTestTransport();
+    const service = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    service.transport = transport;
+    service.device = {
+        maxInputReportSize: 1024,
+        productId: 0x5750,
+        product: 'EST HID Device (HS Mode)',
+        vendorId: 0x0483
+    };
+
+    const longSource = `message = '${'x'.repeat(1100)}'\n`;
+    const downloaded = await service.downloadProgram({
+        programName: '巡线',
+        slot: 3,
+        source: longSource
+    });
+    assert.strictEqual(downloaded.slot, 3);
+    assert.strictEqual(downloaded.programName, '巡线');
+    assert.strictEqual(downloaded.upload.sourceBytes, Buffer.byteLength(longSource, 'utf8'));
+    assert.strictEqual(downloaded.savedStatus.programSlotId, 3);
+    assert.strictEqual(downloaded.savedStatus.programName, '巡线');
+    assert.strictEqual(downloaded.savedStatus.sourceLength, Buffer.byteLength(longSource, 'utf8'));
+    assert.strictEqual(parsePythonProgramResponse(transport.buildPythonResponse()).state, 2);
+    assert.strictEqual(parsePersistentProgramResponse(transport.buildPersistentResponse(3)).programName, '巡线');
+    assert.deepStrictEqual(transport.actions, [
+        '36:0',
+        '36:1',
+        '36:2',
+        '36:2',
+        '37:1'
+    ]);
+
+    const runSource = 'import est\nest._program_result(7)\n';
+    const running = await service.runProgram({source: runSource, slot: 5});
+    assert.strictEqual(running.slot, 5);
+    assert.strictEqual(running.savedStatus.programSlotId, 5);
+    assert.strictEqual(running.run.loadedStatus.programSlotId, 5);
+    assert.strictEqual(running.run.runStatus.state, 3);
+    assert.strictEqual(transport.slots[5].source.toString('utf8'), runSource);
+    assert.deepStrictEqual(transport.actions.slice(-6), [
+        '36:0',
+        '36:1',
+        '36:2',
+        '37:1',
+        '37:2',
+        '36:3'
+    ]);
+
+    const stopped = await service.stopCurrentProgram();
+    assert.strictEqual(stopped.state, 7);
+    assert.strictEqual(stopped.flags & 0x08, 0);
+    assert.deepStrictEqual(transport.actions.slice(-3), ['36:0', '36:4', '36:0']);
+
+    await assert.rejects(
+        service.downloadProgram({source: '', slot: 0}),
+        /must not be empty/
+    );
+    await assert.rejects(
+        service.downloadProgram({source: 'x = 1\n', slot: 8}),
+        /0\.\.7/
+    );
+};
+
+const testProgramStatusTimeoutPreservesStopTransport = async () => {
+    const transport = new ProgramTestTransport();
+    const device = {
+        maxInputReportSize: 1024,
+        path: 'test-est-device',
+        productId: 0x5750,
+        product: 'EST HID Device (HS Mode)',
+        vendorId: 0x0483
+    };
+    const service = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 5,
+        transportFactory: {
+            listDevices: () => Promise.resolve([device])
+        }
+    });
+    service.transport = transport;
+    service.device = device;
+    service.lastDeviceStatus = {
+        compatibility: {compatible: true},
+        firmwareVersion: 'M1.09A'
+    };
+
+    await service.runProgram({source: 'while True:\n    pass\n', slot: 7});
+    assert.strictEqual(service.pythonProgramActive, true);
+
+    const status = await service.getStatus();
+    assert.strictEqual(status.statusPollingDeferred, true);
+    assert.match(status.statusPollingError, /0x19/);
+    assert.strictEqual(transport.closeCount, 0);
+    assert.strictEqual(service.transport, transport);
+
+    const connection = await service.autoConnect();
+    assert.strictEqual(connection.state, 'connected');
+    assert.strictEqual(connection.status.statusPollingDeferred, true);
+    assert.strictEqual(transport.closeCount, 0);
+    assert.strictEqual(service.transport, transport);
+
+    const stopped = await service.stopCurrentProgram();
+    assert.strictEqual(stopped.state, 7);
+    assert.strictEqual(service.pythonProgramActive, false);
+    assert.strictEqual(transport.closeCount, 0);
+    assert.strictEqual(service.transport, transport);
+    assert.deepStrictEqual(transport.actions.slice(-3), ['36:0', '36:4', '36:0']);
+
+    const connectionAfterStop = await service.autoConnect();
+    assert.strictEqual(connectionAfterStop.state, 'error');
+    assert.strictEqual(transport.closeCount, 1);
+    assert.strictEqual(service.transport, null);
+};
+
 const testBuiltInMotorBlock = async () => {
     const invokedChannels = [];
     const motorBlocks = new EstMotorBlocks(null, {
@@ -1722,6 +2084,8 @@ const validateEstDefaultProject = () => new Promise((resolve, reject) => {
 
 validateEstDefaultProject()
     .then(() => testCommandQueue())
+    .then(() => testProgramDownloadRunAndStop())
+    .then(() => testProgramStatusTimeoutPreservesStopTransport())
     .then(() => testBuiltInMotorBlock())
     .then(() => console.log(
         'EST protocol, queue, 90 EST blocks, and native operator/data/procedure tests passed'
