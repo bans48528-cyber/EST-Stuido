@@ -23,8 +23,8 @@
     background: transparent;
     color: #1f2937;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: bold;
     outline: none;
     cursor: pointer;
     user-select: none;
@@ -35,15 +35,7 @@
 .menu-button:active,
 .menu-button-open {
     background-color: $ui-black-transparent;
-    color: #ffffff;
-}
-
-.menu-icon {
-    width: 20px;
-    height: 20px;
-    fill: currentColor;
-    flex: 0 0 auto;
-    pointer-events: none;
+    color: #1f2937;
 }
 
 .menu-text {

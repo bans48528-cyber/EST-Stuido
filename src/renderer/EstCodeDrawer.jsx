@@ -1,6 +1,7 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React from 'react';
+import {connect} from 'react-redux';
 
 import Box from 'openblock-gui/src/components/box/box.jsx';
 import CodeEditor from 'openblock-gui/src/containers/code-editor.jsx';
@@ -11,6 +12,7 @@ import {
     publishCodeDrawerState,
     resizeBlocklyWorkspace
 } from './est-code-drawer-events';
+import {getEstText} from './est-i18n';
 import styles from './EstCodeDrawer.css';
 
 import lockIcon from 'openblock-gui/src/components/hardware/icon--lock.svg';
@@ -175,6 +177,7 @@ class EstCodeDrawer extends React.Component {
             codeEditorTheme,
             codeEditorValue,
             isCodeEditorLocked,
+            locale,
             onCodeEditorWillMount,
             onCodeEditorDidMount,
             onCodeEditorChange,
@@ -183,6 +186,7 @@ class EstCodeDrawer extends React.Component {
         const {drawerWidth, isOpen, isResizing} = this.state;
         const visibleWidth = isOpen ? drawerWidth : COLLAPSED_WIDTH;
         const editorWidth = Math.max(1, drawerWidth - EDITOR_CHROME_WIDTH);
+        const resizeLabel = getEstText('codeDrawer.resize', locale);
 
         return (
             <Box
@@ -197,11 +201,11 @@ class EstCodeDrawer extends React.Component {
                 }}
             >
                 <div
-                    aria-label="Resize Python code panel"
+                    aria-label={resizeLabel}
                     aria-orientation="vertical"
                     className={styles.resizeHandle}
                     role="separator"
-                    title="拖动调整 Python 代码区宽度；双击恢复默认宽度"
+                    title={resizeLabel}
                     onDoubleClick={this.handleResetWidth}
                     onMouseDown={this.handleResizeStart}
                 />
@@ -251,10 +255,19 @@ EstCodeDrawer.propTypes = {
     codeEditorTheme: PropTypes.string,
     codeEditorValue: PropTypes.string,
     isCodeEditorLocked: PropTypes.bool,
+    locale: PropTypes.string,
     onCodeEditorWillMount: PropTypes.func,
     onCodeEditorDidMount: PropTypes.func,
     onCodeEditorChange: PropTypes.func,
     onClickCodeEditorLock: PropTypes.func
 };
 
-export default EstCodeDrawer;
+const mapStateToProps = state => ({
+    locale: state.locales.locale
+});
+
+export {
+    EstCodeDrawer
+};
+
+export default connect(mapStateToProps)(EstCodeDrawer);

@@ -10,6 +10,7 @@ import {
     EST_CONNECTION_STATUS_EVENT,
     EST_PROGRAM_ACTIVITY_EVENT
 } from './est-connection-status';
+import {getEstText} from './est-i18n';
 import {buildEstProgramRequest} from './est-program-name';
 import styles from './EstProgramControls.css';
 
@@ -33,18 +34,20 @@ const PROGRAM_ACTION_CHANNELS = {
     run: 'est-run-program',
     stop: 'est-stop-program'
 };
-const EST_USB_DISCONNECTED_MESSAGE = 'EST USB 连接已断开，请重新连接 EST 后重试。';
-
-const formatProgramOperationError = error => {
+const formatProgramOperationError = (error, locale) => {
     const rawMessage = error && error.message ? error.message : String(error);
     const message = rawMessage.replace(
         /^Error invoking remote method '[^']+': (?:Error|TypeError):\s*/,
         ''
     );
     if (/cannot write to hid device|cannot read from hid device/i.test(message)) {
-        return EST_USB_DISCONNECTED_MESSAGE;
+        return getEstText('programControls.usbDisconnected', locale);
     }
-    return message || '未知错误';
+    if (/当前 EST 固件不支持这个程序使用的功能/.test(message)) {
+        const detail = message.replace(/^当前 EST 固件不支持这个程序使用的功能。请升级到支持相应 EST Studio 功能的固件后再运行。\s*/, '');
+        return `${getEstText('programControls.firmwareUpgradeRequired', locale)} ${detail}`.trim();
+    }
+    return message || getEstText('programControls.unknownError', locale);
 };
 
 class EstProgramControls extends React.Component {
@@ -120,11 +123,21 @@ class EstProgramControls extends React.Component {
             (action !== 'stop' && !this.state.programActionsAllowed)) {
             return;
         }
+        const {locale} = this.props;
         const slot = this.state.selectedSlot;
         const operationMessages = {
-            download: [`正在下载到槽位 ${slot}…`, `已下载到槽位 ${slot}`],
-            run: [`正在下载并启动槽位 ${slot}…`, `槽位 ${slot} 的程序已启动`],
-            stop: ['正在停止程序…', '程序已停止']
+            download: [
+                getEstText('programControls.downloadStart', locale, {slot}),
+                getEstText('programControls.downloadDone', locale, {slot})
+            ],
+            run: [
+                getEstText('programControls.runStart', locale, {slot}),
+                getEstText('programControls.runDone', locale, {slot})
+            ],
+            stop: [
+                getEstText('programControls.stopStart', locale),
+                getEstText('programControls.stopDone', locale)
+            ]
         };
         this.setState({
             busyAction: action,
@@ -148,12 +161,12 @@ class EstProgramControls extends React.Component {
             }
             this.showTemporaryStatus(operationMessages[action][1]);
         } catch (error) {
-            this.showTemporaryStatus('操作失败');
-            const detail = formatProgramOperationError(error);
+            this.showTemporaryStatus(getEstText('programControls.failed', locale));
+            const detail = formatProgramOperationError(error, locale);
             await dialog.showMessageBox(remote.getCurrentWindow(), {
                 type: 'error',
-                title: 'EST 程序操作失败',
-                message: '无法完成程序操作。',
+                title: getEstText('programControls.errorTitle', locale),
+                message: getEstText('programControls.errorMessage', locale),
                 detail
             });
         } finally {
@@ -191,6 +204,7 @@ class EstProgramControls extends React.Component {
     }
 
     render () {
+        const {locale} = this.props;
         const {
             busyAction,
             isSlotMenuOpen,
@@ -201,7 +215,7 @@ class EstProgramControls extends React.Component {
         const controlsBusy = Boolean(busyAction);
         return (
             <div
-                aria-label="EST program controls"
+                aria-label={getEstText('programControls.group', locale)}
                 className={styles.controls}
                 ref={this.handleContainerRef}
                 role="group"
@@ -217,10 +231,10 @@ class EstProgramControls extends React.Component {
                 )}
                 <div className={styles.slotSelector}>
                     <button
-                        aria-label="Previous program slot"
+                        aria-label={getEstText('programControls.previousSlot', locale)}
                         className={styles.slotArrow}
                         disabled={controlsBusy || selectedSlot === SLOT_OPTIONS[0]}
-                        title="上一个槽位"
+                        title={getEstText('programControls.previousSlot', locale)}
                         type="button"
                         onClick={this.handlePreviousSlot}
                     >
@@ -229,13 +243,13 @@ class EstProgramControls extends React.Component {
                     <div className={styles.slotPicker}>
                         {isSlotMenuOpen && (
                             <div
-                                aria-label="Select program slot"
+                                aria-label={getEstText('programControls.selectSlot', locale)}
                                 className={styles.slotMenu}
                                 role="group"
                             >
                                 {SLOT_OPTIONS.map(slot => (
                                     <button
-                                        aria-label={`Select slot ${slot}`}
+                                        aria-label={getEstText('programControls.selectSlotNumber', locale, {slot})}
                                         className={classNames(
                                             styles.slotOption,
                                             slot === selectedSlot && styles.slotOptionSelected
@@ -252,10 +266,10 @@ class EstProgramControls extends React.Component {
                         )}
                         <button
                             aria-expanded={isSlotMenuOpen}
-                            aria-label={`Current program slot ${selectedSlot}`}
+                            aria-label={getEstText('programControls.currentSlot', locale, {slot: selectedSlot})}
                             className={styles.slotDisplay}
                             disabled={controlsBusy}
-                            title="选择程序槽位"
+                            title={getEstText('programControls.selectSlot', locale)}
                             type="button"
                             onClick={this.handleToggleSlotMenu}
                         >
@@ -264,10 +278,10 @@ class EstProgramControls extends React.Component {
                         </button>
                     </div>
                     <button
-                        aria-label="Next program slot"
+                        aria-label={getEstText('programControls.nextSlot', locale)}
                         className={styles.slotArrow}
                         disabled={controlsBusy || selectedSlot === SLOT_OPTIONS[SLOT_OPTIONS.length - 1]}
-                        title="下一个槽位"
+                        title={getEstText('programControls.nextSlot', locale)}
                         type="button"
                         onClick={this.handleNextSlot}
                     >
@@ -276,24 +290,26 @@ class EstProgramControls extends React.Component {
                 </div>
                 <div className={styles.actionButtons}>
                     <button
-                        aria-label="Stop program"
+                        aria-label={getEstText('programControls.stopProgram', locale)}
                         aria-busy={busyAction === 'stop'}
                         className={`${styles.controlButton} ${styles.stopButton}`}
                         data-action="stop"
                         disabled={controlsBusy}
-                        title="停止程序"
+                        title={getEstText('programControls.stopProgram', locale)}
                         type="button"
                         onClick={this.handleAction}
                     >
                         <span className={styles.stopIcon} />
                     </button>
                     <button
-                        aria-label="Run program"
+                        aria-label={getEstText('programControls.runProgram', locale)}
                         aria-busy={busyAction === 'run'}
                         className={`${styles.controlButton} ${styles.runButton}`}
                         data-action="run"
                         disabled={controlsBusy || !programActionsAllowed}
-                        title={programActionsAllowed ? '运行程序' : '连接兼容固件后运行程序'}
+                        title={programActionsAllowed ?
+                            getEstText('programControls.runProgram', locale) :
+                            getEstText('programControls.runNeedsFirmware', locale)}
                         type="button"
                         onClick={this.handleAction}
                     >
@@ -306,12 +322,14 @@ class EstProgramControls extends React.Component {
                         </svg>
                     </button>
                     <button
-                        aria-label="Download program"
+                        aria-label={getEstText('programControls.downloadProgram', locale)}
                         aria-busy={busyAction === 'download'}
                         className={`${styles.controlButton} ${styles.downloadButton}`}
                         data-action="download"
                         disabled={controlsBusy || !programActionsAllowed}
-                        title={programActionsAllowed ? '下载程序' : '连接兼容固件后下载程序'}
+                        title={programActionsAllowed ?
+                            getEstText('programControls.downloadProgram', locale) :
+                            getEstText('programControls.downloadNeedsFirmware', locale)}
                         type="button"
                         onClick={this.handleAction}
                     >
@@ -331,15 +349,18 @@ class EstProgramControls extends React.Component {
 
 EstProgramControls.propTypes = {
     codeEditorValue: PropTypes.string.isRequired,
+    locale: PropTypes.string.isRequired,
     projectTitle: PropTypes.string
 };
 
 const mapStateToProps = state => ({
     codeEditorValue: state.scratchGui.code.codeEditorValue,
+    locale: state.locales.locale,
     projectTitle: state.scratchGui.projectTitle
 });
 
 export {
+    formatProgramOperationError,
     PROGRAM_ACTION_CHANNELS,
     PROGRAM_SLOT_CHANGE_EVENT,
     SLOT_OPTIONS

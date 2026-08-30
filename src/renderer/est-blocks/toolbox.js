@@ -1,5 +1,9 @@
 /* eslint-disable max-len -- Compact block declarations keep defaults beside their block IDs. */
 import {CATEGORY_COLOURS} from './definitions';
+import {
+    getCurrentEstLocale,
+    getEstText
+} from '../est-i18n';
 
 const numberShadow = (name, value) => `
             <value name="${name}">
@@ -36,13 +40,6 @@ const drivePortShadow = (name, value) => `
                 </shadow>
             </value>`;
 
-const eventSensorPortShadow = (name, value) => `
-            <value name="${name}">
-                <shadow type="est_event_sensor_port_picker">
-                    <field name="PORT">${value}</field>
-                </shadow>
-            </value>`;
-
 const sensorPortShadow = (name, value) => `
             <value name="${name}">
                 <shadow type="est_sensor_port_picker">
@@ -75,7 +72,7 @@ const category = (name, id, style, blocks) => {
     </category>`;
 };
 
-const motorCategory = () => category('电机', 'motor', 'motor', [
+const motorCategory = locale => category(getEstText('category.motor', locale), 'motor', 'motor', [
     block('motor_run_for', `${motorPortShadow('PORT', 'A')}${field('DIRECTION', 'clockwise')}${numberShadow('AMOUNT', 1)}${field('UNIT', 'rotations')}`),
     block('motor_start', `${motorPortShadow('PORT', 'A')}${field('DIRECTION', 'clockwise')}`),
     block('motor_stop', motorPortShadow('PORT', 'A')),
@@ -89,10 +86,11 @@ const motorCategory = () => category('电机', 'motor', 'motor', [
     separator,
     block('motor_reset_degrees', motorPortShadow('PORT', 'A')),
     block('motor_degrees', motorPortShadow('PORT', 'A')),
-    block('motor_speed', motorPortShadow('PORT', 'A'))
+    block('motor_speed', motorPortShadow('PORT', 'A')),
+    block('motor_stalled', motorPortShadow('PORT', 'A'))
 ]);
 
-const movementCategory = () => category('移动', 'movement', 'movement', [
+const movementCategory = locale => category(getEstText('category.movement', locale), 'movement', 'movement', [
     block('drive_move_for', `${field('DIRECTION', 'forward')}${numberShadow('AMOUNT', 1)}${field('UNIT', 'rotations')}`),
     block('drive_steer_for', `${steeringShadow('STEERING', 0)}${numberShadow('AMOUNT', 1)}${field('UNIT', 'rotations')}`),
     block('drive_start_steer', steeringShadow('STEERING', 0)),
@@ -108,7 +106,7 @@ const movementCategory = () => category('移动', 'movement', 'movement', [
     block('drive_start_dual_speed', `${numberShadow('LEFT_SPEED', 50)}${numberShadow('RIGHT_SPEED', 50)}`)
 ]);
 
-const displayCategory = () => category('显示', 'display', 'display', [
+const displayCategory = locale => category(getEstText('category.display', locale), 'display', 'display', [
     block('display_image_for', `${field('IMAGE', 'Eyes/Neutral')}${numberShadow('SECONDS', 2)}`),
     block('display_image', field('IMAGE', 'Eyes/Neutral')),
     block('display_text_line', `${numberShadow('LINE', 1)}${textShadow('TEXT', 'EST')}`),
@@ -117,7 +115,7 @@ const displayCategory = () => category('显示', 'display', 'display', [
     block('display_status_light', field('STATUS_MODE', 'red'))
 ]);
 
-const soundCategory = () => category('声音', 'estSound', 'sound', [
+const soundCategory = locale => category(getEstText('category.sound', locale), 'estSound', 'sound', [
     block('sound_play_wait', field('SOUND', 'communication_hello')),
     block('sound_play', field('SOUND', 'communication_hello')),
     block('sound_beep_for', `${numberShadow('NOTE', 60)}${numberShadow('SECONDS', 0.2)}`),
@@ -126,14 +124,14 @@ const soundCategory = () => category('声音', 'estSound', 'sound', [
     block('sound_set_volume', numberShadow('VOLUME', 100))
 ]);
 
-const eventCategory = () => category('事件', 'estEvents', 'event', [
+const eventCategory = locale => category(getEstText('category.event', locale), 'estEvents', 'event', [
     block('event_program_start'),
     block('event_brick_button', `${field('BUTTON', 'confirm')}${field('BUTTON_EVENT', 'pressed')}`),
     block('event_condition'),
     block('event_timer', numberShadow('SECONDS', 10))
 ]);
 
-const controlCategory = () => category('控制', 'estControl', 'control', [
+const controlCategory = locale => category(getEstText('category.control', locale), 'estControl', 'control', [
     block('control_wait_seconds', numberShadow('SECONDS', 1)),
     block('control_wait_until'),
     block('control_repeat', numberShadow('TIMES', 10)),
@@ -145,7 +143,7 @@ const controlCategory = () => category('控制', 'estControl', 'control', [
     block('control_stop', field('STOP_SCOPE', 'all'))
 ]);
 
-const sensorCategory = () => category('传感器', 'sensors', 'sensing', [
+const sensorCategory = locale => category(getEstText('category.sensing', locale), 'sensors', 'sensing', [
     block('sensor_brick_button_value'),
     block('sensor_brick_button_pressed', field('BUTTON', 'confirm')),
     block('sensor_wait_brick_button', `${field('BUTTON', 'confirm')}${field('BUTTON_EVENT', 'pressed')}`),
@@ -222,14 +220,14 @@ const operatorCategory = () => `
         ${separator}
     </category>`;
 
-export const getEstToolboxCategories = () => [
-    motorCategory(),
-    movementCategory(),
-    displayCategory(),
-    soundCategory(),
-    eventCategory(),
-    controlCategory(),
-    sensorCategory(),
+export const getEstToolboxCategories = (locale = getCurrentEstLocale()) => [
+    motorCategory(locale),
+    movementCategory(locale),
+    displayCategory(locale),
+    soundCategory(locale),
+    eventCategory(locale),
+    controlCategory(locale),
+    sensorCategory(locale),
     operatorCategory()
 ].join('\n');
 

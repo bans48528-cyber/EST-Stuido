@@ -1,0 +1,62 @@
+{
+  "en": {
+    "gui.menuBar.LanguageSelector": "Language",
+    "gui.menuBar.file": "File",
+    "gui.menuBar.new": "New Project",
+    "gui.menuBar.downloadToComputer": "Save to Computer",
+    "gui.gui.projectTitlePlaceholder": "Project title",
+    "gui.sharedMessages.loadFromComputerTitle": "Open from Computer",
+    "gui.alerts.creating": "Creating new project...",
+    "gui.alerts.savingError": "Project could not be saved.",
+    "gui.alerts.savesuccess": "Project saved.",
+    "gui.projectLoader.loadError": "The selected EST Studio project could not be opened."
+  },
+  "ru": {
+    "gui.menuBar.LanguageSelector": "Язык",
+    "gui.menuBar.file": "Файл",
+    "gui.menuBar.new": "Новый проект",
+    "gui.menuBar.downloadToComputer": "Сохранить на компьютер",
+    "gui.gui.projectTitlePlaceholder": "Название проекта",
+    "gui.sharedMessages.loadFromComputerTitle": "Открыть с компьютера",
+    "gui.alerts.creating": "Создание нового проекта...",
+    "gui.alerts.savingError": "Не удалось сохранить проект.",
+    "gui.alerts.savesuccess": "Проект сохранен.",
+    "gui.projectLoader.loadError": "Не удалось открыть выбранный проект EST Studio."
+  },
+  "zh-cn": {
+    "gui.menuBar.LanguageSelector": "语言菜单",
+    "gui.menuBar.file": "文件",
+    "gui.menuBar.new": "新作品",
+    "gui.menuBar.downloadToComputer": "保存到电脑",
+    "gui.gui.projectTitlePlaceholder": "在此填写作品标题",
+    "gui.sharedMessages.loadFromComputerTitle": "从电脑打开",
+    "gui.alerts.creating": "正在创建新作品...",
+    "gui.alerts.savingError": "作品无法保存。",
+    "gui.alerts.savesuccess": "作品已保存。",
+    "gui.projectLoader.loadError": "无法打开所选 EST Studio 工程。"
+  },
+  "zh-tw": {
+    "gui.menuBar.LanguageSelector": "語言選單",
+    "gui.menuBar.file": "檔案",
+    "gui.menuBar.new": "新建專案",
+    "gui.menuBar.downloadToComputer": "儲存到電腦",
+    "gui.gui.projectTitlePlaceholder": "在這輸入專案名稱",
+    "gui.sharedMessages.loadFromComputerTitle": "從電腦打開",
+    "gui.alerts.creating": "正在建立新專案...",
+    "gui.alerts.savingError": "專案無法儲存。",
+    "gui.alerts.savesuccess": "專案已儲存。",
+    "gui.projectLoader.loadError": "無法打開所選 EST Studio 專案。"
+  },
+  "pt-br": {
+    "gui.menuBar.LanguageSelector": "Idioma",
+    "gui.menuBar.file": "Arquivo",
+    "gui.menuBar.new": "Novo projeto",
+    "gui.menuBar.downloadToComputer": "Salvar no computador",
+    "gui.gui.projectTitlePlaceholder": "Nome do projeto",
+    "gui.sharedMessages.loadFromComputerTitle": "Abrir do computador",
+    "gui.alerts.creating": "Criando novo projeto...",
+    "gui.alerts.savingError": "Nao foi possivel salvar o projeto.",
+    "gui.alerts.savesuccess": "Projeto salvo.",
+    "gui.projectLoader.loadError": "Nao foi possivel abrir o projeto EST Studio selecionado."
+  }
+}

@@ -1,12 +1,14 @@
 import classNames from 'classnames';
 import {ipcRenderer} from 'electron';
+import PropTypes from 'prop-types';
 import React from 'react';
+import {connect} from 'react-redux';
 
 import {EST_CONNECTION_STATUS_EVENT} from './est-connection-status';
+import {getEstText} from './est-i18n';
 import styles from './EstHardwareStatusButton.css';
 
 const REFRESH_INTERVAL_MS = 3000;
-const EST_USB_DISCONNECTED_MESSAGE = 'EST USB 连接已断开，请重新连接 EST 后重试。';
 const PANEL_MARGIN = 12;
 const PANEL_DEFAULT_WIDTH = 600;
 const PANEL_DEFAULT_HEIGHT = 420;
@@ -67,13 +69,13 @@ const stripRemoteErrorPrefix = message => String(message || '').replace(
     ''
 );
 
-const formatStatusError = error => {
+const formatStatusError = (error, locale) => {
     const message = stripRemoteErrorPrefix(error && error.message ? error.message : error);
     if (/cannot write to hid device|cannot read from hid device|hid device is disconnected|device not open/i
         .test(message)) {
-        return EST_USB_DISCONNECTED_MESSAGE;
+        return getEstText('programControls.usbDisconnected', locale);
     }
-    return message || '无法读取硬件状态';
+    return message || getEstText('hardware.readError', locale);
 };
 
 const isProgramRunning = status => (
@@ -86,23 +88,30 @@ const valueOrDash = value => (
     value === 0 || value ? String(value) : '-'
 );
 
-const hexByte = value => (
-    Number.isInteger(Number(value)) ?
-        `0x${Number(value).toString(16).toUpperCase().padStart(2, '0')}` :
-        '-'
-);
-
-const motorOutputName = value => MOTOR_OUTPUT_NAMES[value] || `unknown (${hexByte(value)})`;
-const sensorStateName = value => SENSOR_STATE_NAMES[value] || `unknown (${hexByte(value)})`;
-
-const sensorModelName = value => {
-    if (!Number(value)) return 'none';
-    return SENSOR_MODEL_NAMES[value] || `unknown (${hexByte(value)})`;
+const hexByte = value => {
+    const numberValue = Number(value);
+    if (!Number.isInteger(numberValue)) return '-';
+    return `0x${numberValue
+        .toString(16)
+        .toUpperCase()
+        .padStart(2, '0')}`;
 };
 
-const sensorModeName = (sensorType, mode) => {
+const motorOutputName = (value, locale) => (
+    MOTOR_OUTPUT_NAMES[value] || getEstText('hardware.unknown', locale, {value: hexByte(value)})
+);
+const sensorStateName = (value, locale) => (
+    SENSOR_STATE_NAMES[value] || getEstText('hardware.unknown', locale, {value: hexByte(value)})
+);
+
+const sensorModelName = (value, locale) => {
+    if (!Number(value)) return getEstText('hardware.none', locale);
+    return SENSOR_MODEL_NAMES[value] || getEstText('hardware.unknown', locale, {value: hexByte(value)});
+};
+
+const sensorModeName = (sensorType, mode, locale) => {
     const names = SENSOR_MODE_NAMES[sensorType] || SENSOR_MODE_NAMES.default;
-    return names[mode] || `unknown (${hexByte(mode)})`;
+    return names[mode] || getEstText('hardware.unknown', locale, {value: hexByte(mode)});
 };
 
 class EstHardwareStatusButton extends React.Component {
@@ -160,14 +169,17 @@ class EstHardwareStatusButton extends React.Component {
     }
 
     handleToggle () {
-        this.setState(state => ({
-            isOpen: !state.isOpen,
-            panelPosition: !state.isOpen ?
-                (state.panelPosition ?
-                    this.constrainPanelPosition(state.panelPosition) :
-                    this.getDefaultPanelPosition()) :
-                state.panelPosition
-        }), () => {
+        this.setState(state => {
+            const isOpen = !state.isOpen;
+            return {
+                isOpen,
+                panelPosition: isOpen ?
+                    (state.panelPosition ?
+                        this.constrainPanelPosition(state.panelPosition) :
+                        this.getDefaultPanelPosition()) :
+                    state.panelPosition
+            };
+        }, () => {
             if (this.state.isOpen) {
                 this.refreshStatus();
             } else {
@@ -309,13 +321,13 @@ class EstHardwareStatusButton extends React.Component {
                 connection,
                 errorMessage: isConnected || !(connection && connection.message) ?
                     null :
-                    formatStatusError(connection.message),
+                    formatStatusError(connection.message, this.props.locale),
                 status: isConnected ? connection.status : null
             });
         } catch (error) {
             this.setState({
                 connection: {state: 'error'},
-                errorMessage: formatStatusError(error),
+                errorMessage: formatStatusError(error, this.props.locale),
                 status: null
             });
         } finally {
@@ -327,28 +339,33 @@ class EstHardwareStatusButton extends React.Component {
     }
 
     renderConnectionAndBattery () {
+        const {locale} = this.props;
         const {connection, status} = this.state;
         const connected = connection && connection.state === 'connected';
         const compatibility = status && status.compatibility;
         return (
             <section className={classNames(styles.section, styles.summarySection)}>
-                <h3 className={styles.sectionTitle}>连接与电池</h3>
+                <h3 className={styles.sectionTitle}>{getEstText('hardware.connectionBattery', locale)}</h3>
                 <div className={styles.summaryGrid}>
-                    <span>连接状态</span>
-                    <strong>{connected ? '已连接' : '未连接'}</strong>
-                    <span>固件版本</span>
+                    <span>{getEstText('hardware.connectionStatus', locale)}</span>
+                    <strong>{connected ?
+                        getEstText('hardware.connected', locale) :
+                        getEstText('hardware.disconnected', locale)}</strong>
+                    <span>{getEstText('hardware.firmwareVersion', locale)}</span>
                     <strong>{status ? status.firmwareVersion : '-'}</strong>
-                    <span>协议版本</span>
+                    <span>{getEstText('hardware.protocolVersion', locale)}</span>
                     <strong>{status ? `${status.protocolMajor}.${status.protocolMinor}` : '-'}</strong>
-                    <span>兼容状态</span>
-                    <strong>{compatibility && compatibility.programCompatible ? '可运行当前程序' : '-'}</strong>
-                    <span>电量</span>
+                    <span>{getEstText('hardware.compatibility', locale)}</span>
+                    <strong>{compatibility && compatibility.programCompatible ?
+                        getEstText('hardware.programCompatible', locale) :
+                        '-'}</strong>
+                    <span>{getEstText('hardware.battery', locale)}</span>
                     <strong>
                         {status ? `${status.batteryLevel}/4 (${Math.min(status.batteryLevel, 4) * 25}%)` : '-'}
                     </strong>
-                    <span>ADC</span>
+                    <span>{getEstText('hardware.adc', locale)}</span>
                     <strong>{status ? valueOrDash(status.batteryAdcRaw) : '-'}</strong>
-                    <span>采样电压</span>
+                    <span>{getEstText('hardware.sampleVoltage', locale)}</span>
                     <strong>{status ? `${status.batterySampleMv} mV` : '-'}</strong>
                 </div>
             </section>
@@ -356,10 +373,11 @@ class EstHardwareStatusButton extends React.Component {
     }
 
     renderMotors () {
+        const {locale} = this.props;
         const motors = (this.state.status && this.state.status.motors) || [];
         return (
             <section className={classNames(styles.section, styles.portSection)}>
-                <h3 className={styles.sectionTitle}>电机</h3>
+                <h3 className={styles.sectionTitle}>{getEstText('hardware.motors', locale)}</h3>
                 <div className={styles.portList}>
                     {MOTOR_PORTS.map((port, index) => {
                         const motor = motors[index];
@@ -369,11 +387,20 @@ class EstHardwareStatusButton extends React.Component {
                                 key={port}
                             >
                                 <strong className={styles.portName}>{port}</strong>
-                                <span>连接：{motor ? '状态可读' : '无数据'}</span>
-                                <span>类型：未提供</span>
-                                <span>输出：{motor ? motorOutputName(motor.outputState) : '-'}</span>
-                                <span>功率：{motor ? motor.powerPercent : '-'}</span>
-                                <span>角度：{motor ? motor.tachoCount : '-'}</span>
+                                <span>
+                                    {getEstText('hardware.connectionStatus', locale)}:
+                                    {motor ?
+                                        getEstText('hardware.connectedReadable', locale) :
+                                        getEstText('hardware.noData', locale)}
+                                </span>
+                                <span>{getEstText('hardware.type', locale)}:
+                                    {getEstText('hardware.typeUnavailable', locale)}</span>
+                                <span>{getEstText('hardware.output', locale)}:
+                                    {motor ? motorOutputName(motor.outputState, locale) : '-'}</span>
+                                <span>{getEstText('hardware.power', locale)}:
+                                    {motor ? motor.powerPercent : '-'}</span>
+                                <span>{getEstText('hardware.angle', locale)}:
+                                    {motor ? motor.tachoCount : '-'}</span>
                             </div>
                         );
                     })}
@@ -383,10 +410,11 @@ class EstHardwareStatusButton extends React.Component {
     }
 
     renderSensors () {
+        const {locale} = this.props;
         const sensors = (this.state.status && this.state.status.sensors) || [];
         return (
             <section className={classNames(styles.section, styles.portSection)}>
-                <h3 className={styles.sectionTitle}>传感器</h3>
+                <h3 className={styles.sectionTitle}>{getEstText('hardware.sensors', locale)}</h3>
                 <div className={styles.portList}>
                     {SENSOR_PORTS.map((port, index) => {
                         const sensor = sensors[index];
@@ -396,11 +424,20 @@ class EstHardwareStatusButton extends React.Component {
                                 key={port}
                             >
                                 <strong className={styles.portName}>{port}</strong>
-                                <span>状态：{sensor ? sensorStateName(sensor.state) : '-'}</span>
-                                <span>类型：{sensor ? sensorModelName(sensor.sensorType) : '-'}</span>
-                                <span>模式：{sensor ? sensorModeName(sensor.sensorType, sensor.mode) : '-'}</span>
-                                <span>有效：{sensor ? (sensor.valueValid ? '是' : '否') : '-'}</span>
-                                <span>当前值：{sensor && sensor.valueValid ? sensor.value : '-'}</span>
+                                <span>{getEstText('hardware.state', locale)}:
+                                    {sensor ? sensorStateName(sensor.state, locale) : '-'}</span>
+                                <span>{getEstText('hardware.type', locale)}:
+                                    {sensor ? sensorModelName(sensor.sensorType, locale) : '-'}</span>
+                                <span>{getEstText('hardware.mode', locale)}:
+                                    {sensor ? sensorModeName(sensor.sensorType, sensor.mode, locale) : '-'}</span>
+                                <span>{getEstText('hardware.valid', locale)}:
+                                    {sensor ?
+                                        (sensor.valueValid ?
+                                            getEstText('hardware.yes', locale) :
+                                            getEstText('hardware.no', locale)) :
+                                        '-'}</span>
+                                <span>{getEstText('hardware.value', locale)}:
+                                    {sensor && sensor.valueValid ? sensor.value : '-'}</span>
                             </div>
                         );
                     })}
@@ -419,6 +456,7 @@ class EstHardwareStatusButton extends React.Component {
     }
 
     renderPanel () {
+        const {locale} = this.props;
         const {
             errorMessage,
             isLoading,
@@ -426,7 +464,7 @@ class EstHardwareStatusButton extends React.Component {
         } = this.state;
         const programRunning = isProgramRunning(status);
         const pollingError = status && status.statusPollingError ?
-            formatStatusError(status.statusPollingError) : null;
+            formatStatusError(status.statusPollingError, this.props.locale) : null;
         const panelStyle = this.state.panelPosition ? {
             left: `${this.state.panelPosition.left}px`,
             top: `${this.state.panelPosition.top}px`
@@ -434,7 +472,7 @@ class EstHardwareStatusButton extends React.Component {
         return (
             <div className={styles.overlay}>
                 <aside
-                    aria-label="硬件状态"
+                    aria-label={getEstText('hardware.title', locale)}
                     className={styles.panel}
                     ref={this.panelRef}
                     role="dialog"
@@ -445,8 +483,10 @@ class EstHardwareStatusButton extends React.Component {
                         onMouseDown={this.handlePanelDragStart}
                     >
                         <div>
-                            <h2>硬件状态</h2>
-                            <p>{isLoading ? '正在刷新…' : 'EST 主机与外设信息'}</p>
+                            <h2>{getEstText('hardware.title', locale)}</h2>
+                            <p>{isLoading ?
+                                getEstText('hardware.refreshing', locale) :
+                                getEstText('hardware.subtitle', locale)}</p>
                         </div>
                         <div className={styles.panelActions}>
                             <button
@@ -455,10 +495,10 @@ class EstHardwareStatusButton extends React.Component {
                                 type="button"
                                 onClick={this.handleManualRefresh}
                             >
-                                手动刷新
+                                {getEstText('hardware.manualRefresh', locale)}
                             </button>
                             <button
-                                aria-label="关闭硬件状态"
+                                aria-label={getEstText('hardware.close', locale)}
                                 className={styles.closeButton}
                                 type="button"
                                 onClick={this.handleClose}
@@ -469,7 +509,7 @@ class EstHardwareStatusButton extends React.Component {
                     </div>
                     {programRunning && (
                         <div className={styles.notice}>
-                            程序运行中，外设详情暂停刷新
+                            {getEstText('hardware.runningNotice', locale)}
                         </div>
                     )}
                     {errorMessage && (
@@ -488,7 +528,7 @@ class EstHardwareStatusButton extends React.Component {
                             {this.renderConnectionAndBattery()}
                         </React.Fragment>
                     ) : (
-                        <p className={styles.emptyState}>EST 未连接</p>
+                        <p className={styles.emptyState}>{getEstText('hardware.notConnected', locale)}</p>
                     )}
                 </aside>
             </div>
@@ -496,31 +536,23 @@ class EstHardwareStatusButton extends React.Component {
     }
 
     render () {
+        const {locale} = this.props;
         const {isOpen} = this.state;
         return (
             <div className={styles.container}>
                 <button
                     aria-expanded={isOpen}
-                    aria-label="硬件状态"
+                    aria-label={getEstText('hardware.title', locale)}
                     className={classNames(
                         styles.menuButton,
                         isOpen && styles.menuButtonOpen
                     )}
                     ref={this.buttonRef}
-                    title="硬件状态"
+                    title={getEstText('hardware.title', locale)}
                     type="button"
                     onClick={this.handleToggle}
                 >
-                    <svg
-                        aria-hidden="true"
-                        className={styles.menuIcon}
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            d="M8 3h8v3h3v12h-3v3H8v-3H5V6h3V3zm2 2v3H7v8h3v3h4v-3h3V8h-3V5h-4zm0 5h4v4h-4v-4z"
-                        />
-                    </svg>
-                    <span className={styles.menuText}>硬件状态</span>
+                    <span className={styles.menuText}>{getEstText('menu.hardwareStatus', locale)}</span>
                 </button>
                 {isOpen ? this.renderPanel() : null}
             </div>
@@ -528,9 +560,19 @@ class EstHardwareStatusButton extends React.Component {
     }
 }
 
+EstHardwareStatusButton.propTypes = {
+    locale: PropTypes.string.isRequired
+};
+
+const mapStateToProps = state => ({
+    locale: state.locales.locale
+});
+
 export {
     formatStatusError,
     isProgramRunning
 };
 
-export default EstHardwareStatusButton;
+export {EstHardwareStatusButton};
+
+export default connect(mapStateToProps)(EstHardwareStatusButton);

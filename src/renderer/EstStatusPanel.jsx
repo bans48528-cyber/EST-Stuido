@@ -1,10 +1,13 @@
 import {ipcRenderer} from 'electron';
+import PropTypes from 'prop-types';
 import React from 'react';
+import {connect} from 'react-redux';
 
 import {
     EST_CONNECTION_STATUS_EVENT,
     EST_PROGRAM_ACTIVITY_EVENT
 } from './est-connection-status';
+import {getEstText} from './est-i18n';
 import styles from './est-status-panel.css';
 
 const INITIAL_REFRESH_DELAY_MS = 1000;
@@ -96,15 +99,16 @@ class EstStatusPanel extends React.Component {
     }
 
     render () {
+        const {locale} = this.props;
         const {isCompatible, isConnected} = this.state;
         let statusClass = styles.disconnected;
-        let statusText = 'EST 未连接';
+        let statusText = getEstText('status.disconnected', locale);
         if (isConnected && isCompatible) {
             statusClass = styles.connected;
-            statusText = 'EST 已连接';
+            statusText = getEstText('status.connected', locale);
         } else if (isConnected) {
             statusClass = styles.upgradeRequired;
-            statusText = 'EST 需升级';
+            statusText = getEstText('status.upgradeRequired', locale);
         }
         return (
             <div className={styles.statusBarItem}>
@@ -115,4 +119,14 @@ class EstStatusPanel extends React.Component {
     }
 }
 
-export default EstStatusPanel;
+EstStatusPanel.propTypes = {
+    locale: PropTypes.string.isRequired
+};
+
+const mapStateToProps = state => ({
+    locale: state.locales.locale
+});
+
+export {EstStatusPanel};
+
+export default connect(mapStateToProps)(EstStatusPanel);

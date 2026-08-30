@@ -1,6 +1,36 @@
+import displayBlockIcon from './est-display-icon.svg';
+import driveBlockIcon from './est-drive-icon.svg';
+import eventHatBlockIcon from './est-event-hat-icon.svg';
+import eventHostBlockIcon from './est-event-host-icon.svg';
+import motorBlockIcon from './est-motor-icon.svg';
+import motorBlockIconCentered from './est-motor-icon-centered.svg';
+import musicBlockIcon from './est-music-icon.svg';
+import sensorButtonBlockIcon from './est-sensor-button-icon.svg';
+import sensorButtonBlockIconCentered from './est-sensor-button-icon-centered.svg';
+import sensorColorBlockIcon from './est-sensor-color-icon.svg';
+import sensorColorBlockIconCentered from './est-sensor-color-icon-centered.svg';
+import sensorGyroBlockIcon from './est-sensor-gyro-icon.svg';
+import sensorGyroBlockIconCentered from './est-sensor-gyro-icon-centered.svg';
+import sensorHostBlockIcon from './est-sensor-host-icon.svg';
+import sensorHostBlockIconCentered from './est-sensor-host-icon-centered.svg';
+import sensorIrBlockIcon from './est-sensor-ir-icon.svg';
+import sensorIrBlockIconCentered from './est-sensor-ir-icon-centered.svg';
+import sensorTemperatureBlockIcon from './est-sensor-temperature-icon.svg';
+import sensorTemperatureBlockIconCentered from './est-sensor-temperature-icon-centered.svg';
+import sensorUltrasonicBlockIcon from './est-sensor-ultrasonic-icon.svg';
+import sensorUltrasonicBlockIconCentered from './est-sensor-ultrasonic-icon-centered.svg';
 import steeringArrowIcon from './steering-arrow.svg';
 import workspaceRedoIcon from './workspace-redo.svg';
 import workspaceUndoIcon from './workspace-undo.svg';
+import {
+    EST_DEFAULT_LOCALE,
+    EST_LOCALE_CHANGED_EVENT,
+    formatEstSteeringDisplayText,
+    getCurrentEstLocale,
+    getEstImageOptions,
+    getEstLocalizedOptions,
+    getEstText
+} from '../est-i18n';
 
 const CATEGORY_COLOURS = {
     motor: {primary: '#0090F5', secondary: '#0078CC', tertiary: '#005FA0'},
@@ -24,7 +54,8 @@ const CATEGORY_BLOCK_IDS = {
         'motor_start_power',
         'motor_reset_degrees',
         'motor_degrees',
-        'motor_speed'
+        'motor_speed',
+        'motor_stalled'
     ],
     movement: [
         'drive_move_for',
@@ -155,12 +186,55 @@ const EST_STEERING_DIAL_COLOURS = {
     detail: '#FFFFFF'
 };
 
-const MOTOR_PORT_OPTIONS = [['A', 'A'], ['B', 'B'], ['C', 'C'], ['D', 'D']];
-const SENSOR_PORT_OPTIONS = [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']];
-const MOTOR_DIRECTION_OPTIONS = [['顺时针', 'clockwise'], ['逆时针', 'counterclockwise']];
-const DRIVE_DIRECTION_OPTIONS = [['前', 'forward'], ['后', 'backward']];
-const MOTOR_UNIT_OPTIONS = [['圈', 'rotations'], ['度', 'degrees'], ['秒', 'seconds']];
-const MOTOR_STOP_ACTION_OPTIONS = [['保持位置', 'hold'], ['惯性滑行', 'float']];
+const MOTOR_PORT_VALUES = ['A', 'B', 'C', 'D'];
+const SENSOR_PORT_VALUES = ['1', '2', '3', '4'];
+const MOTOR_DIRECTION_VALUES = ['clockwise', 'counterclockwise'];
+const DRIVE_DIRECTION_VALUES = ['forward', 'backward'];
+const MOTOR_UNIT_VALUES = ['rotations', 'degrees', 'seconds'];
+const MOTOR_STOP_ACTION_VALUES = ['hold', 'float'];
+const FONT_VALUES = [
+    'regular_black',
+    'bold_black',
+    'large_black',
+    'regular_white',
+    'bold_white',
+    'large_white'
+];
+const STATUS_LIGHT_VALUES = ['off', 'red', 'blue'];
+const SOUND_VALUES = ['communication_hello'];
+const TOUCH_EVENT_VALUES = ['pressed', 'released'];
+const COMPARATOR_VALUES = ['less', 'greater', 'equal', 'changed'];
+const COLOR_VALUES = ['none', 'black', 'blue', 'green', 'yellow', 'red', 'white', 'brown'];
+const TEMPERATURE_UNIT_VALUES = ['celsius', 'fahrenheit'];
+const BEACON_EVENT_VALUES = [
+    'top_left_pressed',
+    'bottom_left_pressed',
+    'left_released',
+    'top_right_pressed',
+    'bottom_right_pressed',
+    'right_released',
+    'active'
+];
+const BEACON_BUTTON_VALUES = ['none', 'top_left', 'bottom_left', 'top_right', 'bottom_right', 'beacon'];
+const BEACON_CHANNEL_VALUES = ['1', '2', '3', '4'];
+const BRICK_BUTTON_VALUES = ['none', 'back', 'left', 'confirm', 'right', 'up', 'down'];
+const DISTANCE_UNIT_VALUES = ['centimeters', 'inches'];
+const BEACON_PROPERTY_VALUES = ['heading', 'proximity'];
+const CALIBRATION_VALUES = ['minimum', 'maximum'];
+const MESSAGE_VALUES = ['message_1'];
+const STOP_SCOPE_VALUES = ['this_stack', 'all'];
+const literalOptions = values => values.map(value => [value, value]);
+const optionsFor = (group, values, locale) => getEstLocalizedOptions(group, values, locale);
+const colorEventOptionsFor = locale => optionsFor('color', COLOR_VALUES, locale).concat([
+    [getEstText('option.colorEvent.changed', locale), 'changed']
+]);
+
+const MOTOR_PORT_OPTIONS = literalOptions(MOTOR_PORT_VALUES);
+const SENSOR_PORT_OPTIONS = literalOptions(SENSOR_PORT_VALUES);
+const MOTOR_DIRECTION_OPTIONS = optionsFor('motorDirection', MOTOR_DIRECTION_VALUES, EST_DEFAULT_LOCALE);
+const DRIVE_DIRECTION_OPTIONS = optionsFor('driveDirection', DRIVE_DIRECTION_VALUES, EST_DEFAULT_LOCALE);
+const MOTOR_UNIT_OPTIONS = optionsFor('motorUnit', MOTOR_UNIT_VALUES, EST_DEFAULT_LOCALE);
+const MOTOR_STOP_ACTION_OPTIONS = optionsFor('stopAction', MOTOR_STOP_ACTION_VALUES, EST_DEFAULT_LOCALE);
 const DISPLAY_IMAGE_IDS = [
     'Expressions/Big smile',
     'Expressions/Heart large',
@@ -205,75 +279,90 @@ const DISPLAY_IMAGE_IDS = [
     'Eyes/Up',
     'Eyes/Winking'
 ];
-const IMAGE_OPTIONS = DISPLAY_IMAGE_IDS.map(id => [id.replace('/', ' / '), id]);
-const FONT_OPTIONS = [
-    ['常规黑色', 'regular_black'],
-    ['粗体黑色', 'bold_black'],
-    ['大号黑色', 'large_black'],
-    ['常规白色', 'regular_white'],
-    ['粗体白色', 'bold_white'],
-    ['大号白色', 'large_white']
-];
-const STATUS_LIGHT_OPTIONS = [
-    ['关闭', 'off'],
-    ['红色', 'red'],
-    ['蓝色', 'blue']
-];
-const SOUND_OPTIONS = [['Communication / Hello', 'communication_hello']];
-const TOUCH_EVENT_OPTIONS = [['被按压', 'pressed'], ['被松开', 'released']];
-const COMPARATOR_OPTIONS = [
-    ['小于 (<)', 'less'],
-    ['大于 (>)', 'greater'],
-    ['等于 (=)', 'equal'],
-    ['变化超过', 'changed']
-];
-const COLOR_OPTIONS = [
-    ['无色', 'none'],
-    ['黑色', 'black'],
-    ['蓝色', 'blue'],
-    ['绿色', 'green'],
-    ['黄色', 'yellow'],
-    ['红色', 'red'],
-    ['白色', 'white'],
-    ['棕色', 'brown']
-];
-const COLOR_EVENT_OPTIONS = COLOR_OPTIONS.concat([['已改变', 'changed']]);
-const TEMPERATURE_UNIT_OPTIONS = [['摄氏', 'celsius'], ['华氏', 'fahrenheit']];
-const BEACON_EVENT_OPTIONS = [
-    ['左上按钮被按压', 'top_left_pressed'],
-    ['左下按钮被按压', 'bottom_left_pressed'],
-    ['未按压左按钮', 'left_released'],
-    ['右上按钮被按压', 'top_right_pressed'],
-    ['右下按钮被按压', 'bottom_right_pressed'],
-    ['未按压右按钮', 'right_released'],
-    ['信标处于活动状态', 'active']
-];
-const BEACON_BUTTON_OPTIONS = [
-    ['无按钮', 'none'],
-    ['左上按钮', 'top_left'],
-    ['左下按钮', 'bottom_left'],
-    ['右上按钮', 'top_right'],
-    ['右下按钮', 'bottom_right'],
-    ['信标按钮', 'beacon']
-];
-const BEACON_CHANNEL_OPTIONS = [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']];
-const BRICK_BUTTON_OPTIONS = [
-    ['无', 'none'],
-    ['返回', 'back'],
-    ['左', 'left'],
-    ['确认', 'confirm'],
-    ['右', 'right'],
-    ['上', 'up'],
-    ['下', 'down']
-];
-const DISTANCE_UNIT_OPTIONS = [['厘米', 'centimeters'], ['英寸', 'inches']];
-const BEACON_PROPERTY_OPTIONS = [['朝向', 'heading'], ['近程', 'proximity']];
-const CALIBRATION_OPTIONS = [['最小值', 'minimum'], ['最大值', 'maximum']];
-const MESSAGE_OPTIONS = [['消息1', 'message_1']];
-const STOP_SCOPE_OPTIONS = [
-    ['此程序堆', 'this_stack'],
-    ['退出整个程序', 'all']
-];
+const IMAGE_OPTIONS = getEstImageOptions(DISPLAY_IMAGE_IDS);
+const FONT_OPTIONS = optionsFor('font', FONT_VALUES, EST_DEFAULT_LOCALE);
+const STATUS_LIGHT_OPTIONS = optionsFor('statusLight', STATUS_LIGHT_VALUES, EST_DEFAULT_LOCALE);
+const SOUND_OPTIONS = optionsFor('sound', SOUND_VALUES, EST_DEFAULT_LOCALE);
+const TOUCH_EVENT_OPTIONS = optionsFor('touchEvent', TOUCH_EVENT_VALUES, EST_DEFAULT_LOCALE);
+const COMPARATOR_OPTIONS = optionsFor('comparator', COMPARATOR_VALUES, EST_DEFAULT_LOCALE);
+const COLOR_OPTIONS = optionsFor('color', COLOR_VALUES, EST_DEFAULT_LOCALE);
+const COLOR_EVENT_OPTIONS = colorEventOptionsFor(EST_DEFAULT_LOCALE);
+const TEMPERATURE_UNIT_OPTIONS = optionsFor('temperatureUnit', TEMPERATURE_UNIT_VALUES, EST_DEFAULT_LOCALE);
+const BEACON_EVENT_OPTIONS = optionsFor('beaconEvent', BEACON_EVENT_VALUES, EST_DEFAULT_LOCALE);
+const BEACON_BUTTON_OPTIONS = optionsFor('beaconButton', BEACON_BUTTON_VALUES, EST_DEFAULT_LOCALE);
+const BEACON_CHANNEL_OPTIONS = literalOptions(BEACON_CHANNEL_VALUES);
+const BRICK_BUTTON_OPTIONS = optionsFor('brickButton', BRICK_BUTTON_VALUES, EST_DEFAULT_LOCALE);
+const DISTANCE_UNIT_OPTIONS = optionsFor('distanceUnit', DISTANCE_UNIT_VALUES, EST_DEFAULT_LOCALE);
+const BEACON_PROPERTY_OPTIONS = optionsFor('beaconProperty', BEACON_PROPERTY_VALUES, EST_DEFAULT_LOCALE);
+const CALIBRATION_OPTIONS = optionsFor('calibration', CALIBRATION_VALUES, EST_DEFAULT_LOCALE);
+const MESSAGE_OPTIONS = optionsFor('message', MESSAGE_VALUES, EST_DEFAULT_LOCALE);
+const STOP_SCOPE_OPTIONS = optionsFor('stopScope', STOP_SCOPE_VALUES, EST_DEFAULT_LOCALE);
+const EST_BLOCK_ICON_SIZE = 38;
+const EST_LARGE_BLOCK_ICON_SIZE = 46;
+const EST_ICON_DIVIDER_WIDTH = 10;
+const EST_ICON_DIVIDER_LENGTH = Number((EST_BLOCK_ICON_SIZE * 0.52 * 1.3).toFixed(2));
+const svgDataUri = source => `data:image/svg+xml;utf8,${encodeURIComponent(source)}`;
+const blockIcon = (name, src, altMessageId, options = {}) => ({centered = false} = {}) => {
+    const size = options.size || EST_BLOCK_ICON_SIZE;
+    const iconSource = centered && options.centeredSrc ? options.centeredSrc : src;
+    return {
+        type: 'field_image',
+        name,
+        src: iconSource,
+        width: size,
+        height: size,
+        alt: getEstText(altMessageId),
+        flip_rtl: true
+    };
+};
+const iconDivider = (style, height) => {
+    const lineTop = Number(((height - EST_ICON_DIVIDER_LENGTH) / 2).toFixed(2));
+    const lineBottom = Number((lineTop + EST_ICON_DIVIDER_LENGTH).toFixed(2));
+    return {
+        type: 'field_image',
+        name: 'EST_ICON_DIVIDER',
+        src: svgDataUri(
+            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${EST_ICON_DIVIDER_WIDTH} ${height}">` +
+            `<path d="M5 ${lineTop}V${lineBottom}" stroke="${CATEGORY_COLOURS[style].tertiary}" ` +
+            'stroke-width="1.2" stroke-linecap="round"/></svg>'
+        ),
+        width: EST_ICON_DIVIDER_WIDTH,
+        height,
+        alt: getEstText('icon.divider'),
+        flip_rtl: true
+    };
+};
+const motorIcon = blockIcon('EST_MOTOR_ICON', motorBlockIcon, 'icon.motor', {
+    centeredSrc: motorBlockIconCentered
+});
+const driveIcon = blockIcon('EST_DRIVE_ICON', driveBlockIcon, 'icon.drive');
+const displayIcon = blockIcon('EST_DISPLAY_ICON', displayBlockIcon, 'icon.display');
+const musicIcon = blockIcon('EST_MUSIC_ICON', musicBlockIcon, 'icon.music');
+const eventHatIcon = blockIcon('EST_EVENT_HAT_ICON', eventHatBlockIcon, 'icon.event');
+const eventHostIcon = blockIcon('EST_EVENT_HOST_ICON', eventHostBlockIcon, 'icon.host');
+const sensorHostIcon = blockIcon('EST_SENSOR_HOST_ICON', sensorHostBlockIcon, 'icon.host', {
+    centeredSrc: sensorHostBlockIconCentered
+});
+const sensorButtonIcon = blockIcon('EST_SENSOR_BUTTON_ICON', sensorButtonBlockIcon, 'icon.button', {
+    centeredSrc: sensorButtonBlockIconCentered
+});
+const sensorColorIcon = blockIcon('EST_SENSOR_COLOR_ICON', sensorColorBlockIcon, 'icon.color', {
+    centeredSrc: sensorColorBlockIconCentered
+});
+const sensorTemperatureIcon = blockIcon('EST_SENSOR_TEMPERATURE_ICON', sensorTemperatureBlockIcon, 'icon.temperature', {
+    centeredSrc: sensorTemperatureBlockIconCentered
+});
+const sensorUltrasonicIcon = blockIcon('EST_SENSOR_ULTRASONIC_ICON', sensorUltrasonicBlockIcon, 'icon.ultrasonic', {
+    centeredSrc: sensorUltrasonicBlockIconCentered,
+    size: EST_LARGE_BLOCK_ICON_SIZE
+});
+const sensorIrIcon = blockIcon('EST_SENSOR_IR_ICON', sensorIrBlockIcon, 'icon.ir', {
+    centeredSrc: sensorIrBlockIconCentered,
+    size: EST_LARGE_BLOCK_ICON_SIZE
+});
+const sensorGyroIcon = blockIcon('EST_SENSOR_GYRO_ICON', sensorGyroBlockIcon, 'icon.gyro', {
+    centeredSrc: sensorGyroBlockIconCentered
+});
 const dropdown = (name, options) => ({type: 'field_dropdown', name, options});
 const valueInput = (name, check) => {
     const input = {type: 'input_value', name};
@@ -322,6 +411,21 @@ const endCommand = (style, type, message0, args0 = []) => styled(style, {
     previousStatement: null
 });
 
+const shiftPlaceholders = (message, offset = 1) => (
+    message.replace(/%(\d+)/g, (match, index) => `%${Number(index) + offset}`)
+);
+const withLeadingIcon = (style, message0, args0, iconFactory, iconOptions = {}) => {
+    const icon = iconFactory(iconOptions);
+    return {
+        message0: `%1 %2 ${shiftPlaceholders(message0, 2)}`,
+        args0: [icon, iconDivider(style, icon.height)].concat(args0)
+    };
+};
+const commandWithIcon = (style, type, iconFactory, message0, args0 = []) => {
+    const definition = withLeadingIcon(style, message0, args0, iconFactory);
+    return command(style, type, definition.message0, definition.args0);
+};
+
 const reporter = (ScratchBlocks, style, type, message0, args0 = [], output = 'Number') => styled(style, {
     type,
     message0,
@@ -330,6 +434,11 @@ const reporter = (ScratchBlocks, style, type, message0, args0 = [], output = 'Nu
     output,
     outputShape: ScratchBlocks.OUTPUT_SHAPE_ROUND
 });
+
+const reporterWithIcon = (ScratchBlocks, style, type, iconFactory, message0, args0 = [], output = 'Number') => {
+    const definition = withLeadingIcon(style, message0, args0, iconFactory, {centered: true});
+    return reporter(ScratchBlocks, style, type, definition.message0, definition.args0, output);
+};
 
 const booleanReporter = (ScratchBlocks, style, type, message0, args0 = []) => styled(style, {
     type,
@@ -340,6 +449,11 @@ const booleanReporter = (ScratchBlocks, style, type, message0, args0 = []) => st
     outputShape: ScratchBlocks.OUTPUT_SHAPE_HEXAGONAL
 });
 
+const booleanReporterWithIcon = (ScratchBlocks, style, type, iconFactory, message0, args0 = []) => {
+    const definition = withLeadingIcon(style, message0, args0, iconFactory, {centered: true});
+    return booleanReporter(ScratchBlocks, style, type, definition.message0, definition.args0);
+};
+
 const hat = (style, type, message0, args0 = []) => styled(style, {
     type,
     message0,
@@ -348,17 +462,19 @@ const hat = (style, type, message0, args0 = []) => styled(style, {
     extensions: ['shape_hat']
 });
 
+const hatWithIcon = (style, type, iconFactory, message0, args0 = []) => {
+    const definition = withLeadingIcon(style, message0, args0, iconFactory);
+    return hat(style, type, definition.message0, definition.args0);
+};
+
 const clampSteering = value => Math.max(
     -EST_STEERING_LIMIT,
     Math.min(EST_STEERING_LIMIT, value)
 );
 const isSteeringDialMarkVisible = angle => angle === 0 || angle >= 180;
-const formatSteeringDisplayText = value => {
-    const steering = clampSteering(Math.round(Number(value) || 0));
-    if (steering < 0) return `左:${steering}`;
-    if (steering > 0) return `右:${steering}`;
-    return '前:0';
-};
+const formatSteeringDisplayText = (value, locale = getCurrentEstLocale()) => (
+    formatEstSteeringDisplayText(clampSteering(Math.round(Number(value) || 0)), locale)
+);
 
 const registerEstSteeringField = ScratchBlocks => {
     if (!ScratchBlocks.Field || !ScratchBlocks.FieldAngle || !ScratchBlocks.FieldTextInput) return;
@@ -510,373 +626,530 @@ const makeSensorPortPickerDefinition = ScratchBlocks => ({
     colourTertiary: CATEGORY_COLOURS.sensing.tertiary
 });
 
-const makeMotorDefinitions = ScratchBlocks => [
-    command('motor', 'motor_run_for', '%1 %2 运行 %3 %4', [
-        valueInput('PORT'),
-        dropdown('DIRECTION', MOTOR_DIRECTION_OPTIONS),
-        valueInput('AMOUNT', 'Number'),
-        dropdown('UNIT', MOTOR_UNIT_OPTIONS)
-    ]),
-    command('motor', 'motor_start', '%1 %2 启动电机', [
-        valueInput('PORT'),
-        dropdown('DIRECTION', MOTOR_DIRECTION_OPTIONS)
-    ]),
-    command('motor', 'motor_stop', '%1 停止电机', [valueInput('PORT')]),
-    command('motor', 'motor_set_speed', '%1 将速度设置为 %2 %%', [
-        valueInput('PORT'),
-        valueInput('SPEED', 'Number')
-    ]),
-    command('motor', 'motor_set_stop_action', '%1 将电机设置为在停止处 %2', [
-        valueInput('PORT'),
-        dropdown('STOP_ACTION', MOTOR_STOP_ACTION_OPTIONS)
-    ]),
-    command('motor', 'motor_run_for_speed', '%1 以 %2 %% 的速度运行 %3 %4', [
-        valueInput('PORT'),
-        valueInput('SPEED', 'Number'),
-        valueInput('AMOUNT', 'Number'),
-        dropdown('UNIT', MOTOR_UNIT_OPTIONS)
-    ]),
-    command('motor', 'motor_start_speed', '%1 以 %2 %% 的速度启动电机', [
-        valueInput('PORT'),
-        valueInput('SPEED', 'Number')
-    ]),
-    command('motor', 'motor_start_power', '%1 以 %2 %% 的功率启动电机', [
-        valueInput('PORT'),
-        valueInput('POWER', 'Number')
-    ]),
-    command('motor', 'motor_reset_degrees', '%1 重置运转度数', [valueInput('PORT')]),
-    reporter(ScratchBlocks, 'motor', 'motor_degrees', '%1 运转度数', [valueInput('PORT')]),
-    reporter(ScratchBlocks, 'motor', 'motor_speed', '%1 速度', [valueInput('PORT')])
-];
-
-const makeMovementDefinitions = () => [
-    command('movement', 'drive_move_for', '向 %1 移动 %2 %3', [
-        dropdown('DIRECTION', DRIVE_DIRECTION_OPTIONS),
-        valueInput('AMOUNT', 'Number'),
-        dropdown('UNIT', MOTOR_UNIT_OPTIONS)
-    ]),
-    command('movement', 'drive_steer_for', '向 %1 移动 %2 %3', [
-        valueInput('STEERING', 'Number'),
-        valueInput('AMOUNT', 'Number'),
-        dropdown('UNIT', MOTOR_UNIT_OPTIONS)
-    ]),
-    command('movement', 'drive_start_steer', '开始向 %1 移动', [valueInput('STEERING', 'Number')]),
-    command('movement', 'drive_stop', '停止运动'),
-    command('movement', 'drive_set_speed', '将移动速度设置为 %1 %%', [valueInput('SPEED', 'Number')]),
-    command('movement', 'drive_set_pair', '将运转电机设置为 %1 和 %2', [
-        valueInput('LEFT_PORT'),
-        valueInput('RIGHT_PORT')
-    ]),
-    command('movement', 'drive_set_stop_action', '将运转电机设置为停止时 %1', [
-        dropdown('STOP_ACTION', MOTOR_STOP_ACTION_OPTIONS)
-    ]),
-    command('movement', 'drive_steer_for_speed', '以 %1 %% 的速度向 %2 移动 %3 %4', [
-        valueInput('SPEED', 'Number'),
-        valueInput('STEERING', 'Number'),
-        valueInput('AMOUNT', 'Number'),
-        dropdown('UNIT', MOTOR_UNIT_OPTIONS)
-    ]),
-    command('movement', 'drive_dual_speed_for', '以 %1 %2 %% 的速度移动 %3 %4', [
-        valueInput('LEFT_SPEED', 'Number'),
-        valueInput('RIGHT_SPEED', 'Number'),
-        valueInput('AMOUNT', 'Number'),
-        dropdown('UNIT', MOTOR_UNIT_OPTIONS)
-    ]),
-    command('movement', 'drive_start_steer_speed', '以 %1 %% 的速度开始向 %2 移动', [
-        valueInput('SPEED', 'Number'),
-        valueInput('STEERING', 'Number')
-    ]),
-    command('movement', 'drive_start_dual_speed', '以 %1 %2 %% 的速度开始移动', [
-        valueInput('LEFT_SPEED', 'Number'),
-        valueInput('RIGHT_SPEED', 'Number')
-    ])
-];
-
-const makeDisplayDefinitions = () => [
-    command('display', 'display_image_for', '显示 %1 %2 秒', [
-        dropdown('IMAGE', IMAGE_OPTIONS),
-        valueInput('SECONDS', 'Number')
-    ]),
-    command('display', 'display_image', '显示 %1', [dropdown('IMAGE', IMAGE_OPTIONS)]),
-    command('display', 'display_text_line', '在第 %1 行写入 %2', [
-        valueInput('LINE', 'Number'),
-        valueInput('TEXT')
-    ]),
-    command('display', 'display_text_xy', '使用字体 %1 在 %2 , %3 处写入 %4', [
-        dropdown('FONT', FONT_OPTIONS),
-        valueInput('X', 'Number'),
-        valueInput('Y', 'Number'),
-        valueInput('TEXT')
-    ]),
-    command('display', 'display_clear', '清除显示'),
-    command('display', 'display_status_light', '将状态灯设置为 %1', [
-        dropdown('STATUS_MODE', STATUS_LIGHT_OPTIONS)
-    ])
-];
-
-const makeSoundDefinitions = () => [
-    command('sound', 'sound_play_wait', '播放声音 %1 直到完成', [dropdown('SOUND', SOUND_OPTIONS)]),
-    command('sound', 'sound_play', '开始播放声音 %1', [dropdown('SOUND', SOUND_OPTIONS)]),
-    command('sound', 'sound_beep_for', '播放警笛声 %1 %2 秒', [
-        valueInput('NOTE', 'Number'),
-        valueInput('SECONDS', 'Number')
-    ]),
-    command('sound', 'sound_beep', '开始播放警笛声 %1', [valueInput('NOTE', 'Number')]),
-    command('sound', 'sound_stop_all', '停止所有声音'),
-    command('sound', 'sound_set_volume', '将音量设置为 %1 %%', [valueInput('VOLUME', 'Number')])
-];
-
-const makeEventDefinitions = () => [
-    hat('event', 'event_program_start', '当程序启动时'),
-    hat('event', 'event_color', '%1 当颜色为 %2', [
-        valueInput('PORT'),
-        dropdown('COLOR_EVENT', COLOR_EVENT_OPTIONS)
-    ]),
-    hat('event', 'event_touch', '%1 当 %2', [
-        valueInput('PORT'),
-        dropdown('TOUCH_EVENT', TOUCH_EVENT_OPTIONS)
-    ]),
-    hat('event', 'event_ultrasonic', '%1 当距离 %2 %3 %4', [
-        valueInput('PORT'),
-        dropdown('COMPARATOR', COMPARATOR_OPTIONS),
-        valueInput('VALUE', 'Number'),
-        dropdown('UNIT', DISTANCE_UNIT_OPTIONS)
-    ]),
-    hat('event', 'event_ir_proximity', '%1 当近程 %2 %3 %%', [
-        valueInput('PORT'),
-        dropdown('COMPARATOR', COMPARATOR_OPTIONS),
-        valueInput('VALUE', 'Number')
-    ]),
-    hat('event', 'event_ir_beacon_button', '%1 当信标 %2 %3 时', [
-        valueInput('PORT'),
-        dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
-        dropdown('BEACON_EVENT', BEACON_EVENT_OPTIONS)
-    ]),
-    hat('event', 'event_gyro_angle', '%1 当角度 %2 %3° 时', [
-        valueInput('PORT'),
-        dropdown('COMPARATOR', COMPARATOR_OPTIONS),
-        valueInput('VALUE', 'Number')
-    ]),
-    hat('event', 'event_brick_button', '当 %1 按钮 %2', [
-        dropdown('BUTTON', BRICK_BUTTON_OPTIONS),
-        dropdown('BUTTON_EVENT', TOUCH_EVENT_OPTIONS)
-    ]),
-    hat('event', 'event_condition', '当 %1', [valueInput('CONDITION', 'Boolean')]),
-    hat('event', 'event_broadcast_received', '当接收到 %1', [dropdown('MESSAGE', MESSAGE_OPTIONS)]),
-    command('event', 'event_broadcast', '广播 %1', [dropdown('MESSAGE', MESSAGE_OPTIONS)]),
-    command('event', 'event_broadcast_wait', '广播 %1 并等待', [dropdown('MESSAGE', MESSAGE_OPTIONS)]),
-    hat('event', 'event_timer', '当计时器 > %1', [valueInput('SECONDS', 'Number')])
-];
-
-const makeControlDefinitions = () => [
-    command('control', 'control_wait_seconds', '等待 %1 秒', [valueInput('SECONDS', 'Number')]),
-    command('control', 'control_wait_until', '等待 %1', [valueInput('CONDITION', 'Boolean')]),
-    styled('control', {
-        type: 'control_repeat',
-        message0: '重复执行 %1 次',
-        args0: [valueInput('TIMES', 'Number')],
-        message1: '%1',
-        args1: [statementInput('SUBSTACK')],
-        previousStatement: null,
-        nextStatement: null
-    }),
-    styled('control', {
-        type: 'control_forever',
-        message0: '重复执行',
-        message1: '%1',
-        args1: [statementInput('SUBSTACK')],
-        previousStatement: null
-    }),
-    styled('control', {
-        type: 'control_repeat_until',
-        message0: '重复执行直到 %1',
-        args0: [valueInput('CONDITION', 'Boolean')],
-        message1: '%1',
-        args1: [statementInput('SUBSTACK')],
-        previousStatement: null,
-        nextStatement: null
-    }),
-    styled('control', {
-        type: 'control_if',
-        message0: '如果 %1 那么',
-        args0: [valueInput('CONDITION', 'Boolean')],
-        message1: '%1',
-        args1: [statementInput('SUBSTACK')],
-        previousStatement: null,
-        nextStatement: null
-    }),
-    styled('control', {
-        type: 'control_if_else',
-        message0: '如果 %1 那么',
-        args0: [valueInput('CONDITION', 'Boolean')],
-        message1: '%1',
-        args1: [statementInput('SUBSTACK')],
-        message2: '否则',
-        message3: '%1',
-        args3: [statementInput('SUBSTACK2')],
-        previousStatement: null,
-        nextStatement: null
-    }),
-    command('control', 'control_stop_other_stacks', '停止其它程序堆'),
-    endCommand('control', 'control_stop', '停止 %1', [dropdown('STOP_SCOPE', STOP_SCOPE_OPTIONS)])
-];
-
-const makeSensorDefinitions = ScratchBlocks => [
-    reporter(ScratchBlocks, 'sensing', 'sensor_brick_button_value', '按钮'),
-    booleanReporter(ScratchBlocks, 'sensing', 'sensor_brick_button_pressed', '%1 按钮是否被按压？', [
-        dropdown('BUTTON', BRICK_BUTTON_OPTIONS)
-    ]),
-    command('sensing', 'sensor_wait_brick_button', '等待直到 %1 按钮 %2', [
-        dropdown('BUTTON', BRICK_BUTTON_OPTIONS),
-        dropdown('BUTTON_EVENT', TOUCH_EVENT_OPTIONS)
-    ]),
-    command('sensing', 'sensor_color_calibrate_reflection', '将反射光线强度从 %1 校准至 %2', [
-        dropdown('CALIBRATION', CALIBRATION_OPTIONS),
-        valueInput('VALUE', 'Number')
-    ]),
-    command('sensing', 'sensor_color_reset_calibration', '重置反射光线强度校准'),
-    reporter(ScratchBlocks, 'sensing', 'sensor_color_reflection', '%1 反射光线强度', [
-        valueInput('PORT')
-    ]),
-    booleanReporter(ScratchBlocks, 'sensing', 'sensor_color_reflection_compare',
-        '%1 反射光线强度是否 %2 %3 %%？', [
+const makeMotorDefinitions = (ScratchBlocks, locale = getCurrentEstLocale()) => {
+    const motorDirectionOptions = optionsFor('motorDirection', MOTOR_DIRECTION_VALUES, locale);
+    const motorUnitOptions = optionsFor('motorUnit', MOTOR_UNIT_VALUES, locale);
+    const stopActionOptions = optionsFor('stopAction', MOTOR_STOP_ACTION_VALUES, locale);
+    return [
+        commandWithIcon('motor', 'motor_run_for', motorIcon, getEstText('block.motor.runFor', locale), [
             valueInput('PORT'),
-            dropdown('COMPARATOR', COMPARATOR_OPTIONS),
+            dropdown('DIRECTION', motorDirectionOptions),
+            valueInput('AMOUNT', 'Number'),
+            dropdown('UNIT', motorUnitOptions)
+        ]),
+        commandWithIcon('motor', 'motor_start', motorIcon, getEstText('block.motor.start', locale), [
+            valueInput('PORT'),
+            dropdown('DIRECTION', motorDirectionOptions)
+        ]),
+        commandWithIcon('motor', 'motor_stop', motorIcon, getEstText('block.motor.stop', locale), [valueInput('PORT')]),
+        commandWithIcon('motor', 'motor_set_speed', motorIcon, getEstText('block.motor.setSpeed', locale), [
+            valueInput('PORT'),
+            valueInput('SPEED', 'Number')
+        ]),
+        commandWithIcon('motor', 'motor_set_stop_action', motorIcon, getEstText('block.motor.setStopAction', locale), [
+            valueInput('PORT'),
+            dropdown('STOP_ACTION', stopActionOptions)
+        ]),
+        commandWithIcon('motor', 'motor_run_for_speed', motorIcon, getEstText('block.motor.runForSpeed', locale), [
+            valueInput('PORT'),
+            valueInput('SPEED', 'Number'),
+            valueInput('AMOUNT', 'Number'),
+            dropdown('UNIT', motorUnitOptions)
+        ]),
+        commandWithIcon('motor', 'motor_start_speed', motorIcon, getEstText('block.motor.startSpeed', locale), [
+            valueInput('PORT'),
+            valueInput('SPEED', 'Number')
+        ]),
+        commandWithIcon('motor', 'motor_start_power', motorIcon, getEstText('block.motor.startPower', locale), [
+            valueInput('PORT'),
+            valueInput('POWER', 'Number')
+        ]),
+        commandWithIcon('motor', 'motor_reset_degrees', motorIcon, getEstText('block.motor.resetDegrees', locale), [
+            valueInput('PORT')
+        ]),
+        reporterWithIcon(ScratchBlocks, 'motor', 'motor_degrees', motorIcon, getEstText('block.motor.degrees', locale), [
+            valueInput('PORT')
+        ]),
+        reporterWithIcon(ScratchBlocks, 'motor', 'motor_speed', motorIcon, getEstText('block.motor.speed', locale), [
+            valueInput('PORT')
+        ]),
+        booleanReporterWithIcon(ScratchBlocks, 'motor', 'motor_stalled', motorIcon, getEstText('block.motor.stalled', locale), [
+            valueInput('PORT')
+        ])
+    ];
+};
+
+const makeMovementDefinitions = (locale = getCurrentEstLocale()) => {
+    const driveDirectionOptions = optionsFor('driveDirection', DRIVE_DIRECTION_VALUES, locale);
+    const motorUnitOptions = optionsFor('motorUnit', MOTOR_UNIT_VALUES, locale);
+    const stopActionOptions = optionsFor('stopAction', MOTOR_STOP_ACTION_VALUES, locale);
+    return [
+        commandWithIcon('movement', 'drive_move_for', driveIcon, getEstText('block.movement.moveFor', locale), [
+            dropdown('DIRECTION', driveDirectionOptions),
+            valueInput('AMOUNT', 'Number'),
+            dropdown('UNIT', motorUnitOptions)
+        ]),
+        commandWithIcon('movement', 'drive_steer_for', driveIcon, getEstText('block.movement.steerFor', locale), [
+            valueInput('STEERING', 'Number'),
+            valueInput('AMOUNT', 'Number'),
+            dropdown('UNIT', motorUnitOptions)
+        ]),
+        commandWithIcon('movement', 'drive_start_steer', driveIcon, getEstText('block.movement.startSteer', locale), [
+            valueInput('STEERING', 'Number')
+        ]),
+        commandWithIcon('movement', 'drive_stop', driveIcon, getEstText('block.movement.stop', locale)),
+        commandWithIcon('movement', 'drive_set_speed', driveIcon, getEstText('block.movement.setSpeed', locale), [
+            valueInput('SPEED', 'Number')
+        ]),
+        commandWithIcon('movement', 'drive_set_pair', driveIcon, getEstText('block.movement.setPair', locale), [
+            valueInput('LEFT_PORT'),
+            valueInput('RIGHT_PORT')
+        ]),
+        commandWithIcon('movement', 'drive_set_stop_action', driveIcon, getEstText('block.movement.setStopAction', locale), [
+            dropdown('STOP_ACTION', stopActionOptions)
+        ]),
+        commandWithIcon(
+            'movement',
+            'drive_steer_for_speed',
+            driveIcon,
+            getEstText('block.movement.steerForSpeed', locale),
+            [
+                valueInput('SPEED', 'Number'),
+                valueInput('STEERING', 'Number'),
+                valueInput('AMOUNT', 'Number'),
+                dropdown('UNIT', motorUnitOptions)
+            ]
+        ),
+        commandWithIcon(
+            'movement',
+            'drive_dual_speed_for',
+            driveIcon,
+            getEstText('block.movement.dualSpeedFor', locale),
+            [
+                valueInput('LEFT_SPEED', 'Number'),
+                valueInput('RIGHT_SPEED', 'Number'),
+                valueInput('AMOUNT', 'Number'),
+                dropdown('UNIT', motorUnitOptions)
+            ]
+        ),
+        commandWithIcon(
+            'movement',
+            'drive_start_steer_speed',
+            driveIcon,
+            getEstText('block.movement.startSteerSpeed', locale),
+            [
+                valueInput('SPEED', 'Number'),
+                valueInput('STEERING', 'Number')
+            ]
+        ),
+        commandWithIcon(
+            'movement',
+            'drive_start_dual_speed',
+            driveIcon,
+            getEstText('block.movement.startDualSpeed', locale),
+            [
+                valueInput('LEFT_SPEED', 'Number'),
+                valueInput('RIGHT_SPEED', 'Number')
+            ]
+        )
+    ];
+};
+
+const makeDisplayDefinitions = (locale = getCurrentEstLocale()) => {
+    const fontOptions = optionsFor('font', FONT_VALUES, locale);
+    const statusLightOptions = optionsFor('statusLight', STATUS_LIGHT_VALUES, locale);
+    return [
+        commandWithIcon('display', 'display_image_for', displayIcon, getEstText('block.display.imageFor', locale), [
+            dropdown('IMAGE', IMAGE_OPTIONS),
+            valueInput('SECONDS', 'Number')
+        ]),
+        commandWithIcon('display', 'display_image', displayIcon, getEstText('block.display.image', locale), [
+            dropdown('IMAGE', IMAGE_OPTIONS)
+        ]),
+        commandWithIcon('display', 'display_text_line', displayIcon, getEstText('block.display.textLine', locale), [
+            valueInput('LINE', 'Number'),
+            valueInput('TEXT')
+        ]),
+        commandWithIcon('display', 'display_text_xy', displayIcon, getEstText('block.display.textXY', locale), [
+            dropdown('FONT', fontOptions),
+            valueInput('X', 'Number'),
+            valueInput('Y', 'Number'),
+            valueInput('TEXT')
+        ]),
+        commandWithIcon('display', 'display_clear', displayIcon, getEstText('block.display.clear', locale)),
+        commandWithIcon('display', 'display_status_light', displayIcon, getEstText('block.display.statusLight', locale), [
+            dropdown('STATUS_MODE', statusLightOptions)
+        ])
+    ];
+};
+
+const makeSoundDefinitions = (locale = getCurrentEstLocale()) => {
+    const soundOptions = optionsFor('sound', SOUND_VALUES, locale);
+    return [
+        commandWithIcon('sound', 'sound_play_wait', musicIcon, getEstText('block.sound.playWait', locale), [
+            dropdown('SOUND', soundOptions)
+        ]),
+        commandWithIcon('sound', 'sound_play', musicIcon, getEstText('block.sound.play', locale), [
+            dropdown('SOUND', soundOptions)
+        ]),
+        commandWithIcon('sound', 'sound_beep_for', musicIcon, getEstText('block.sound.beepFor', locale), [
+            valueInput('NOTE', 'Number'),
+            valueInput('SECONDS', 'Number')
+        ]),
+        commandWithIcon('sound', 'sound_beep', musicIcon, getEstText('block.sound.beep', locale), [
+            valueInput('NOTE', 'Number')
+        ]),
+        commandWithIcon('sound', 'sound_stop_all', musicIcon, getEstText('block.sound.stopAll', locale)),
+        commandWithIcon('sound', 'sound_set_volume', musicIcon, getEstText('block.sound.setVolume', locale), [
+            valueInput('VOLUME', 'Number')
+        ])
+    ];
+};
+
+const makeEventDefinitions = (locale = getCurrentEstLocale()) => {
+    const colorEventOptions = colorEventOptionsFor(locale);
+    const touchEventOptions = optionsFor('touchEvent', TOUCH_EVENT_VALUES, locale);
+    const comparatorOptions = optionsFor('comparator', COMPARATOR_VALUES, locale);
+    const distanceUnitOptions = optionsFor('distanceUnit', DISTANCE_UNIT_VALUES, locale);
+    const beaconEventOptions = optionsFor('beaconEvent', BEACON_EVENT_VALUES, locale);
+    const brickButtonOptions = optionsFor('brickButton', BRICK_BUTTON_VALUES, locale);
+    const messageOptions = optionsFor('message', MESSAGE_VALUES, locale);
+    return [
+        hatWithIcon('event', 'event_program_start', eventHatIcon, getEstText('block.event.programStart', locale)),
+        hatWithIcon('event', 'event_color', eventHatIcon, getEstText('block.event.color', locale), [
+            valueInput('PORT'),
+            dropdown('COLOR_EVENT', colorEventOptions)
+        ]),
+        hatWithIcon('event', 'event_touch', eventHatIcon, getEstText('block.event.touch', locale), [
+            valueInput('PORT'),
+            dropdown('TOUCH_EVENT', touchEventOptions)
+        ]),
+        hatWithIcon('event', 'event_ultrasonic', eventHatIcon, getEstText('block.event.ultrasonic', locale), [
+            valueInput('PORT'),
+            dropdown('COMPARATOR', comparatorOptions),
+            valueInput('VALUE', 'Number'),
+            dropdown('UNIT', distanceUnitOptions)
+        ]),
+        hatWithIcon('event', 'event_ir_proximity', eventHatIcon, getEstText('block.event.irProximity', locale), [
+            valueInput('PORT'),
+            dropdown('COMPARATOR', comparatorOptions),
             valueInput('VALUE', 'Number')
         ]),
-    reporter(ScratchBlocks, 'sensing', 'sensor_color_ambient', '%1 环境光强度', [
-        valueInput('PORT')
-    ]),
-    booleanReporter(ScratchBlocks, 'sensing', 'sensor_color_ambient_compare',
-        '%1 环境光强度是否 %2 %3 %%？', [
-            valueInput('PORT'),
-            dropdown('COMPARATOR', COMPARATOR_OPTIONS),
-            valueInput('VALUE', 'Number')
-        ]),
-    reporter(ScratchBlocks, 'sensing', 'sensor_color_value', '%1 颜色', [
-        valueInput('PORT')
-    ]),
-    booleanReporter(ScratchBlocks, 'sensing', 'sensor_color_is', '%1 颜色是否为 %2？', [
-        valueInput('PORT'),
-        dropdown('COLOR', COLOR_OPTIONS)
-    ]),
-    command('sensing', 'sensor_wait_color', '%1 等待直到颜色为 %2', [
-        valueInput('PORT'),
-        dropdown('COLOR_EVENT', COLOR_EVENT_OPTIONS)
-    ]),
-    reporter(ScratchBlocks, 'sensing', 'sensor_temperature', '%1 温度，单位为 %2', [
-        valueInput('PORT'),
-        dropdown('UNIT', TEMPERATURE_UNIT_OPTIONS)
-    ]),
-    booleanReporter(ScratchBlocks, 'sensing', 'sensor_touch_pressed', '%1 是否被按压？', [
-        valueInput('PORT')
-    ]),
-    command('sensing', 'sensor_wait_touch', '%1 等待直到 %2', [
-        valueInput('PORT'),
-        dropdown('TOUCH_EVENT', TOUCH_EVENT_OPTIONS)
-    ]),
-    reporter(ScratchBlocks, 'sensing', 'sensor_ultrasonic_distance', '%1 距离，单位为 %2', [
-        valueInput('PORT'),
-        dropdown('UNIT', DISTANCE_UNIT_OPTIONS)
-    ]),
-    booleanReporter(ScratchBlocks, 'sensing', 'sensor_ultrasonic_compare', '%1 距离是否 %2 %3 %4？', [
-        valueInput('PORT'),
-        dropdown('COMPARATOR', COMPARATOR_OPTIONS),
-        valueInput('VALUE', 'Number'),
-        dropdown('UNIT', DISTANCE_UNIT_OPTIONS)
-    ]),
-    command('sensing', 'sensor_wait_ultrasonic', '%1 等待直到距离 %2 %3 %4', [
-        valueInput('PORT'),
-        dropdown('COMPARATOR', COMPARATOR_OPTIONS),
-        valueInput('VALUE', 'Number'),
-        dropdown('UNIT', DISTANCE_UNIT_OPTIONS)
-    ]),
-    reporter(ScratchBlocks, 'sensing', 'sensor_ir_proximity', '%1 近程', [
-        valueInput('PORT')
-    ]),
-    booleanReporter(ScratchBlocks, 'sensing', 'sensor_ir_proximity_compare', '%1 近程是否 %2 %3 %%？', [
-        valueInput('PORT'),
-        dropdown('COMPARATOR', COMPARATOR_OPTIONS),
-        valueInput('VALUE', 'Number')
-    ]),
-    command('sensing', 'sensor_wait_ir_proximity', '%1 等待直到近程 %2 %3 %%', [
-        valueInput('PORT'),
-        dropdown('COMPARATOR', COMPARATOR_OPTIONS),
-        valueInput('VALUE', 'Number')
-    ]),
-    reporter(ScratchBlocks, 'sensing', 'sensor_ir_beacon_heading', '%1 前往信标 %2', [
-        valueInput('PORT'),
-        dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
-    ]),
-    reporter(ScratchBlocks, 'sensing', 'sensor_ir_beacon_proximity', '%1 信标 %2 近程', [
-        valueInput('PORT'),
-        dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
-    ]),
-    reporter(ScratchBlocks, 'sensing', 'sensor_ir_beacon_buttons', '%1 按压信标 %2 按钮', [
-        valueInput('PORT'),
-        dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
-    ]),
-    booleanReporter(ScratchBlocks, 'sensing', 'sensor_ir_beacon_button_pressed',
-        '%1 信标 %2 %3 是否被按压？', [
+        hatWithIcon('event', 'event_ir_beacon_button', eventHatIcon, getEstText('block.event.irBeaconButton', locale), [
             valueInput('PORT'),
             dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
-            dropdown('BEACON_BUTTON', BEACON_BUTTON_OPTIONS)
+            dropdown('BEACON_EVENT', beaconEventOptions)
         ]),
-    command('sensing', 'sensor_wait_ir_beacon_button', '%1 等待直到信标 %2 %3', [
-        valueInput('PORT'),
-        dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
-        dropdown('BEACON_EVENT', BEACON_EVENT_OPTIONS)
-    ]),
-    booleanReporter(ScratchBlocks, 'sensing', 'sensor_ir_beacon_active',
-        '%1 信标 %2 是否处于活动状态？', [
+        hatWithIcon('event', 'event_gyro_angle', eventHatIcon, getEstText('block.event.gyroAngle', locale), [
             valueInput('PORT'),
-            dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
-        ]),
-    booleanReporter(ScratchBlocks, 'sensing', 'sensor_ir_beacon_active_compare',
-        '%1 信标 %2 是否 %3 %4 %5？', [
-            valueInput('PORT'),
-            dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
-            dropdown('PROPERTY', BEACON_PROPERTY_OPTIONS),
-            dropdown('COMPARATOR', COMPARATOR_OPTIONS),
+            dropdown('COMPARATOR', comparatorOptions),
             valueInput('VALUE', 'Number')
         ]),
-    reporter(ScratchBlocks, 'sensing', 'sensor_gyro_angle', '%1 角度', [
-        valueInput('PORT')
-    ]),
-    reporter(ScratchBlocks, 'sensing', 'sensor_gyro_rate', '%1 角速度', [
-        valueInput('PORT')
-    ]),
-    command('sensing', 'sensor_gyro_reset', '%1 重置角度', [valueInput('PORT')]),
-    booleanReporter(ScratchBlocks, 'sensing', 'sensor_gyro_compare', '%1 角度是否 %2 %3°？', [
-        valueInput('PORT'),
-        dropdown('COMPARATOR', COMPARATOR_OPTIONS),
-        valueInput('VALUE', 'Number')
-    ]),
-    command('sensing', 'sensor_wait_gyro', '%1 等待直到角度 %2 %3°', [
-        valueInput('PORT'),
-        dropdown('COMPARATOR', COMPARATOR_OPTIONS),
-        valueInput('VALUE', 'Number')
-    ]),
-    reporter(ScratchBlocks, 'sensing', 'sensor_timer', '计时器'),
-    command('sensing', 'sensor_timer_reset', '重置计数器')
-];
+        hatWithIcon('event', 'event_brick_button', eventHatIcon, getEstText('block.event.brickButton', locale), [
+            dropdown('BUTTON', brickButtonOptions),
+            dropdown('BUTTON_EVENT', touchEventOptions)
+        ]),
+        hatWithIcon('event', 'event_condition', eventHatIcon, getEstText('block.event.condition', locale), [
+            valueInput('CONDITION', 'Boolean')
+        ]),
+        hatWithIcon('event', 'event_broadcast_received', eventHatIcon, getEstText('block.event.broadcastReceived', locale), [
+            dropdown('MESSAGE', messageOptions)
+        ]),
+        commandWithIcon('event', 'event_broadcast', eventHostIcon, getEstText('block.event.broadcast', locale), [
+            dropdown('MESSAGE', messageOptions)
+        ]),
+        commandWithIcon('event', 'event_broadcast_wait', eventHostIcon, getEstText('block.event.broadcastWait', locale), [
+            dropdown('MESSAGE', messageOptions)
+        ]),
+        hatWithIcon('event', 'event_timer', eventHatIcon, getEstText('block.event.timer', locale), [
+            valueInput('SECONDS', 'Number')
+        ])
+    ];
+};
 
-const makeEstBlockDefinitions = ScratchBlocks => [
+const makeControlDefinitions = (locale = getCurrentEstLocale()) => {
+    const stopScopeOptions = optionsFor('stopScope', STOP_SCOPE_VALUES, locale);
+    return [
+        command('control', 'control_wait_seconds', getEstText('block.control.waitSeconds', locale), [
+            valueInput('SECONDS', 'Number')
+        ]),
+        command('control', 'control_wait_until', getEstText('block.control.waitUntil', locale), [
+            valueInput('CONDITION', 'Boolean')
+        ]),
+        styled('control', {
+            type: 'control_repeat',
+            message0: getEstText('block.control.repeat', locale),
+            args0: [valueInput('TIMES', 'Number')],
+            message1: '%1',
+            args1: [statementInput('SUBSTACK')],
+            previousStatement: null,
+            nextStatement: null
+        }),
+        styled('control', {
+            type: 'control_forever',
+            message0: getEstText('block.control.forever', locale),
+            message1: '%1',
+            args1: [statementInput('SUBSTACK')],
+            previousStatement: null
+        }),
+        styled('control', {
+            type: 'control_repeat_until',
+            message0: getEstText('block.control.repeatUntil', locale),
+            args0: [valueInput('CONDITION', 'Boolean')],
+            message1: '%1',
+            args1: [statementInput('SUBSTACK')],
+            previousStatement: null,
+            nextStatement: null
+        }),
+        styled('control', {
+            type: 'control_if',
+            message0: getEstText('block.control.if', locale),
+            args0: [valueInput('CONDITION', 'Boolean')],
+            message1: '%1',
+            args1: [statementInput('SUBSTACK')],
+            previousStatement: null,
+            nextStatement: null
+        }),
+        styled('control', {
+            type: 'control_if_else',
+            message0: getEstText('block.control.if', locale),
+            args0: [valueInput('CONDITION', 'Boolean')],
+            message1: '%1',
+            args1: [statementInput('SUBSTACK')],
+            message2: getEstText('block.control.else', locale),
+            message3: '%1',
+            args3: [statementInput('SUBSTACK2')],
+            previousStatement: null,
+            nextStatement: null
+        }),
+        command('control', 'control_stop_other_stacks', getEstText('block.control.stopOtherStacks', locale)),
+        endCommand('control', 'control_stop', getEstText('block.control.stop', locale), [
+            dropdown('STOP_SCOPE', stopScopeOptions)
+        ])
+    ];
+};
+
+const makeSensorDefinitions = (ScratchBlocks, locale = getCurrentEstLocale()) => {
+    const brickButtonOptions = optionsFor('brickButton', BRICK_BUTTON_VALUES, locale);
+    const touchEventOptions = optionsFor('touchEvent', TOUCH_EVENT_VALUES, locale);
+    const calibrationOptions = optionsFor('calibration', CALIBRATION_VALUES, locale);
+    const comparatorOptions = optionsFor('comparator', COMPARATOR_VALUES, locale);
+    const colorOptions = optionsFor('color', COLOR_VALUES, locale);
+    const colorEventOptions = colorEventOptionsFor(locale);
+    const temperatureUnitOptions = optionsFor('temperatureUnit', TEMPERATURE_UNIT_VALUES, locale);
+    const distanceUnitOptions = optionsFor('distanceUnit', DISTANCE_UNIT_VALUES, locale);
+    const beaconButtonOptions = optionsFor('beaconButton', BEACON_BUTTON_VALUES, locale);
+    const beaconEventOptions = optionsFor('beaconEvent', BEACON_EVENT_VALUES, locale);
+    const beaconPropertyOptions = optionsFor('beaconProperty', BEACON_PROPERTY_VALUES, locale);
+    return [
+        reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_brick_button_value', sensorButtonIcon,
+            getEstText('block.sensing.buttonValue', locale)),
+        booleanReporterWithIcon(
+            ScratchBlocks,
+            'sensing',
+            'sensor_brick_button_pressed',
+            sensorButtonIcon,
+            getEstText('block.sensing.buttonPressed', locale),
+            [dropdown('BUTTON', brickButtonOptions)]
+        ),
+        commandWithIcon('sensing', 'sensor_wait_brick_button', sensorButtonIcon,
+            getEstText('block.sensing.waitButton', locale), [
+                dropdown('BUTTON', brickButtonOptions),
+                dropdown('BUTTON_EVENT', touchEventOptions)
+            ]),
+        commandWithIcon(
+            'sensing',
+            'sensor_color_calibrate_reflection',
+            sensorColorIcon,
+            getEstText('block.sensing.calibrateReflection', locale),
+            [
+                dropdown('CALIBRATION', calibrationOptions),
+                valueInput('VALUE', 'Number')
+            ]
+        ),
+        commandWithIcon('sensing', 'sensor_color_reset_calibration', sensorColorIcon,
+            getEstText('block.sensing.resetReflectionCalibration', locale)),
+        reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_color_reflection', sensorColorIcon,
+            getEstText('block.sensing.reflection', locale), [
+                valueInput('PORT')
+            ]),
+        booleanReporterWithIcon(ScratchBlocks, 'sensing', 'sensor_color_reflection_compare', sensorColorIcon,
+            getEstText('block.sensing.reflectionCompare', locale), [
+                valueInput('PORT'),
+                dropdown('COMPARATOR', comparatorOptions),
+                valueInput('VALUE', 'Number')
+            ]),
+        reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_color_ambient', sensorColorIcon,
+            getEstText('block.sensing.ambient', locale), [
+                valueInput('PORT')
+            ]),
+        booleanReporterWithIcon(ScratchBlocks, 'sensing', 'sensor_color_ambient_compare', sensorColorIcon,
+            getEstText('block.sensing.ambientCompare', locale), [
+                valueInput('PORT'),
+                dropdown('COMPARATOR', comparatorOptions),
+                valueInput('VALUE', 'Number')
+            ]),
+        reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_color_value', sensorColorIcon,
+            getEstText('block.sensing.colorValue', locale), [
+                valueInput('PORT')
+            ]),
+        booleanReporterWithIcon(ScratchBlocks, 'sensing', 'sensor_color_is', sensorColorIcon,
+            getEstText('block.sensing.colorIs', locale), [
+                valueInput('PORT'),
+                dropdown('COLOR', colorOptions)
+            ]),
+        commandWithIcon('sensing', 'sensor_wait_color', sensorColorIcon,
+            getEstText('block.sensing.waitColor', locale), [
+                valueInput('PORT'),
+                dropdown('COLOR_EVENT', colorEventOptions)
+            ]),
+        reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_temperature', sensorTemperatureIcon,
+            getEstText('block.sensing.temperature', locale), [
+                valueInput('PORT'),
+                dropdown('UNIT', temperatureUnitOptions)
+            ]),
+        booleanReporterWithIcon(ScratchBlocks, 'sensing', 'sensor_touch_pressed', sensorButtonIcon,
+            getEstText('block.sensing.touchPressed', locale), [
+                valueInput('PORT')
+            ]),
+        commandWithIcon('sensing', 'sensor_wait_touch', sensorButtonIcon,
+            getEstText('block.sensing.waitTouch', locale), [
+                valueInput('PORT'),
+                dropdown('TOUCH_EVENT', touchEventOptions)
+            ]),
+        reporterWithIcon(
+            ScratchBlocks,
+            'sensing',
+            'sensor_ultrasonic_distance',
+            sensorUltrasonicIcon,
+            getEstText('block.sensing.ultrasonicDistance', locale),
+            [
+                valueInput('PORT'),
+                dropdown('UNIT', distanceUnitOptions)
+            ]
+        ),
+        booleanReporterWithIcon(
+            ScratchBlocks,
+            'sensing',
+            'sensor_ultrasonic_compare',
+            sensorUltrasonicIcon,
+            getEstText('block.sensing.ultrasonicCompare', locale),
+            [
+                valueInput('PORT'),
+                dropdown('COMPARATOR', comparatorOptions),
+                valueInput('VALUE', 'Number'),
+                dropdown('UNIT', distanceUnitOptions)
+            ]
+        ),
+        commandWithIcon('sensing', 'sensor_wait_ultrasonic', sensorUltrasonicIcon,
+            getEstText('block.sensing.waitUltrasonic', locale), [
+                valueInput('PORT'),
+                dropdown('COMPARATOR', comparatorOptions),
+                valueInput('VALUE', 'Number'),
+                dropdown('UNIT', distanceUnitOptions)
+            ]),
+        reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_proximity', sensorIrIcon,
+            getEstText('block.sensing.irProximity', locale), [
+                valueInput('PORT')
+            ]),
+        booleanReporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_proximity_compare', sensorIrIcon,
+            getEstText('block.sensing.irProximityCompare', locale), [
+                valueInput('PORT'),
+                dropdown('COMPARATOR', comparatorOptions),
+                valueInput('VALUE', 'Number')
+            ]),
+        commandWithIcon('sensing', 'sensor_wait_ir_proximity', sensorIrIcon,
+            getEstText('block.sensing.waitIrProximity', locale), [
+                valueInput('PORT'),
+                dropdown('COMPARATOR', comparatorOptions),
+                valueInput('VALUE', 'Number')
+            ]),
+        reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_beacon_heading', sensorIrIcon,
+            getEstText('block.sensing.irBeaconHeading', locale), [
+                valueInput('PORT'),
+                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
+            ]),
+        reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_beacon_proximity', sensorIrIcon,
+            getEstText('block.sensing.irBeaconProximity', locale), [
+                valueInput('PORT'),
+                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
+            ]),
+        reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_beacon_buttons', sensorIrIcon,
+            getEstText('block.sensing.irBeaconButtons', locale), [
+                valueInput('PORT'),
+                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
+            ]),
+        booleanReporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_beacon_button_pressed', sensorIrIcon,
+            getEstText('block.sensing.irBeaconButtonPressed', locale), [
+                valueInput('PORT'),
+                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
+                dropdown('BEACON_BUTTON', beaconButtonOptions)
+            ]),
+        commandWithIcon('sensing', 'sensor_wait_ir_beacon_button', sensorIrIcon,
+            getEstText('block.sensing.waitIrBeaconButton', locale), [
+                valueInput('PORT'),
+                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
+                dropdown('BEACON_EVENT', beaconEventOptions)
+            ]),
+        booleanReporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_beacon_active', sensorIrIcon,
+            getEstText('block.sensing.irBeaconActive', locale), [
+                valueInput('PORT'),
+                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
+            ]),
+        booleanReporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_beacon_active_compare', sensorIrIcon,
+            getEstText('block.sensing.irBeaconActiveCompare', locale), [
+                valueInput('PORT'),
+                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
+                dropdown('PROPERTY', beaconPropertyOptions),
+                dropdown('COMPARATOR', comparatorOptions),
+                valueInput('VALUE', 'Number')
+            ]),
+        reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_gyro_angle', sensorGyroIcon,
+            getEstText('block.sensing.gyroAngle', locale), [
+                valueInput('PORT')
+            ]),
+        reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_gyro_rate', sensorGyroIcon,
+            getEstText('block.sensing.gyroRate', locale), [
+                valueInput('PORT')
+            ]),
+        commandWithIcon('sensing', 'sensor_gyro_reset', sensorGyroIcon,
+            getEstText('block.sensing.gyroReset', locale), [valueInput('PORT')]),
+        booleanReporterWithIcon(ScratchBlocks, 'sensing', 'sensor_gyro_compare', sensorGyroIcon,
+            getEstText('block.sensing.gyroCompare', locale), [
+                valueInput('PORT'),
+                dropdown('COMPARATOR', comparatorOptions),
+                valueInput('VALUE', 'Number')
+            ]),
+        commandWithIcon('sensing', 'sensor_wait_gyro', sensorGyroIcon,
+            getEstText('block.sensing.waitGyro', locale), [
+                valueInput('PORT'),
+                dropdown('COMPARATOR', comparatorOptions),
+                valueInput('VALUE', 'Number')
+            ]),
+        reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_timer', sensorHostIcon,
+            getEstText('block.sensing.timer', locale)),
+        commandWithIcon('sensing', 'sensor_timer_reset', sensorHostIcon,
+            getEstText('block.sensing.timerReset', locale))
+    ];
+};
+
+const makeEstBlockDefinitions = (ScratchBlocks, locale = getCurrentEstLocale()) => [
     makeSteeringPickerDefinition(ScratchBlocks),
     makeMotorPortPickerDefinition(ScratchBlocks, 'motor', EST_MOTOR_PORT_PICKER_ID),
     makeMotorPortPickerDefinition(ScratchBlocks, 'movement', EST_DRIVE_PORT_PICKER_ID),
     makeEventSensorPortPickerDefinition(ScratchBlocks),
     makeSensorPortPickerDefinition(ScratchBlocks),
-    ...makeMotorDefinitions(ScratchBlocks),
-    ...makeMovementDefinitions(),
-    ...makeDisplayDefinitions(),
-    ...makeSoundDefinitions(),
-    ...makeEventDefinitions(),
-    ...makeControlDefinitions(),
-    ...makeSensorDefinitions(ScratchBlocks)
+    ...makeMotorDefinitions(ScratchBlocks, locale),
+    ...makeMovementDefinitions(locale),
+    ...makeDisplayDefinitions(locale),
+    ...makeSoundDefinitions(locale),
+    ...makeEventDefinitions(locale),
+    ...makeControlDefinitions(locale),
+    ...makeSensorDefinitions(ScratchBlocks, locale)
 ];
 
 const registeredTargets = new WeakSet();
+const registeredLocaleListeners = new WeakSet();
 const configuredZoomControlTypes = new WeakSet();
 const EST_HISTORY_CONTROL_COUNT = 2;
 const XLINK_NAMESPACE = 'http://www.w3.org/1999/xlink';
@@ -921,8 +1194,22 @@ const configureEstWorkspaceControls = ScratchBlocks => {
             const originalY = Number(control.getAttribute('y'));
             control.setAttribute('y', originalY + historyControlsOffset);
         });
-        createEstHistoryControl(ScratchBlocks, this, workspaceUndoIcon, 0, false, '撤回');
-        createEstHistoryControl(ScratchBlocks, this, workspaceRedoIcon, 1, true, '前进');
+        createEstHistoryControl(
+            ScratchBlocks,
+            this,
+            workspaceUndoIcon,
+            0,
+            false,
+            getEstText('history.undo', getCurrentEstLocale())
+        );
+        createEstHistoryControl(
+            ScratchBlocks,
+            this,
+            workspaceRedoIcon,
+            1,
+            true,
+            getEstText('history.redo', getCurrentEstLocale())
+        );
         return group;
     };
     ZoomControls.prototype.position = function estPositionZoomControls () {
@@ -940,11 +1227,8 @@ const configureEstWorkspaceControls = ScratchBlocks => {
     configuredZoomControlTypes.add(ZoomControls);
 };
 
-export const registerEstBlocks = ScratchBlocks => {
-    configureEstWorkspaceControls(ScratchBlocks);
-    if (registeredTargets.has(ScratchBlocks)) return;
-    registerEstSteeringField(ScratchBlocks);
-    const definitions = makeEstBlockDefinitions(ScratchBlocks);
+const defineEstBlocksWithLocale = (ScratchBlocks, locale = getCurrentEstLocale()) => {
+    const definitions = makeEstBlockDefinitions(ScratchBlocks, locale);
     EST_REPLACED_OPENBLOCK_BLOCK_IDS.forEach(blockId => {
         if (ScratchBlocks.Blocks &&
             Object.prototype.hasOwnProperty.call(ScratchBlocks.Blocks, blockId)) {
@@ -952,6 +1236,47 @@ export const registerEstBlocks = ScratchBlocks => {
         }
     });
     ScratchBlocks.defineBlocksWithJsonArray(definitions);
+};
+
+const refreshEstWorkspaceForLocale = ScratchBlocks => {
+    if (!ScratchBlocks || typeof ScratchBlocks.getMainWorkspace !== 'function') {
+        return;
+    }
+    const workspace = ScratchBlocks.getMainWorkspace();
+    if (!workspace) {
+        return;
+    }
+    if (typeof workspace.refreshToolboxSelection_ === 'function') {
+        workspace.refreshToolboxSelection_();
+    }
+    if (workspace.rendered && typeof workspace.render === 'function') {
+        workspace.render();
+    }
+    if (typeof ScratchBlocks.svgResize === 'function') {
+        ScratchBlocks.svgResize(workspace);
+    }
+};
+
+const registerEstLocaleListener = ScratchBlocks => {
+    if (registeredLocaleListeners.has(ScratchBlocks) ||
+        typeof window === 'undefined' ||
+        typeof window.addEventListener !== 'function') {
+        return;
+    }
+    window.addEventListener(EST_LOCALE_CHANGED_EVENT, event => {
+        const locale = event && event.detail && event.detail.locale;
+        defineEstBlocksWithLocale(ScratchBlocks, locale);
+        refreshEstWorkspaceForLocale(ScratchBlocks);
+    });
+    registeredLocaleListeners.add(ScratchBlocks);
+};
+
+export const registerEstBlocks = ScratchBlocks => {
+    configureEstWorkspaceControls(ScratchBlocks);
+    if (registeredTargets.has(ScratchBlocks)) return;
+    registerEstSteeringField(ScratchBlocks);
+    defineEstBlocksWithLocale(ScratchBlocks);
+    registerEstLocaleListener(ScratchBlocks);
     registeredTargets.add(ScratchBlocks);
 };
 
@@ -988,5 +1313,6 @@ export {
     TEMPERATURE_UNIT_OPTIONS,
     configureEstWorkspaceControls,
     formatSteeringDisplayText,
-    isSteeringDialMarkVisible
+    isSteeringDialMarkVisible,
+    makeEstBlockDefinitions
 };

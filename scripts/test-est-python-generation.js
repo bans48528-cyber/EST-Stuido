@@ -6,6 +6,7 @@ const path = require('path');
 const babel = require('@babel/core');
 
 const estBlocksRoot = path.resolve(__dirname, '..', 'src', 'renderer', 'est-blocks');
+const estRendererRoot = path.resolve(__dirname, '..', 'src', 'renderer');
 const originalLoader = Module._extensions['.js'];
 const originalSvgLoader = Module._extensions['.svg'];
 
@@ -13,7 +14,7 @@ Module._extensions['.svg'] = (module, filename) => {
     module.exports = filename;
 };
 Module._extensions['.js'] = (module, filename) => {
-    if (!filename.startsWith(estBlocksRoot)) return originalLoader(module, filename);
+    if (!filename.startsWith(estRendererRoot)) return originalLoader(module, filename);
     const source = fs.readFileSync(filename, 'utf8');
     const transformed = babel.transformSync(source, {
         babelrc: false,

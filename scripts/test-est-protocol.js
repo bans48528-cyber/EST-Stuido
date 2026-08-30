@@ -32,6 +32,7 @@ const estRoot = estRoots[0];
 const estBlocksRoot = estRoots[1];
 const estProjectRoot = estRoots[2];
 const estRendererRoot = estRoots[3];
+const estBlockAssetsRoot = path.join(estBlocksRoot);
 
 const {
     buildPersistentProgramLoadFrame,
@@ -65,6 +66,7 @@ const {
     CAPABILITY_HOLD_POSITION_CONTROL,
     CAPABILITY_MOTOR_CONTROL,
     CAPABILITY_MOTOR_PAIR_POSITION,
+    CAPABILITY_MOTOR_STALL_DETECTION,
     CAPABILITY_RUNTIME_BASIC_EVENT_HATS,
     CAPABILITY_TEMPERATURE_SENSOR,
     CAPABILITY_UNLIMITED_PYTHON_RUN,
@@ -96,6 +98,7 @@ const {
     configureEstWorkspaceControls,
     formatSteeringDisplayText,
     isSteeringDialMarkVisible,
+    makeEstBlockDefinitions,
     registerEstBlocks
 } = require(path.join(estBlocksRoot, 'definitions.js'));
 const getEstToolboxCategories = require(path.join(estBlocksRoot, 'toolbox.js')).default;
@@ -111,6 +114,16 @@ const {
     normalizeEstProgramName,
     utf8ByteLength
 } = require(path.join(estRendererRoot, 'est-program-name.js'));
+const {
+    EST_EDITOR_MESSAGE_OVERRIDES,
+    EST_LOCALE_CHANGED_EVENT,
+    EST_LOCALE_NAMES,
+    getEstLocaleOptions,
+    getEstLocalizedOptions,
+    getEstText,
+    normalizeEstLocale,
+    setCurrentEstLocale
+} = require(path.join(estRendererRoot, 'est-i18n.js'));
 const {
     registerEstPythonGenerator,
     stackNameForBlock
@@ -133,6 +146,10 @@ const EST_COOPERATIVE_PROGRAM_REQUIRED_CAPABILITIES = (
 const EST_BASIC_EVENT_HATS_PROGRAM_REQUIRED_CAPABILITIES = (
     EST_PROGRAM_REQUIRED_CAPABILITIES |
     CAPABILITY_RUNTIME_BASIC_EVENT_HATS
+) >>> 0;
+const EST_MOTOR_STALL_PROGRAM_REQUIRED_CAPABILITIES = (
+    EST_PROGRAM_REQUIRED_CAPABILITIES |
+    CAPABILITY_MOTOR_STALL_DETECTION
 ) >>> 0;
 
 assert.strictEqual(EST_PROGRAM_NAME_MAX_BYTES, 31);
@@ -305,7 +322,8 @@ assert.deepStrictEqual(Object.keys(EST_PROGRAM_COMPATIBILITY_TABLE), [
     'M1.10C',
     'M1.12A',
     'M1.13A',
-    'M1.14A'
+    'M1.14A',
+    'M1.21A'
 ]);
 assert.deepStrictEqual(
     {
@@ -371,6 +389,10 @@ assert.strictEqual(
     CAPABILITY_TEMPERATURE_SENSOR
 );
 assert.strictEqual(
+    programRequiredCapabilitiesForSource('import est_runtime as rt\nblocked = rt.motor_stalled("A")\n'),
+    CAPABILITY_MOTOR_STALL_DETECTION
+);
+assert.strictEqual(
     programRequiredCapabilitiesForSource(
         '@rt.on_start\nasync def stack_1():\n  await rt.sleep(1)\nrt.run()\n'
     ),
@@ -427,6 +449,35 @@ const m114ATemperatureStatus = {
 };
 assert.strictEqual(
     checkProgramFirmwareCompatibility(m114ATemperatureStatus, CAPABILITY_TEMPERATURE_SENSOR).programCompatible,
+    true
+);
+const missingMotorStallCompatibility = checkProgramFirmwareCompatibility(
+    m112AStatus,
+    CAPABILITY_MOTOR_STALL_DETECTION
+);
+assert.strictEqual(missingMotorStallCompatibility.programCompatible, false);
+assert.strictEqual(missingMotorStallCompatibility.programProtocolCompatible, false);
+assert.strictEqual(missingMotorStallCompatibility.requiredProgramProtocolMinor, 26);
+assert.strictEqual(
+    missingMotorStallCompatibility.requiredProgramCapabilities,
+    EST_MOTOR_STALL_PROGRAM_REQUIRED_CAPABILITIES
+);
+assert.strictEqual(
+    missingMotorStallCompatibility.missingProgramCapabilities,
+    CAPABILITY_MOTOR_STALL_DETECTION
+);
+assert.deepStrictEqual(
+    missingMotorStallCompatibility.missingProgramCapabilityNames,
+    ['motor-stall-detection']
+);
+const m121AMotorStallStatus = {
+    ...m112AStatus,
+    firmwareVersion: 'M1.21A',
+    protocolMinor: 26,
+    capabilities: EST_MOTOR_STALL_PROGRAM_REQUIRED_CAPABILITIES
+};
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(m121AMotorStallStatus, CAPABILITY_MOTOR_STALL_DETECTION).programCompatible,
     true
 );
 const missingCooperativeCompatibility = checkProgramFirmwareCompatibility(
@@ -663,7 +714,7 @@ assert.strictEqual(fakeZoomControls.HEIGHT_, 212);
 assert.strictEqual(fakeZoomControls.top_, 214);
 assert.strictEqual(zoomTransform, 'translate(800,214)');
 const expectedCategoryCounts = {
-    motor: 11,
+    motor: 12,
     movement: 11,
     display: 6,
     sound: 6,
@@ -678,8 +729,8 @@ assert.deepStrictEqual(
     ])),
     expectedCategoryCounts
 );
-assert.strictEqual(registeredBlockDefinitions.length, 96);
-assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 91);
+assert.strictEqual(registeredBlockDefinitions.length, 97);
+assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 92);
 assert.deepStrictEqual(EST_REPLACED_OPENBLOCK_BLOCK_IDS, [
     'sound_play',
     'event_broadcast',
@@ -748,6 +799,9 @@ assert.deepStrictEqual(
     sensorPortPickerDefinition.args0[0].options.map(option => option[1]),
     ['1', '2', '3', '4']
 );
+const definitionArguments = definition => Object.keys(definition)
+    .filter(key => /^args\d+$/.test(key))
+    .reduce((argumentsList, key) => argumentsList.concat(definition[key]), []);
 assert.strictEqual(EST_STEERING_LIMIT, 100);
 assert.deepStrictEqual(EST_STEERING_DIAL_COLOURS, {
     fill: '#d8009b',
@@ -773,6 +827,53 @@ assert.strictEqual(steeringField.classValidator('150'), '100');
 assert.strictEqual(steeringField.classValidator('not-a-number'), null);
 steeringField.getText = () => '-40';
 assert.strictEqual(steeringField.getDisplayText_(), '左:-40');
+const blockDefinitionFor = blockId => registeredBlockDefinitions.find(definition => definition.type === blockId);
+assert.strictEqual(EST_LOCALE_NAMES['pt-br'], 'Português (Brasil)');
+assert.strictEqual(normalizeEstLocale('pt_BR'), 'pt-br');
+assert.strictEqual(getEstText('menu.hardwareStatus', 'pt-br'), 'Status do hardware');
+assert.deepStrictEqual(getEstLocaleOptions({
+    en: {},
+    'zh-cn': {},
+    'pt-br': {}
+}).find(option => option.value === 'pt-br'), {
+    label: 'Português (Brasil)',
+    value: 'pt-br'
+});
+assert.strictEqual(formatSteeringDisplayText(-40, 'pt-br'), 'esq.:-40');
+assert.strictEqual(formatSteeringDisplayText(40, 'pt-br'), 'dir.:40');
+assert.deepStrictEqual(getEstLocalizedOptions('motorDirection', [
+    'clockwise',
+    'counterclockwise'
+], 'pt-br'), [
+    ['horario', 'clockwise'],
+    ['anti-horario', 'counterclockwise']
+]);
+const ptBlockDefinitions = makeEstBlockDefinitions(fakeScratchBlocks, 'pt-br');
+const ptBlockDefinitionFor = blockId => ptBlockDefinitions.find(definition => definition.type === blockId);
+const ptMotorStalledDefinition = ptBlockDefinitionFor('motor_stalled');
+assert.strictEqual(ptMotorStalledDefinition.message0, '%1 %2 motor %3 esta travado?');
+const ptMotorRunForDirection = definitionArguments(ptBlockDefinitionFor('motor_run_for'))
+    .find(argument => argument.name === 'DIRECTION');
+assert.deepStrictEqual(ptMotorRunForDirection.options, [
+    ['horario', 'clockwise'],
+    ['anti-horario', 'counterclockwise']
+]);
+const zhMotorRunForDirection = definitionArguments(blockDefinitionFor('motor_run_for'))
+    .find(argument => argument.name === 'DIRECTION');
+assert.deepStrictEqual(zhMotorRunForDirection.options, [
+    ['顺时针', 'clockwise'],
+    ['逆时针', 'counterclockwise']
+]);
+const ptTemperatureUnit = definitionArguments(ptBlockDefinitionFor('sensor_temperature'))
+    .find(argument => argument.name === 'UNIT');
+assert.deepStrictEqual(ptTemperatureUnit.options, [
+    ['Celsius', 'celsius'],
+    ['Fahrenheit', 'fahrenheit']
+]);
+const ptToolboxCategories = getEstToolboxCategories('pt-br');
+assert.match(ptToolboxCategories, /<category[^>]*name="Sensores"/s);
+assert.match(ptToolboxCategories, /<category[^>]*name="Reproduzir"/s);
+assert.ok(!ptToolboxCategories.includes('name="传感器"'));
 const styleForBlock = blockId => Object.entries(CATEGORY_BLOCK_IDS)
     .find(([, blockIds]) => blockIds.includes(blockId))[0];
 registeredBlockDefinitions.slice(EST_SUPPORT_BLOCK_IDS.length).forEach(definition => {
@@ -780,6 +881,145 @@ registeredBlockDefinitions.slice(EST_SUPPORT_BLOCK_IDS.length).forEach(definitio
     assert.strictEqual(definition.colour, CATEGORY_COLOURS[style].primary);
     assert.strictEqual(definition.colourSecondary, CATEGORY_COLOURS[style].secondary);
     assert.strictEqual(definition.colourTertiary, CATEGORY_COLOURS[style].tertiary);
+});
+const decodeSvgDataUri = source => decodeURIComponent(source.replace(/^data:image\/svg\+xml;utf8,/, ''));
+const iconDividerLength = Number((38 * 0.52 * 1.3).toFixed(2));
+const assertLeadingBlockIcon = (definition, expectedName, expectedSource, expectedSize = 38) => {
+    const style = styleForBlock(definition.type);
+    assert.strictEqual(definition.args0[0].type, 'field_image');
+    assert.strictEqual(definition.args0[0].name, expectedName);
+    assert.strictEqual(definition.args0[0].width, expectedSize);
+    assert.strictEqual(definition.args0[0].height, expectedSize);
+    assert.match(definition.args0[0].src, expectedSource);
+    assert.strictEqual(definition.args0[1].type, 'field_image');
+    assert.strictEqual(definition.args0[1].name, 'EST_ICON_DIVIDER');
+    assert.strictEqual(definition.args0[1].width, 10);
+    assert.strictEqual(definition.args0[1].height, expectedSize);
+    const dividerSvg = decodeSvgDataUri(definition.args0[1].src);
+    assert.match(dividerSvg, new RegExp(`stroke="${CATEGORY_COLOURS[style].tertiary}"`));
+    const dividerTop = Number(((expectedSize - iconDividerLength) / 2).toFixed(2));
+    const dividerBottom = Number((dividerTop + iconDividerLength).toFixed(2));
+    assert.match(
+        dividerSvg,
+        new RegExp(`d="M5 ${dividerTop}V${dividerBottom}"`)
+    );
+    assert.strictEqual(Number((dividerBottom - dividerTop).toFixed(2)), iconDividerLength);
+};
+CATEGORY_BLOCK_IDS.motor.forEach(blockId => {
+    const definition = blockDefinitionFor(blockId);
+    const sourcePattern = definition.output ? /est-motor-icon-centered\.svg$/ : /est-motor-icon\.svg$/;
+    assertLeadingBlockIcon(definition, 'EST_MOTOR_ICON', sourcePattern);
+});
+CATEGORY_BLOCK_IDS.movement.forEach(blockId => {
+    assertLeadingBlockIcon(blockDefinitionFor(blockId), 'EST_DRIVE_ICON', /est-drive-icon\.svg$/);
+});
+CATEGORY_BLOCK_IDS.display.forEach(blockId => {
+    assertLeadingBlockIcon(blockDefinitionFor(blockId), 'EST_DISPLAY_ICON', /est-display-icon\.svg$/);
+});
+CATEGORY_BLOCK_IDS.sound.forEach(blockId => {
+    assertLeadingBlockIcon(blockDefinitionFor(blockId), 'EST_MUSIC_ICON', /est-music-icon\.svg$/);
+});
+[
+    'event_program_start',
+    'event_color',
+    'event_touch',
+    'event_ultrasonic',
+    'event_ir_proximity',
+    'event_ir_beacon_button',
+    'event_gyro_angle',
+    'event_brick_button',
+    'event_condition',
+    'event_broadcast_received',
+    'event_timer'
+].forEach(blockId => {
+    assertLeadingBlockIcon(blockDefinitionFor(blockId), 'EST_EVENT_HAT_ICON', /est-event-hat-icon\.svg$/);
+});
+[
+    ['event_broadcast', 'EST_EVENT_HOST_ICON', /est-event-host-icon\.svg$/],
+    ['event_broadcast_wait', 'EST_EVENT_HOST_ICON', /est-event-host-icon\.svg$/]
+].forEach(([blockId, iconName, sourcePattern]) => {
+    assertLeadingBlockIcon(blockDefinitionFor(blockId), iconName, sourcePattern);
+});
+const sensorIconSource = (definition, filename) => (
+    definition.output ?
+        new RegExp(`${filename.replace('.svg', '')}-centered\\.svg$`) :
+        new RegExp(`${filename.replace('.', '\\.')}$`)
+);
+[
+    ['sensor_brick_button_value', 'EST_SENSOR_BUTTON_ICON', 'est-sensor-button-icon.svg'],
+    ['sensor_brick_button_pressed', 'EST_SENSOR_BUTTON_ICON', 'est-sensor-button-icon.svg'],
+    ['sensor_wait_brick_button', 'EST_SENSOR_BUTTON_ICON', 'est-sensor-button-icon.svg'],
+    ['sensor_color_calibrate_reflection', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
+    ['sensor_color_reset_calibration', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
+    ['sensor_color_reflection', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
+    ['sensor_color_reflection_compare', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
+    ['sensor_color_ambient', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
+    ['sensor_color_ambient_compare', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
+    ['sensor_color_value', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
+    ['sensor_color_is', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
+    ['sensor_wait_color', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
+    ['sensor_temperature', 'EST_SENSOR_TEMPERATURE_ICON', 'est-sensor-temperature-icon.svg'],
+    ['sensor_touch_pressed', 'EST_SENSOR_BUTTON_ICON', 'est-sensor-button-icon.svg'],
+    ['sensor_wait_touch', 'EST_SENSOR_BUTTON_ICON', 'est-sensor-button-icon.svg'],
+    ['sensor_ultrasonic_distance', 'EST_SENSOR_ULTRASONIC_ICON', 'est-sensor-ultrasonic-icon.svg', 46],
+    ['sensor_ultrasonic_compare', 'EST_SENSOR_ULTRASONIC_ICON', 'est-sensor-ultrasonic-icon.svg', 46],
+    ['sensor_wait_ultrasonic', 'EST_SENSOR_ULTRASONIC_ICON', 'est-sensor-ultrasonic-icon.svg', 46],
+    ['sensor_ir_proximity', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
+    ['sensor_ir_proximity_compare', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
+    ['sensor_wait_ir_proximity', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
+    ['sensor_ir_beacon_heading', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
+    ['sensor_ir_beacon_proximity', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
+    ['sensor_ir_beacon_buttons', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
+    ['sensor_ir_beacon_button_pressed', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
+    ['sensor_wait_ir_beacon_button', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
+    ['sensor_ir_beacon_active', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
+    ['sensor_ir_beacon_active_compare', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
+    ['sensor_gyro_angle', 'EST_SENSOR_GYRO_ICON', 'est-sensor-gyro-icon.svg'],
+    ['sensor_gyro_rate', 'EST_SENSOR_GYRO_ICON', 'est-sensor-gyro-icon.svg'],
+    ['sensor_gyro_reset', 'EST_SENSOR_GYRO_ICON', 'est-sensor-gyro-icon.svg'],
+    ['sensor_gyro_compare', 'EST_SENSOR_GYRO_ICON', 'est-sensor-gyro-icon.svg'],
+    ['sensor_wait_gyro', 'EST_SENSOR_GYRO_ICON', 'est-sensor-gyro-icon.svg'],
+    ['sensor_timer', 'EST_SENSOR_HOST_ICON', 'est-sensor-host-icon.svg'],
+    ['sensor_timer_reset', 'EST_SENSOR_HOST_ICON', 'est-sensor-host-icon.svg']
+].forEach(([blockId, iconName, filename, expectedSize]) => {
+    const definition = blockDefinitionFor(blockId);
+    assertLeadingBlockIcon(definition, iconName, sensorIconSource(definition, filename), expectedSize);
+});
+Object.entries({
+    'est-motor-icon.svg': '#005FA0',
+    'est-motor-icon-centered.svg': '#005FA0',
+    'est-drive-icon.svg': '#A9007A',
+    'est-display-icon.svg': '#4A00D0',
+    'est-music-icon.svg': '#763696',
+    'est-event-hat-icon.svg': '#B89A00',
+    'est-event-host-icon.svg': '#B89A00',
+    'est-sensor-host-icon.svg': '#008AA6',
+    'est-sensor-host-icon-centered.svg': '#008AA6',
+    'est-sensor-button-icon.svg': '#008AA6',
+    'est-sensor-button-icon-centered.svg': '#008AA6',
+    'est-sensor-color-icon.svg': '#008AA6',
+    'est-sensor-color-icon-centered.svg': '#008AA6',
+    'est-sensor-temperature-icon.svg': '#008AA6',
+    'est-sensor-temperature-icon-centered.svg': '#008AA6',
+    'est-sensor-ultrasonic-icon.svg': '#008AA6',
+    'est-sensor-ultrasonic-icon-centered.svg': '#008AA6',
+    'est-sensor-ir-icon.svg': '#008AA6',
+    'est-sensor-ir-icon-centered.svg': '#008AA6',
+    'est-sensor-gyro-icon.svg': '#008AA6',
+    'est-sensor-gyro-icon-centered.svg': '#008AA6'
+}).forEach(([filename, stroke]) => {
+    const source = fs.readFileSync(path.join(estBlockAssetsRoot, filename), 'utf8');
+    assert.match(source, new RegExp(`stroke="${stroke}"`));
+    if (filename === 'est-event-hat-icon.svg') {
+        assert.match(source, /transform="translate\(4\.5 0\.6\)"/);
+    } else if (filename.includes('-centered')) {
+        assert.match(source, /transform="translate\(1\.1 0\)"/);
+    } else {
+        assert.match(source, /transform="translate\(1\.1 2\.4\)"/);
+    }
+    if (filename === 'est-event-hat-icon.svg') {
+        assert.match(source, /d="M16\.6 11\.34 4\.6 4\.41v13\.86Z"/);
+    }
 });
 assert.deepStrictEqual(MOTOR_COLOURS, {
     primary: '#0090F5',
@@ -794,24 +1034,34 @@ assert.deepStrictEqual(DRIVE_COLOURS, {
 const motorRunForDefinition = registeredBlockDefinitions.find(
     definition => definition.type === 'motor_run_for'
 );
-assert.strictEqual(motorRunForDefinition.args0[0].type, 'input_value');
+assert.strictEqual(motorRunForDefinition.message0, '%1 %2 %3 %4 运行 %5 %6');
+assert.strictEqual(motorRunForDefinition.args0.find(argument => argument.name === 'PORT').type, 'input_value');
 assert.deepStrictEqual(
-    motorRunForDefinition.args0[1].options.map(option => option[1]),
+    motorRunForDefinition.args0.find(argument => argument.name === 'DIRECTION').options.map(option => option[1]),
     ['clockwise', 'counterclockwise']
 );
 assert.deepStrictEqual(
-    motorRunForDefinition.args0[3].options.map(option => option[1]),
+    motorRunForDefinition.args0.find(argument => argument.name === 'UNIT').options.map(option => option[1]),
     ['rotations', 'degrees', 'seconds']
+);
+const motorStalledDefinition = registeredBlockDefinitions.find(
+    definition => definition.type === 'motor_stalled'
+);
+assert.strictEqual(motorStalledDefinition.message0, '%1 %2 马达 %3 是否堵转？');
+assert.strictEqual(motorStalledDefinition.output, 'Boolean');
+assert.strictEqual(
+    motorStalledDefinition.args0.find(argument => argument.name === 'PORT').type,
+    'input_value'
 );
 const driveMoveForDefinition = registeredBlockDefinitions.find(
     definition => definition.type === 'drive_move_for'
 );
 assert.deepStrictEqual(
-    driveMoveForDefinition.args0[0].options.map(option => option[1]),
+    driveMoveForDefinition.args0.find(argument => argument.name === 'DIRECTION').options.map(option => option[1]),
     ['forward', 'backward']
 );
 assert.deepStrictEqual(
-    driveMoveForDefinition.args0[2].options.map(option => option[1]),
+    driveMoveForDefinition.args0.find(argument => argument.name === 'UNIT').options.map(option => option[1]),
     ['rotations', 'degrees', 'seconds']
 );
 assert.deepStrictEqual(
@@ -825,10 +1075,10 @@ assert.deepStrictEqual(
         registeredBlockDefinitions.find(definition => definition.type === blockId).message0
     ])),
     {
-        drive_steer_for: '向 %1 移动 %2 %3',
-        drive_start_steer: '开始向 %1 移动',
-        drive_steer_for_speed: '以 %1 %% 的速度向 %2 移动 %3 %4',
-        drive_start_steer_speed: '以 %1 %% 的速度开始向 %2 移动'
+        drive_steer_for: '%1 %2 向 %3 移动 %4 %5',
+        drive_start_steer: '%1 %2 开始向 %3 移动',
+        drive_steer_for_speed: '%1 %2 以 %3 %% 的速度向 %4 移动 %5 %6',
+        drive_start_steer_speed: '%1 %2 以 %3 %% 的速度开始向 %4 移动'
     }
 );
 [
@@ -849,17 +1099,18 @@ assert.deepStrictEqual(
 const driveSetPairDefinition = registeredBlockDefinitions.find(
     definition => definition.type === 'drive_set_pair'
 );
-driveSetPairDefinition.args0.forEach(portArgument => {
-    assert.strictEqual(portArgument.type, 'input_value');
-});
+assert.strictEqual(driveSetPairDefinition.args0.find(argument => argument.name === 'LEFT_PORT').type, 'input_value');
+assert.strictEqual(driveSetPairDefinition.args0.find(argument => argument.name === 'RIGHT_PORT').type, 'input_value');
 const sensorTemperatureDefinition = registeredBlockDefinitions.find(
     definition => definition.type === 'sensor_temperature'
 );
 assert.strictEqual(sensorTemperatureDefinition.output, 'Number');
-assert.strictEqual(sensorTemperatureDefinition.args0[0].type, 'input_value');
-assert.strictEqual(sensorTemperatureDefinition.args0[1].type, 'field_dropdown');
+const sensorTemperaturePort = sensorTemperatureDefinition.args0.find(argument => argument.name === 'PORT');
+const sensorTemperatureUnit = sensorTemperatureDefinition.args0.find(argument => argument.name === 'UNIT');
+assert.strictEqual(sensorTemperaturePort.type, 'input_value');
+assert.strictEqual(sensorTemperatureUnit.type, 'field_dropdown');
 assert.deepStrictEqual(
-    sensorTemperatureDefinition.args0[1].options,
+    sensorTemperatureUnit.options,
     [['摄氏', 'celsius'], ['华氏', 'fahrenheit']]
 );
 [
@@ -871,23 +1122,37 @@ assert.deepStrictEqual(
     'event_gyro_angle'
 ].forEach(blockId => {
     const definition = registeredBlockDefinitions.find(item => item.type === blockId);
-    assert.strictEqual(definition.args0[0].type, 'input_value');
+    const port = definition.args0.find(argument => argument.name === 'PORT');
+    assert.strictEqual(port.type, 'input_value');
 });
 const eventColorDefinition = registeredBlockDefinitions.find(item => item.type === 'event_color');
-assert.strictEqual(eventColorDefinition.args0[1].type, 'field_dropdown');
+assert.strictEqual(
+    eventColorDefinition.args0.find(argument => argument.name === 'COLOR_EVENT').type,
+    'field_dropdown'
+);
 const eventUltrasonicDefinition = registeredBlockDefinitions.find(
     item => item.type === 'event_ultrasonic'
 );
-assert.strictEqual(eventUltrasonicDefinition.args0[1].type, 'field_dropdown');
-assert.strictEqual(eventUltrasonicDefinition.args0[2].type, 'input_value');
-assert.strictEqual(eventUltrasonicDefinition.args0[3].type, 'field_dropdown');
+assert.strictEqual(
+    eventUltrasonicDefinition.args0.find(argument => argument.name === 'COMPARATOR').type,
+    'field_dropdown'
+);
+assert.strictEqual(
+    eventUltrasonicDefinition.args0.find(argument => argument.name === 'VALUE').type,
+    'input_value'
+);
+assert.strictEqual(
+    eventUltrasonicDefinition.args0.find(argument => argument.name === 'UNIT').type,
+    'field_dropdown'
+);
 const eventBrickButtonDefinition = registeredBlockDefinitions.find(
     item => item.type === 'event_brick_button'
 );
-eventBrickButtonDefinition.args0.forEach(argument => {
+eventBrickButtonDefinition.args0.filter(argument => argument.type !== 'field_image').forEach(argument => {
     assert.strictEqual(argument.type, 'field_dropdown');
 });
-assert.deepStrictEqual(eventBrickButtonDefinition.args0[0].options.map(option => option[1]), [
+const eventBrickButtonField = eventBrickButtonDefinition.args0.find(argument => argument.name === 'BUTTON');
+assert.deepStrictEqual(eventBrickButtonField.options.map(option => option[1]), [
     'none',
     'back',
     'left',
@@ -896,14 +1161,11 @@ assert.deepStrictEqual(eventBrickButtonDefinition.args0[0].options.map(option =>
     'up',
     'down'
 ]);
-assert.ok(!eventBrickButtonDefinition.args0[0].options.some(option => option[1] === 'center'));
+assert.ok(!eventBrickButtonField.options.some(option => option[1] === 'center'));
 ['event_broadcast_received', 'event_broadcast', 'event_broadcast_wait'].forEach(blockId => {
     const definition = registeredBlockDefinitions.find(item => item.type === blockId);
-    assert.strictEqual(definition.args0[0].type, 'field_dropdown');
+    assert.strictEqual(definition.args0.find(argument => argument.name === 'MESSAGE').type, 'field_dropdown');
 });
-const definitionArguments = definition => Object.keys(definition)
-    .filter(key => /^args\d+$/.test(key))
-    .reduce((argumentsList, key) => argumentsList.concat(definition[key]), []);
 const sensorPortDefaults = {
     sensor_color_reflection: '3',
     sensor_color_reflection_compare: '3',
@@ -1015,10 +1277,11 @@ assert.deepStrictEqual(numberCheckedInputs, []);
         assert.strictEqual(condition.check, 'Boolean', blockId);
     });
 const estToolboxCategories = getEstToolboxCategories();
-['电机', '移动', '显示', '声音', '事件', '控制', '传感器']
+['电机', '移动', '显示', '播放', '事件', '控制', '传感器']
     .forEach(categoryName => {
         assert.match(estToolboxCategories, new RegExp(`<category[^>]*name="${categoryName}"`, 's'));
     });
+assert.ok(!estToolboxCategories.includes('name="声音"'));
 assert.match(estToolboxCategories, /<category[^>]*name="%\{BKY_CATEGORY_OPERATORS\}"/s);
 assert.strictEqual((estToolboxCategories.match(/<category/g) || []).length, 8);
 const hiddenUnsupportedEventBlockIds = [
@@ -1108,6 +1371,7 @@ assert.match(estToolboxCategories, /<field name="NUM">50<\/field>/);
 assert.match(toolboxBlockXml('display_image'), /<field name="IMAGE">Eyes\/Neutral<\/field>/);
 assert.match(toolboxBlockXml('display_image_for'), /<field name="IMAGE">Eyes\/Neutral<\/field>/);
 assert.match(toolboxBlockXml('sensor_temperature'), /<field name="PORT">3<\/field>/);
+assert.match(toolboxBlockXml('motor_stalled'), /<field name="PORT">A<\/field>/);
 assert.match(toolboxBlockXml('sensor_temperature'), /<field name="UNIT">celsius<\/field>/);
 assert.match(toolboxBlockXml('event_brick_button'), /<field name="BUTTON">confirm<\/field>/);
 assert.match(toolboxBlockXml('sensor_brick_button_pressed'), /<field name="BUTTON">confirm<\/field>/);
@@ -1135,7 +1399,7 @@ assert.match(
     /<block type="drive_start_steer_speed">[\s\S]*?<value name="STEERING">[\s\S]*?<shadow type="est_steering_picker">/
 );
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_steering_picker">/g) || []).length, 4);
-assert.strictEqual((estToolboxCategories.match(/<shadow type="est_motor_port_picker">/g) || []).length, 11);
+assert.strictEqual((estToolboxCategories.match(/<shadow type="est_motor_port_picker">/g) || []).length, 12);
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_drive_port_picker">/g) || []).length, 2);
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_event_sensor_port_picker">/g) || []).length, 0);
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_sensor_port_picker">/g) || []).length, 28);
@@ -1242,11 +1506,31 @@ const motorRunPython = fakePythonGenerator.motor_run_for(makeFakeBlock('motor_ru
 const motorStopPython = fakePythonGenerator.motor_stop(makeFakeBlock('motor_stop', {
     values: {PORT: "'B'"}
 }));
+const motorStalledPython = fakePythonGenerator.motor_stalled(makeFakeBlock('motor_stalled', {
+    values: {PORT: "'B'"}
+}));
+const motorStalledDefaultPython = fakePythonGenerator.motor_stalled(makeFakeBlock('motor_stalled'));
+const motorStalledVariablePython = fakePythonGenerator.motor_stalled(makeFakeBlock('motor_stalled', {
+    values: {PORT: 'port_var'}
+}));
 assert.strictEqual(
     motorRunPython,
     "rt.motor_run_for('B', 'clockwise', 2, 'rotations')\n"
 );
 assert.strictEqual(motorStopPython, "rt.motor_stop('B')\n");
+assert.deepStrictEqual(motorStalledPython, ['rt.motor_stalled("B")', 2.2]);
+assert.deepStrictEqual(motorStalledDefaultPython, ['rt.motor_stalled("A")', 2.2]);
+assert.deepStrictEqual(motorStalledVariablePython, ['rt.motor_stalled(port_var)', 2.2]);
+const languageInvariantMotorRunBlock = makeFakeBlock('motor_run_for', {
+    values: {PORT: "'B'", AMOUNT: '2'},
+    fields: {DIRECTION: 'clockwise', UNIT: 'rotations'}
+});
+setCurrentEstLocale('zh-cn', {silent: true});
+const zhMotorRunPython = fakePythonGenerator.motor_run_for(languageInvariantMotorRunBlock);
+setCurrentEstLocale('pt-br', {silent: true});
+const ptMotorRunPython = fakePythonGenerator.motor_run_for(languageInvariantMotorRunBlock);
+setCurrentEstLocale('zh-cn', {silent: true});
+assert.strictEqual(ptMotorRunPython, zhMotorRunPython);
 
 programStartBlock.nextCode = `${fakePythonGenerator.INDENT}${motorRunPython}` +
     `${fakePythonGenerator.INDENT}${motorStopPython}`;
@@ -1471,6 +1755,20 @@ const estDefaultProjectData = createEstDefaultProjectData();
 assert.strictEqual(estDefaultProjectData.targets.length, 2);
 assert.strictEqual(estDefaultProjectData.targets[0].isStage, true);
 assert.strictEqual(estDefaultProjectData.targets[1].isStage, false);
+assert.deepStrictEqual(estDefaultProjectData.targets[0].blocks, {});
+const defaultProgramBlocks = estDefaultProjectData.targets[1].blocks;
+assert.deepStrictEqual(Object.keys(defaultProgramBlocks), ['est_default_program_start']);
+assert.deepStrictEqual(defaultProgramBlocks.est_default_program_start, {
+    opcode: 'event_program_start',
+    next: null,
+    parent: null,
+    inputs: {},
+    fields: {},
+    shadow: false,
+    topLevel: true,
+    x: 360,
+    y: 160
+});
 for (const target of estDefaultProjectData.targets) {
     assert.strictEqual(target.costumes.length, 1);
     assert.strictEqual(target.costumes[0].assetId, EMPTY_COSTUME_ASSET_ID);
@@ -1540,7 +1838,15 @@ babel.transformSync(transformedEditorMessages, {
     presets: ['@babel/preset-env']
 });
 assert.match(transformedEditorMessages, /"gui\.sharedMessages\.loadFromComputerTitle": "从电脑打开"/);
-assert.ok(!transformedEditorMessages.includes('"gui.sharedMessages.loadFromComputerTitle": "从电脑中上传"'));
+assert.match(transformedEditorMessages, /"pt-br"/);
+assert.match(transformedEditorMessages, /"gui\.menuBar\.file": "Arquivo"/);
+assert.match(transformedEditorMessages, /"gui\.menuBar\.LanguageSelector": "Idioma"/);
+assert.match(transformedEditorMessages, /"gui\.sharedMessages\.loadFromComputerTitle": "Abrir do computador"/);
+assert.match(transformedEditorMessages, /messages\[locale\] \|\| messages\.en/);
+assert.ok(
+    transformedEditorMessages.lastIndexOf('"gui.sharedMessages.loadFromComputerTitle": "从电脑打开"') >
+    transformedEditorMessages.indexOf('"gui.sharedMessages.loadFromComputerTitle": "从电脑中上传"')
+);
 const menuBarLoader = require('./est-menu-bar-loader');
 const menuBarSource = `import CommunityButton from './community-button.jsx'; // eslint-disable-line no-unused-vars
     handleClickOpenCommunity () {
@@ -1625,6 +1931,7 @@ assert.ok(!transformedMenuBar.includes('this.handleCheckUpdate'));
 assert.match(transformedMenuBar, /<EstStatusPanel \/>\s*<EstHardwareStatusButton \/>/);
 assert.match(transformedMenuBar, /import EstCodeDrawerToggle from 'est-code-drawer-toggle';/);
 assert.match(transformedMenuBar, /import EstHardwareStatusButton from 'est-hardware-status-button';/);
+assert.match(transformedMenuBar, /import EstLanguageMenu from 'est-language-menu';/);
 assert.match(transformedMenuBar, /import EstMenuBarLayout from 'est-menu-bar-layout';/);
 assert.match(transformedMenuBar, /import estMenuLogo from 'est-menu-logo';/);
 assert.match(transformedMenuBar, /title: PropTypes\.node, \/\/ rendered menu label/);
@@ -1723,6 +2030,9 @@ assert.match(transformedFullMenuBar, /<ProjectTitleInput/);
 assert.match(transformedFullMenuBar, /<SB3Downloader>/);
 assert.match(transformedFullMenuBar, /requestNewProject/);
 assert.match(transformedFullMenuBar, /<EstStatusPanel \/>\s*<EstHardwareStatusButton \/>/);
+assert.match(transformedFullMenuBar, /<EstLanguageMenu[\s\S]*open=\{this\.props\.languageMenuOpen\}/);
+assert.match(transformedFullMenuBar, /onMouseUp=\{this\.handleLanguageMouseUp\}/);
+assert.ok(!transformedFullMenuBar.includes("import LanguageSelector from '../../containers/language-selector.jsx';"));
 assert.match(transformedFullMenuBar, /<EstMenuBarLayout \/>[\s\S]*<div className=\{styles\.mainMenu\}>/);
 assert.ok(!transformedFullMenuBar.includes(
     '{this.state.isOverflow ? null :\n                    (<div className={styles.fileMenu}>'
@@ -1773,6 +2083,8 @@ assert.match(estCodeDrawerSource, /EST_CODE_DRAWER_REQUEST_STATE_EVENT/);
 assert.match(estCodeDrawerSource, /publishCodeDrawerState/);
 assert.match(estCodeDrawerSource, /resizeBlocklyWorkspace/);
 assert.match(estCodeDrawerSource, /EDITOR_CHROME_WIDTH = 6/);
+assert.match(estCodeDrawerSource, /getEstText\('codeDrawer\.resize'/);
+assert.match(estCodeDrawerSource, /state\.locales\.locale/);
 assert.ok(!estCodeDrawerSource.includes('styles.toggleButton'));
 assert.ok(!estCodeDrawerSource.includes('styles.toggleButtonCollapsed'));
 assert.ok(!estCodeDrawerSource.includes('pythonCodeDrawerOpen'));
@@ -1800,6 +2112,8 @@ assert.match(estCodeDrawerToggleSource, /EST_CODE_DRAWER_TOGGLE_EVENT/);
 assert.match(estCodeDrawerToggleSource, /aria-expanded=\{isOpen\}/);
 assert.match(estCodeDrawerToggleSource, /import codeIcon from '\.\/file-code-fill\.svg';/);
 assert.match(estCodeDrawerToggleSource, /className=\{styles\.toggleIcon\}[\s\S]*src=\{codeIcon\}/);
+assert.match(estCodeDrawerToggleSource, /getEstText\(isOpen \? 'codeDrawer\.collapse' : 'codeDrawer\.expand'/);
+assert.match(estCodeDrawerToggleSource, /state\.locales\.locale/);
 const estCodeDrawerToggleStyles = fs.readFileSync(path.resolve(
     __dirname,
     '..',
@@ -1816,6 +2130,11 @@ assert.match(estCodeDrawerToggleStyles, /padding: 0 0\.75rem;/);
 assert.match(estCodeDrawerToggleStyles, /border-radius: 0;/);
 assert.match(estCodeDrawerToggleStyles, /background-color: \$ui-black-transparent;/);
 assert.ok(!estCodeDrawerToggleStyles.includes('rgba(255, 255, 255, 0.18)'));
+assert.match(
+    estCodeDrawerToggleStyles,
+    /\.toggle-button:hover \.toggle-icon,[\s\S]*filter: brightness\(0\) invert\(16%\);/
+);
+assert.ok(!estCodeDrawerToggleStyles.includes('invert(100%)'));
 const estMenuBarLayoutSource = fs.readFileSync(path.resolve(
     __dirname,
     '..',
@@ -1828,7 +2147,39 @@ assert.match(estMenuBarLayoutSource, /CENTER_MENU_MAX_WIDTH = 252/);
 assert.match(estMenuBarLayoutSource, /getContentBounds/);
 assert.match(estMenuBarLayoutSource, /mainBounds\.right/);
 assert.match(estMenuBarLayoutSource, /tailBounds\.left/);
+assert.match(estMenuBarLayoutSource, /HOME_BUTTON_CLASS = 'est-menu-bar-home-button'/);
+assert.match(estMenuBarLayoutSource, /ensureHomeButton/);
+assert.match(estMenuBarLayoutSource, /EST_LOCALE_CHANGED_EVENT/);
+assert.match(estMenuBarLayoutSource, /getEstText\('menu\.home'/);
+assert.match(estMenuBarLayoutSource, /homeButton\.textContent = label/);
+assert.match(estMenuBarLayoutSource, /insertBefore\(homeButton, logoItem\.nextSibling\)/);
 assert.ok(!estMenuBarLayoutSource.includes('est-menu-bar-hide-centered-file-menu'));
+const estLanguageMenuSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'renderer',
+    'EstLanguageMenu.jsx'
+), 'utf8');
+assert.match(estLanguageMenuSource, /from 'openblock-l10n'/);
+assert.match(estLanguageMenuSource, /MenuBarMenu/);
+assert.match(estLanguageMenuSource, /getEstLocaleOptions/);
+assert.match(estLanguageMenuSource, /setCurrentEstLocale/);
+assert.match(estLanguageMenuSource, /locale\.value === 'pt-br'/);
+assert.match(estLanguageMenuSource, /selectLocale/);
+assert.match(estLanguageMenuSource, /closeLanguageMenu/);
+assert.match(estLanguageMenuSource, /currentLocale === locale\.value && styles\.selected/);
+const estLanguageMenuStyles = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'renderer',
+    'EstLanguageMenu.css'
+), 'utf8');
+assert.match(estLanguageMenuStyles, /\.language-menu\s*\{[\s\S]*background-color: #f8fafc;/);
+assert.match(estLanguageMenuStyles, /\.language-menu-item\s*\{[\s\S]*justify-content: space-between;/);
+assert.match(estLanguageMenuStyles, /\.language-menu-item\s*\{[\s\S]*text-align: left;/);
+assert.match(estLanguageMenuStyles, /\.language-menu-item:hover,[\s\S]*background-color: #e5e7eb;/);
 const guiCleanupLoader = require('./est-gui-cleanup-loader');
 const openBlockGuiSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -1883,6 +2234,8 @@ assert.match(estProgramControlsSource, /cannot write to hid device/);
 assert.match(estProgramControlsSource, /EST_PROGRAM_ACTIVITY_EVENT/);
 assert.match(estProgramControlsSource, /detail: \{isRunning: action === 'run'\}/);
 assert.match(estProgramControlsSource, /programActionsAllowed: false/);
+assert.match(estProgramControlsSource, /getEstText\('programControls\.downloadStart'/);
+assert.match(estProgramControlsSource, /state\.locales\.locale/);
 assert.strictEqual(
     (estProgramControlsSource.match(/disabled=\{controlsBusy \|\| !programActionsAllowed\}/g) || []).length,
     2
@@ -1895,7 +2248,8 @@ const estStatusPanelSource = fs.readFileSync(path.resolve(
     'EstStatusPanel.jsx'
 ), 'utf8');
 assert.match(estStatusPanelSource, /result\.compatible === true/);
-assert.match(estStatusPanelSource, /EST 需升级/);
+assert.match(estStatusPanelSource, /getEstText\('status\.upgradeRequired'/);
+assert.match(estStatusPanelSource, /state\.locales\.locale/);
 assert.match(estStatusPanelSource, /EST_CONNECTION_STATUS_EVENT/);
 assert.match(estStatusPanelSource, /EST_PROGRAM_ACTIVITY_EVENT/);
 assert.match(estStatusPanelSource, /RUNNING_REFRESH_INTERVAL_MS = 10000/);
@@ -1903,6 +2257,15 @@ assert.match(estStatusPanelSource, /NORMAL_REFRESH_INTERVAL_MS = 3000/);
 assert.match(estStatusPanelSource, /isProgramStatusActive/);
 assert.match(estStatusPanelSource, /scheduleRefresh\(this\.programRunning \? RUNNING_REFRESH_INTERVAL_MS : 0\)/);
 assert.ok(!estStatusPanelSource.includes('setInterval'));
+const estStatusPanelStyles = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'renderer',
+    'est-status-panel.css'
+), 'utf8');
+assert.match(estStatusPanelStyles, /\.statusBarItem\s*\{[\s\S]*font-size: 0\.75rem;/);
+assert.match(estStatusPanelStyles, /\.statusBarItem\s*\{[\s\S]*font-weight: bold;/);
 const estHardwareStatusButtonSource = fs.readFileSync(path.resolve(
     __dirname,
     '..',
@@ -1910,11 +2273,12 @@ const estHardwareStatusButtonSource = fs.readFileSync(path.resolve(
     'renderer',
     'EstHardwareStatusButton.jsx'
 ), 'utf8');
-assert.match(estHardwareStatusButtonSource, /aria-label="硬件状态"/);
+assert.match(estHardwareStatusButtonSource, /getEstText\('hardware\.title'/);
+assert.match(estHardwareStatusButtonSource, /state\.locales\.locale/);
 assert.match(estHardwareStatusButtonSource, /className=\{styles\.overlay\}/);
 assert.ok(!estHardwareStatusButtonSource.includes('aria-modal'));
 assert.match(estHardwareStatusButtonSource, /handleToggle/);
-assert.match(estHardwareStatusButtonSource, /isOpen: !state\.isOpen/);
+assert.match(estHardwareStatusButtonSource, /const isOpen = !state\.isOpen/);
 assert.match(estHardwareStatusButtonSource, /handleClose/);
 assert.match(estHardwareStatusButtonSource, /handlePanelDragStart/);
 assert.match(estHardwareStatusButtonSource, /handlePanelDragMove/);
@@ -1927,27 +2291,29 @@ assert.match(
     estHardwareStatusButtonSource,
     /\{this\.renderPortsOverview\(\)\}\s*\{this\.renderConnectionAndBattery\(\)\}/
 );
-assert.match(estHardwareStatusButtonSource, /手动刷新/);
+assert.ok(!estHardwareStatusButtonSource.includes('styles.menuIcon'));
+assert.ok(!estHardwareStatusButtonSource.includes('<svg'));
+assert.match(estHardwareStatusButtonSource, /getEstText\('hardware\.manualRefresh'/);
 assert.match(estHardwareStatusButtonSource, /includeProgramStatus: true/);
 assert.match(estHardwareStatusButtonSource, /REFRESH_INTERVAL_MS = 3000/);
 assert.match(estHardwareStatusButtonSource, /PANEL_DEFAULT_WIDTH = 600/);
 assert.match(estHardwareStatusButtonSource, /PANEL_DEFAULT_HEIGHT = 420/);
 assert.match(estHardwareStatusButtonSource, /isProgramRunning\(this\.state\.status\)/);
-assert.match(estHardwareStatusButtonSource, /程序运行中，外设详情暂停刷新/);
-assert.match(estHardwareStatusButtonSource, /EST USB 连接已断开/);
+assert.match(estHardwareStatusButtonSource, /getEstText\('hardware\.runningNotice'/);
+assert.match(estHardwareStatusButtonSource, /getEstText\('programControls\.usbDisconnected'/);
 assert.match(estHardwareStatusButtonSource, /stripRemoteErrorPrefix/);
-for (const hardwareStatusLabel of [
-    '连接状态',
-    '连接与电池',
-    '固件版本',
-    '协议版本',
-    '电量',
-    '采样电压',
-    '电机',
-    '传感器',
-    'EST 未连接'
+for (const hardwareStatusKey of [
+    'hardware.connectionStatus',
+    'hardware.connectionBattery',
+    'hardware.firmwareVersion',
+    'hardware.protocolVersion',
+    'hardware.battery',
+    'hardware.sampleVoltage',
+    'hardware.motors',
+    'hardware.sensors',
+    'hardware.notConnected'
 ]) {
-    assert.ok(estHardwareStatusButtonSource.includes(hardwareStatusLabel), hardwareStatusLabel);
+    assert.ok(estHardwareStatusButtonSource.includes(`'${hardwareStatusKey}'`), hardwareStatusKey);
 }
 assert.ok(!estHardwareStatusButtonSource.includes('<h3 className={styles.sectionTitle}>能力</h3>'));
 assert.ok(!estHardwareStatusButtonSource.includes('<h3 className={styles.sectionTitle}>Python 程序</h3>'));
@@ -1964,6 +2330,11 @@ const estHardwareStatusButtonStyles = fs.readFileSync(path.resolve(
 ), 'utf8');
 assert.match(estHardwareStatusButtonStyles, /\.menu-button:hover/);
 assert.match(estHardwareStatusButtonStyles, /background-color: \$ui-black-transparent/);
+assert.match(estHardwareStatusButtonStyles, /\.menu-button\s*\{[\s\S]*font-size: 0\.75rem;/);
+assert.match(estHardwareStatusButtonStyles, /\.menu-button\s*\{[\s\S]*font-weight: bold;/);
+assert.match(estHardwareStatusButtonStyles, /\.menu-button-open\s*\{[\s\S]*color: #1f2937;/);
+assert.ok(!estHardwareStatusButtonStyles.includes('color: #ffffff'));
+assert.ok(!estHardwareStatusButtonStyles.includes('.menu-icon'));
 assert.match(estHardwareStatusButtonStyles, /\.overlay/);
 assert.match(estHardwareStatusButtonStyles, /\.overlay\s*\{[\s\S]*pointer-events: none/);
 assert.match(estHardwareStatusButtonStyles, /\.panel/);
@@ -2127,12 +2498,46 @@ const estRendererAppStyles = fs.readFileSync(path.resolve(
 ), 'utf8');
 assert.match(estRendererAppStyles, /\.app :global\(\.injectionDiv\) \{[\s\S]*overflow: hidden !important;/);
 assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar_"\][\s\S]*position: relative;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar_"\][\s\S]*display: grid;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar_"\][\s\S]*grid-template-columns:/);
 assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar_"\][\s\S]*background-color: #f1f3f5;/);
 assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar_"\][\s\S]*color: #1f2937;/);
 assert.match(estRendererAppStyles, /\[class\*="gui_body-wrapper_"\][\s\S]*background-color: #f1f3f5;/);
-assert.match(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*left: 50%;/);
-assert.match(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*z-index: 3;/);
-assert.match(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*transform: translateX\(-50%\);/);
+assert.match(estRendererAppStyles, /\.app :global\(\.blocklyToolboxDiv\) \{[\s\S]*height: 100% !important;/);
+assert.match(estRendererAppStyles, /\[class\*="gui_extension-button-container_"\]\) \{[\s\S]*width: 2\.625rem;/);
+assert.match(estRendererAppStyles, /\[class\*="gui_extension-button-container_"\]\) \{[\s\S]*height: 2\.275rem;/);
+assert.match(estRendererAppStyles, /\[class\*="gui_extension-button-container_"\]\) \{[\s\S]*right: auto;/);
+assert.match(estRendererAppStyles, /\[class\*="gui_extension-button-container_"\]\) \{[\s\S]*border: 0;/);
+assert.match(estRendererAppStyles, /\[class\*="gui_extension-button-container_"\]\) \{[\s\S]*border-radius: 8px;/);
+assert.match(estRendererAppStyles, /\[class\*="gui_extension-button-container_"\]\) \{[\s\S]*box-shadow: none;/);
+assert.match(estRendererAppStyles, /\[class\*="gui_extension-button-container_"\]::before\) \{[\s\S]*display: none;/);
+assert.match(estRendererAppStyles, /\[class\*="gui_extension-button_"\]\) \{[\s\S]*justify-content: center;/);
+assert.match(
+    estRendererAppStyles,
+    /\[class\*="modal_modal-content_"\]\[class\*="modal_full-screen_"\]\) \{[\s\S]*background-color: #ffffff;/
+);
+assert.match(
+    estRendererAppStyles,
+    /\[class\*="modal_modal-content_"\]\[class\*="modal_full-screen_"\] \[class\*="box_box_"\]\) \{[\s\S]*background-color: #ffffff;/
+);
+assert.match(
+    estRendererAppStyles,
+    /\[class\*="modal_full-screen_"\] \[class\*="modal_header_"\]\) \{[\s\S]*background-color: #f1f3f5;[\s\S]*color: #111827;/
+);
+assert.match(
+    estRendererAppStyles,
+    /\[class\*="modal_full-screen_"\] \[class\*="modal_back-button_"\] img\) \{[\s\S]*filter: brightness\(0\) invert\(16%\);/
+);
+assert.match(estRendererAppStyles, /\[class\*="library_filter-bar_"\]\) \{[\s\S]*display: none !important;/);
+assert.match(
+    estRendererAppStyles,
+    /\[class\*="library_library-scroll-grid_"\]\) \{[\s\S]*height: calc\(100% - 3\.125rem\);[\s\S]*background-color: #ffffff;/
+);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*grid-column: 2;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*position: relative;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*z-index: 1;/);
+assert.doesNotMatch(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*left: 50%;/);
+assert.doesNotMatch(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*transform: translateX\(-50%\);/);
 assert.match(estRendererAppStyles, /--est-centered-file-menu-width/);
 assert.match(estRendererAppStyles, /var\(--est-centered-file-menu-width, 252px\)/);
 assert.match(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*overflow: hidden;/);
@@ -2140,9 +2545,31 @@ assert.match(
     estRendererAppStyles,
     /img:not\(\[class\*="menu-bar_openblock-logo_"\]\)[\s\S]*filter: brightness\(0\) invert\(16%\);/
 );
+assert.match(
+    estRendererAppStyles,
+    /\[class\*="menu-bar_menu-bar-item_"\]\[class\*="menu-bar_hoverable_"\]:hover\),[\s\S]*color: #1f2937;/
+);
+assert.match(
+    estRendererAppStyles,
+    /\[class\*="menu-bar_active_"\] img:not\(\[class\*="menu-bar_openblock-logo_"\]\)\)[\s\S]*filter: brightness\(0\) invert\(16%\);/
+);
+assert.ok(estRendererAppStyles.includes('.app :global(.est-menu-bar-home-button)'));
+assert.match(estRendererAppStyles, /\.est-menu-bar-home-button\) \{[\s\S]*font-size: 0\.75rem;/);
+assert.match(estRendererAppStyles, /\.est-menu-bar-home-button\) \{[\s\S]*font-weight: bold;/);
+assert.match(estRendererAppStyles, /\.est-menu-bar-home-button:hover\),[\s\S]*background-color: rgba\(0, 0, 0, 0\.15\);/);
+assert.match(estRendererAppStyles, /\.est-menu-bar-home-button:active\) \{[\s\S]*color: #1f2937;/);
 assert.match(estRendererAppStyles, /\[class\*="project-title-input_title-field_"\][\s\S]*color: #111827;/);
 assert.match(estRendererAppStyles, /project-title-input_title-field_"\]::placeholder\)[\s\S]*color: #4b5563;/);
+assert.match(
+    estRendererAppStyles,
+    /\[class\*="language-selector_language-select_"\] option\) \{[\s\S]*background-color: #f8fafc;[\s\S]*color: #1f2937;/
+);
+assert.match(
+    estRendererAppStyles,
+    /\[class\*="language-selector_language-select_"\] option:hover\) \{[\s\S]*background-color: #e5e7eb;/
+);
 assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar-menu_"\]\[class\*="menu_menu_"\][\s\S]*background-color: #f8fafc !important;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar-menu_"\]\[class\*="menu_menu_"\][\s\S]*overflow: hidden;/);
 assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar-menu_"\] \[class\*="menu_menu-item_"\][\s\S]*justify-content: flex-start;/);
 assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar-menu_"\] \[class\*="menu_menu-item_"\][\s\S]*background-color: #f8fafc !important;/);
 assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar-menu_"\] \[class\*="menu_menu-item_"\][\s\S]*text-align: left;/);
@@ -2151,6 +2578,23 @@ assert.ok(!estRendererAppStyles.includes('--est-centered-file-menu-max-width'));
 assert.ok(!estRendererAppStyles.includes('est-menu-bar-hide-centered-file-menu'));
 assert.match(estRendererAppStyles, /\[class\*="gui_tab-list_"\][\s\S]*display: none !important;/);
 assert.match(estRendererAppStyles, /\[class\*="gui_tab-list_"\][\s\S]*height: 0 !important;/);
+for (const categoryColourRule of [
+    ['scratchCategoryId-motor', '#0090F5'],
+    ['scratchCategoryId-movement', '#fb59ce'],
+    ['scratchCategoryId-display', '#935DF5'],
+    ['scratchCategoryId-estSound', '#BF70E7'],
+    ['scratchCategoryId-estEvents', '#F5C400'],
+    ['scratchCategoryId-estControl', '#FFB515'],
+    ['scratchCategoryId-sensors', '#1DCCF0'],
+    ['scratchCategoryId-operators', '#40BF4A'],
+    ['scratchCategoryId-variables', '#FF8C1A'],
+    ['scratchCategoryId-myBlocks', '#FF6680']
+]) {
+    assert.match(
+        estRendererAppStyles,
+        new RegExp(`${categoryColourRule[0]}[\\s\\S]*color: ${categoryColourRule[1].replace('#', '#')};`)
+    );
+}
 const localProjectFetcherLoader = require('./est-local-project-fetcher-loader');
 const openBlockProjectFetcherSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -2472,6 +2916,8 @@ assert.match(sharedWebpackConfig, /EST_CODE_DRAWER_TOGGLE/);
 assert.match(sharedWebpackConfig, /est-code-drawer-toggle\$/);
 assert.match(sharedWebpackConfig, /EST_HARDWARE_STATUS_BUTTON/);
 assert.match(sharedWebpackConfig, /est-hardware-status-button\$/);
+assert.match(sharedWebpackConfig, /EST_LANGUAGE_MENU/);
+assert.match(sharedWebpackConfig, /est-language-menu\$/);
 assert.match(sharedWebpackConfig, /EST_MENU_BAR_LAYOUT/);
 assert.match(sharedWebpackConfig, /est-menu-bar-layout\$/);
 assert.match(sharedWebpackConfig, /EST_MENU_LOGO/);
@@ -2746,6 +3192,7 @@ assert.strictEqual(CAPABILITY_HOLD_POSITION_CONTROL, 1 << 21);
 assert.strictEqual(CAPABILITY_TEMPERATURE_SENSOR, 1 << 22);
 assert.strictEqual(CAPABILITY_COOPERATIVE_MULTITASK, 1 << 23);
 assert.strictEqual(CAPABILITY_RUNTIME_BASIC_EVENT_HATS, 1 << 24);
+assert.strictEqual(CAPABILITY_MOTOR_STALL_DETECTION, 1 << 25);
 const m114ADeviceStatusPayload = new Uint8Array(72);
 m114ADeviceStatusPayload[0] = 1;
 m114ADeviceStatusPayload[1] = 25;
@@ -2799,6 +3246,10 @@ assert.deepStrictEqual(
         'cooperative-multitask',
         'runtime-basic-event-hats'
     ]
+);
+assert.deepStrictEqual(
+    capabilityNamesFor(CAPABILITY_MOTOR_STALL_DETECTION),
+    ['motor-stall-detection']
 );
 assert.strictEqual(checkProgramFirmwareCompatibility(parsedM114ADeviceStatus).programCompatible, true);
 assert.strictEqual(
@@ -3516,7 +3967,7 @@ validateEstDefaultProject()
     .then(() => testUsbDisconnectClearsStaleTransport())
     .then(() => testBuiltInMotorBlock())
     .then(() => console.log(
-        'EST protocol, queue, 91 EST blocks, and native operator/data/procedure tests passed'
+        'EST protocol, queue, 92 EST blocks, and native operator/data/procedure tests passed'
     ))
     .catch(error => {
         console.error(error);

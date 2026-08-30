@@ -67,6 +67,8 @@ const orderOf = (generator, name, fallback = 99) => (
 
 const quote = (generator, value) => generator.quote_(String(value));
 
+const doubleQuote = value => `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+
 const fieldValue = (block, name, fallback) => {
     const value = block.getFieldValue(name);
     return value === null || typeof value === 'undefined' || value === '' ? fallback : value;
@@ -96,6 +98,11 @@ const numberField = (block, name, fallback = '0') => String(fieldValue(block, na
 const valueOr = (generator, block, name, fallback) => (
     generator.valueToCode(block, name, orderOf(generator, 'ORDER_NONE')) || fallback
 );
+
+const doubleQuotedMotorPortLiteral = code => {
+    const match = String(code).match(/^['"]([ABCD])['"]$/);
+    return match ? doubleQuote(match[1]) : code;
+};
 
 const ensureSpeedHelpers = generator => {
     ensureDictionary(generator, 'libraries_').estSpeedHelpers =
@@ -314,6 +321,11 @@ const registerMotorGenerators = generator => {
         ensureRuntimeImport(generator);
         const port = valueOr(generator, block, 'PORT', quote(generator, 'A'));
         return functionCall(generator, `rt.motor(${port}).speed()`);
+    };
+    generator.motor_stalled = block => {
+        ensureRuntimeImport(generator);
+        const port = doubleQuotedMotorPortLiteral(valueOr(generator, block, 'PORT', doubleQuote('A')));
+        return functionCall(generator, `rt.motor_stalled(${port})`);
     };
 };
 

@@ -23,6 +23,12 @@ body,
 
 .app :global([class*="menu-bar_menu-bar_"]) {
     position: relative;
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, var(--est-centered-file-menu-width, 252px))
+        minmax(0, 1fr);
+    align-items: stretch;
     background-color: #f1f3f5;
     color: #1f2937;
 }
@@ -31,7 +37,99 @@ body,
     background-color: #f1f3f5;
 }
 
+.app :global(.blocklyToolboxDiv) {
+    height: 100% !important;
+}
+
+.app :global([class*="gui_extension-button-container_"]) {
+    right: auto;
+    bottom: 0.4875rem;
+    left: 0.5625rem;
+    box-sizing: border-box;
+    width: 2.625rem;
+    height: 2.275rem;
+    overflow: hidden;
+    border: 0;
+    border-radius: 8px;
+    box-shadow: none;
+}
+
+.app :global([class*="gui_extension-button-container_"]::before) {
+    display: none;
+}
+
+.app :global([class*="gui_extension-button_"]) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+:global([class*="modal_modal-content_"][class*="modal_full-screen_"]) {
+    background-color: #ffffff;
+}
+
+:global([class*="modal_modal-content_"][class*="modal_full-screen_"] [class*="box_box_"]) {
+    background-color: #ffffff;
+}
+
+:global([class*="modal_full-screen_"] [class*="modal_header_"]) {
+    border-bottom: 1px solid rgba(31, 41, 55, 0.12);
+    background-color: #f1f3f5;
+    color: #111827;
+}
+
+:global([class*="modal_full-screen_"] [class*="modal_header-item_"]),
+:global([class*="modal_full-screen_"] [class*="modal_back-button_"]) {
+    color: #111827;
+}
+
+:global([class*="modal_full-screen_"] [class*="modal_header-image_"]),
+:global([class*="modal_full-screen_"] [class*="modal_back-button_"] img) {
+    filter: brightness(0) invert(16%);
+}
+
+:global([class*="library_filter-bar_"]) {
+    display: none !important;
+}
+
+:global([class*="library_library-scroll-grid_"]) {
+    height: calc(100% - 3.125rem);
+    background-color: #ffffff;
+}
+
+:global([class*="library_library-scroll-grid_"][class*="library_withFilterBar_"]) {
+    height: calc(100% - 3.125rem);
+}
+
 .app :global([class*="menu-bar_menu-bar_"] [class*="menu-bar_menu-bar-item_"]) {
+    color: #1f2937;
+}
+
+.app :global(.est-menu-bar-home-button) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 3rem;
+    margin: 0;
+    padding: 0 0.75rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #1f2937;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.75rem;
+    font-weight: bold;
+    outline: none;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.app :global(.est-menu-bar-home-button:hover),
+.app :global(.est-menu-bar-home-button:active) {
+    background-color: rgba(0, 0, 0, 0.15);
     color: #1f2937;
 }
 
@@ -41,27 +139,30 @@ body,
 
 .app :global([class*="menu-bar_menu-bar-item_"][class*="menu-bar_hoverable_"]:hover),
 .app :global([class*="menu-bar_menu-bar-item_"][class*="menu-bar_active_"]) {
-    color: #ffffff;
+    color: #1f2937;
 }
 
 .app :global([class*="menu-bar_menu-bar-item_"][class*="menu-bar_hoverable_"]:hover img:not([class*="menu-bar_openblock-logo_"])),
 .app :global([class*="menu-bar_menu-bar-item_"][class*="menu-bar_active_"] img:not([class*="menu-bar_openblock-logo_"])) {
-    filter: brightness(0) invert(100%);
+    filter: brightness(0) invert(16%);
 }
 
 .app :global([class*="menu-bar_main-menu_"]),
 .app :global([class*="menu-bar_tail-menu_"]) {
+    min-width: 0;
     position: relative;
     z-index: 2;
 }
 
 .app :global([class*="menu-bar_file-menu_"]) {
-    position: absolute;
-    z-index: 3;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
+    grid-column: 2;
+    grid-row: 1;
+    align-self: stretch;
+    justify-self: center;
+    position: relative;
+    z-index: 1;
     box-sizing: border-box;
+    height: 100%;
     width: var(--est-centered-file-menu-width, 252px);
     max-width: var(--est-centered-file-menu-width, 252px);
     min-width: 0;
@@ -101,12 +202,30 @@ body,
     color: #111827;
 }
 
+.app :global([class*="language-selector_language-select_"]) {
+    background-color: #f8fafc !important;
+    color: #1f2937 !important;
+}
+
+.app :global([class*="language-selector_language-select_"] option) {
+    background-color: #f8fafc;
+    color: #1f2937;
+    text-align: left;
+}
+
+.app :global([class*="language-selector_language-select_"] option:checked),
+.app :global([class*="language-selector_language-select_"] option:hover) {
+    background-color: #e5e7eb;
+    color: #111827;
+}
+
 .app :global([class*="menu-bar_menu-bar-menu_"][class*="menu_menu_"]),
 .app :global([class*="menu-bar_menu-bar_"] [class*="menu_menu_"]) {
     border-color: rgba(31, 41, 55, 0.18);
     background-color: #f8fafc !important;
     color: #1f2937 !important;
     box-shadow: 0 8px 16px rgba(31, 41, 55, 0.14);
+    overflow: hidden;
 }
 
 .app :global([class*="menu-bar_menu-bar-menu_"] [class*="menu_menu-item_"]),
@@ -143,4 +262,53 @@ body,
 .app :global([class*="gui_tabs_"]),
 .app :global([class*="gui_tab-panel_"]) {
     min-height: 0;
+}
+
+.app :global(.scratchCategoryId-motor .scratchCategoryMenuItemLabel) {
+    color: #0090F5;
+}
+
+.app :global(.scratchCategoryId-movement .scratchCategoryMenuItemLabel) {
+    color: #fb59ce;
+}
+
+.app :global(.scratchCategoryId-display .scratchCategoryMenuItemLabel) {
+    color: #935DF5;
+}
+
+.app :global(.scratchCategoryId-estSound .scratchCategoryMenuItemLabel),
+.app :global(.scratchCategoryId-sound .scratchCategoryMenuItemLabel),
+.app :global(.scratchCategoryId-sounds .scratchCategoryMenuItemLabel) {
+    color: #BF70E7;
+}
+
+.app :global(.scratchCategoryId-estEvents .scratchCategoryMenuItemLabel),
+.app :global(.scratchCategoryId-event .scratchCategoryMenuItemLabel),
+.app :global(.scratchCategoryId-events .scratchCategoryMenuItemLabel) {
+    color: #F5C400;
+}
+
+.app :global(.scratchCategoryId-estControl .scratchCategoryMenuItemLabel),
+.app :global(.scratchCategoryId-control .scratchCategoryMenuItemLabel) {
+    color: #FFB515;
+}
+
+.app :global(.scratchCategoryId-sensors .scratchCategoryMenuItemLabel),
+.app :global(.scratchCategoryId-sensing .scratchCategoryMenuItemLabel) {
+    color: #1DCCF0;
+}
+
+.app :global(.scratchCategoryId-operators .scratchCategoryMenuItemLabel) {
+    color: #40BF4A;
+}
+
+.app :global(.scratchCategoryId-variables .scratchCategoryMenuItemLabel),
+.app :global(.scratchCategoryId-data .scratchCategoryMenuItemLabel),
+.app :global(.scratchCategoryId-data-lists .scratchCategoryMenuItemLabel) {
+    color: #FF8C1A;
+}
+
+.app :global(.scratchCategoryId-myBlocks .scratchCategoryMenuItemLabel),
+.app :global(.scratchCategoryId-procedures .scratchCategoryMenuItemLabel) {
+    color: #FF6680;
 }

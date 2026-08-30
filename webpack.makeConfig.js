@@ -49,6 +49,7 @@ const EST_STATUS_PANEL = path.resolve(__dirname, './src/renderer/EstStatusPanel.
 const EST_HARDWARE_STATUS_BUTTON = path.resolve(__dirname, './src/renderer/EstHardwareStatusButton.jsx');
 const EST_CODE_DRAWER = path.resolve(__dirname, './src/renderer/EstCodeDrawer.jsx');
 const EST_CODE_DRAWER_TOGGLE = path.resolve(__dirname, './src/renderer/EstCodeDrawerToggle.jsx');
+const EST_LANGUAGE_MENU = path.resolve(__dirname, './src/renderer/EstLanguageMenu.jsx');
 const EST_MENU_BAR_LAYOUT = path.resolve(__dirname, './src/renderer/EstMenuBarLayout.jsx');
 const EST_MENU_LOGO = path.resolve(__dirname, './src/renderer/est-menu-logo.png');
 const EST_PROGRAM_CONTROLS = path.resolve(__dirname, './src/renderer/EstProgramControls.jsx');
@@ -324,6 +325,7 @@ const makeConfig = function (defaultConfig, options) {
                 'est-hardware-status-button$': EST_HARDWARE_STATUS_BUTTON,
                 'est-code-drawer$': EST_CODE_DRAWER,
                 'est-code-drawer-toggle$': EST_CODE_DRAWER_TOGGLE,
+                'est-language-menu$': EST_LANGUAGE_MENU,
                 'est-menu-bar-layout$': EST_MENU_BAR_LAYOUT,
                 'est-menu-logo$': EST_MENU_LOGO,
                 'est-program-controls$': EST_PROGRAM_CONTROLS,

@@ -30,7 +30,8 @@ export const EST_PROGRAM_COMPATIBILITY_TABLE = Object.freeze({
     'M1.10C': Object.freeze({protocolMajor: 1, protocolMinor: 20}),
     'M1.12A': Object.freeze({protocolMajor: 1, protocolMinor: 21}),
     'M1.13A': Object.freeze({protocolMajor: 1, protocolMinor: 22}),
-    'M1.14A': Object.freeze({protocolMajor: 1, protocolMinor: 24})
+    'M1.14A': Object.freeze({protocolMajor: 1, protocolMinor: 24}),
+    'M1.21A': Object.freeze({protocolMajor: 1, protocolMinor: 26})
 });
 
 export const CAPABILITY_FIRMWARE_UPDATE = 1 << 0;
@@ -58,6 +59,7 @@ export const CAPABILITY_HOLD_POSITION_CONTROL = 1 << 21;
 export const CAPABILITY_TEMPERATURE_SENSOR = 1 << 22;
 export const CAPABILITY_COOPERATIVE_MULTITASK = 1 << 23;
 export const CAPABILITY_RUNTIME_BASIC_EVENT_HATS = 1 << 24;
+export const CAPABILITY_MOTOR_STALL_DETECTION = 1 << 25;
 
 export const PYTHON_PROGRAM_ACTION_STATUS = 0x00;
 export const PYTHON_PROGRAM_ACTION_BEGIN = 0x01;

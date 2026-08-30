@@ -1,17 +1,31 @@
+const estEditorMessageOverrides = require('../src/renderer/est-editor-message-overrides.json');
+
 /**
  * Override EST Studio-specific interface copy without editing openblock-l10n.
  * @param {string} source - OpenBlock editor locale messages source.
  * @returns {string} transformed source with EST message overrides.
  */
 module.exports = function (source) {
-    const upstreamMessage =
-        '    "gui.sharedMessages.loadFromComputerTitle": "从电脑中上传",';
-    const estMessage =
-        '    "gui.sharedMessages.loadFromComputerTitle": "从电脑打开",';
+    const exportStart = 'export default {';
+    const exportEndPattern = /\n\};\s*$/;
 
-    if (!source.includes(upstreamMessage)) {
-        throw new Error('Unable to locate the OpenBlock zh-cn load-from-computer message.');
+    if (!source.includes(exportStart) || !exportEndPattern.test(source)) {
+        throw new Error('Unable to locate the OpenBlock editor locale export.');
     }
 
-    return source.replace(upstreamMessage, estMessage);
+    const overridesSource = JSON.stringify(estEditorMessageOverrides, null, 4);
+
+    return source
+        .replace(exportStart, 'const openBlockEditorMessages = {')
+        .replace(exportEndPattern, [
+            '\n};',
+            `const estEditorMessageOverrides = ${overridesSource};`,
+            'const estMergedEditorMessages = Object.keys(estEditorMessageOverrides).reduce((messages, locale) => {',
+            '    const baseMessages = messages[locale] || messages.en || {};',
+            '    messages[locale] = Object.assign({}, baseMessages, estEditorMessageOverrides[locale]);',
+            '    return messages;',
+            '}, Object.assign({}, openBlockEditorMessages));',
+            '',
+            'export default estMergedEditorMessages;'
+        ].join('\n'));
 };

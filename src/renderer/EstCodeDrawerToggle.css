@@ -24,6 +24,7 @@
 .toggle-button:active,
 .toggle-button-open {
     background-color: $ui-black-transparent;
+    color: #1f2937;
 }
 
 .toggle-icon {
@@ -37,5 +38,5 @@
 .toggle-button:hover .toggle-icon,
 .toggle-button:active .toggle-icon,
 .toggle-button-open .toggle-icon {
-    filter: brightness(0) invert(100%);
+    filter: brightness(0) invert(16%);
 }

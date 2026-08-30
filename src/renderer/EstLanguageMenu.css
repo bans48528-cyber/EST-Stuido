@@ -1,0 +1,40 @@
+@import "../../node_modules/openblock-gui/src/css/colors.css";
+@import "../../node_modules/openblock-gui/src/css/units.css";
+@import "../../node_modules/openblock-gui/src/css/z-index.css";
+
+.menu-bar-menu {
+    margin-top: $menu-bar-height;
+    z-index: $z-index-menu-bar;
+}
+
+.language-menu {
+    overflow-y: auto;
+    max-height: min(420px, calc(100vh - 72px));
+    border-color: rgba(31, 41, 55, 0.18);
+    background-color: #f8fafc;
+    color: #1f2937;
+    box-shadow: 0 8px 16px rgba(31, 41, 55, 0.14);
+}
+
+.language-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 20px;
+    background-color: #f8fafc;
+    color: #1f2937;
+    text-align: left;
+}
+
+.language-menu-item:hover,
+.selected {
+    background-color: #e5e7eb;
+    color: #111827;
+}
+
+.language-menu-text {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+}

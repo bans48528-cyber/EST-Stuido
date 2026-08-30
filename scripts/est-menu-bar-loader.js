@@ -76,6 +76,28 @@ module.exports = function (source) {
     const aboutTitlePropType = '                title: PropTypes.string, // text for the menu item';
     const openBlockLogoImport = "import openblockLogo from './openblock-logo.svg';\n";
     const openBlockLogoSmallImport = "import openblockLogoSmall from './openblock-logo-small.svg';\n";
+    const languageSelectorImport = "import LanguageSelector from '../../containers/language-selector.jsx';\n";
+    const languageMenuContainer = [
+        '                    {(this.props.canChangeLanguage) && (<div',
+        '                        className={classNames(styles.menuBarItem, styles.hoverable, styles.languageMenu)}',
+        '                    >'
+    ].join('\n');
+    const estLanguageMenuContainer = [
+        '                    {(this.props.canChangeLanguage) && (<div',
+        '                        className={classNames(styles.menuBarItem, styles.hoverable, styles.languageMenu, {',
+        '                            [styles.active]: this.props.languageMenuOpen',
+        '                        })}',
+        '                        onMouseUp={this.handleLanguageMouseUp}',
+        '                    >'
+    ].join('\n');
+    const languageSelectorElement =
+        '<LanguageSelector label={this.props.intl.formatMessage(ariaMessages.language)} />';
+    const estLanguageMenuElement =
+        '<EstLanguageMenu\n' +
+        '                            label={this.props.intl.formatMessage(ariaMessages.language)}\n' +
+        '                            open={this.props.languageMenuOpen}\n' +
+        '                            onRequestClose={this.props.onRequestCloseLanguage}\n' +
+        '                        />';
     const openBlockLogoSrc =
         'src={this.state.isOverflow ? this.props.logoSmall : this.props.logo}';
     const openBlockLogoDefaultProps = [
@@ -128,6 +150,9 @@ module.exports = function (source) {
     }
 
     let transformedSource = source
+        .replace(languageSelectorImport, '')
+        .replace(languageMenuContainer, estLanguageMenuContainer)
+        .replace(languageSelectorElement, estLanguageMenuElement)
         .replace(deviceSelectionPattern, '')
         .replace(
             connectionButtonPattern,
@@ -605,6 +630,7 @@ module.exports = function (source) {
     return [
         "import EstCodeDrawerToggle from 'est-code-drawer-toggle';",
         "import EstHardwareStatusButton from 'est-hardware-status-button';",
+        "import EstLanguageMenu from 'est-language-menu';",
         "import EstMenuBarLayout from 'est-menu-bar-layout';",
         "import estMenuLogo from 'est-menu-logo';",
         "import EstStatusPanel from 'est-status-panel';",
