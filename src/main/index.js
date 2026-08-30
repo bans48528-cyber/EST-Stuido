@@ -10,6 +10,8 @@ import {getFilterForExtension} from './FileFilters';
 import Updater from './OpenblockDesktopUpdater';
 import MacOSMenu from './MacOSMenu';
 import log from '../common/log.js';
+import appIconIco from '../icon/OpenBlockDesktop.ico';
+import appIconPng from '../icon/OpenBlockDesktop.png';
 import {productName, version} from '../../package.json';
 import {EstDeviceService} from './est/device-service';
 import {createNodeHidEstTransportFactory} from './est/transports/node-hid';
@@ -20,11 +22,16 @@ import locales from 'openblock-l10n/locales/desktop-msgs';
 const estDeviceService = new EstDeviceService({
     transportFactory: createNodeHidEstTransportFactory()
 });
+const estStudioAppId = 'com.eststudio.desktop';
 
 formatMessage.setup({translations: locales});
 
 // suppress deprecation warning; this will be the default in Electron 9
 app.allowRendererProcessReuse = true;
+
+if (process.platform === 'win32') {
+    app.setAppUserModelId(estStudioAppId);
+}
 
 // allow connect to localhost
 app.commandLine.appendSwitch('allow-insecure-localhost', 'true');
@@ -36,6 +43,8 @@ app.commandLine.hasSwitch('ignore-gpu-blacklist');
 const defaultSize = {width: 1620, height: 900};
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
+
+const getWindowIcon = () => (process.platform === 'win32' ? appIconIco : appIconPng);
 
 const devToolKey = ((process.platform === 'darwin') ?
     { // macOS: command+option+i
@@ -212,6 +221,7 @@ const handlePermissionRequest = async (webContents, permission, callback, detail
 
 const createWindow = ({search = null, url = 'index.html', ...browserWindowOptions}) => {
     const window = new BrowserWindow({
+        icon: getWindowIcon(),
         useContentSize: true,
         show: false,
         webPreferences: {
@@ -446,10 +456,6 @@ const createMainWindow = () => {
         update.checkUpdateAtStartup();
     });
 
-    ipcMain.on('reqeustCheckUpdate', () => {
-        update.reqeustCheckUpdate();
-    });
-
     ipcMain.on('reqeustUpdate', () => {
         update.reqeustUpdate()
             .then(() => {
@@ -585,8 +591,8 @@ ipcMain.on('set-locale', (event, arg) => {
 ipcMain.handle('est-list-devices', () => estDeviceService.listDevices());
 ipcMain.handle('est-connect', (event, device) => estDeviceService.connect(device));
 ipcMain.handle('est-disconnect', () => estDeviceService.disconnect());
-ipcMain.handle('est-get-status', () => estDeviceService.getStatus());
-ipcMain.handle('est-auto-connect', () => estDeviceService.autoConnect());
+ipcMain.handle('est-get-status', (event, options) => estDeviceService.getStatus(options));
+ipcMain.handle('est-auto-connect', (event, options) => estDeviceService.autoConnect(options));
 ipcMain.handle('est-download-program', (event, request) => estDeviceService.downloadProgram(request));
 ipcMain.handle('est-run-program', (event, request) => estDeviceService.runProgram(request));
 ipcMain.handle('est-stop-program', () => estDeviceService.stopCurrentProgram());

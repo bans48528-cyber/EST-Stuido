@@ -1,3 +1,5 @@
+import {installEstPythonNameSanitizer} from './python-names';
+
 const registeredGenerators = new WeakSet();
 
 const EVENT_HAT_IDS = new Set([
@@ -24,6 +26,27 @@ const COLOR_IDS = {
     white: 6,
     brown: 7
 };
+
+const STATUS_LIGHT_CONSTANTS = {
+    off: 'est.led.OFF',
+    red: 'est.led.RED',
+    blue: 'est.led.BLUE'
+};
+
+const BRICK_BUTTON_CONSTANTS = {
+    none: 'est.buttons.NONE',
+    back: 'est.buttons.BACK',
+    left: 'est.buttons.LEFT',
+    center: 'est.buttons.CONFIRM',
+    confirm: 'est.buttons.CONFIRM',
+    right: 'est.buttons.RIGHT',
+    up: 'est.buttons.UP',
+    down: 'est.buttons.DOWN'
+};
+
+const ASYNC_RUNTIME_STATEMENT_RE =
+    /^(\s*)(?!await\b)(rt\.(?:yield_once|sleep|wait_until|motor_run_for|drive_move_for|drive_steer_for|drive_dual_speed_for|display_image_for|wait_[a-z_]+)\s*\()/gm;
+const STACK_STOP_STATEMENT_RE = /\brt\.(?:stop|stop_other_stacks)\s*\(/;
 
 const ensureDictionary = (generator, name) => {
     if (!generator[name]) generator[name] = Object.create(null);
@@ -54,11 +77,52 @@ const quoteField = (generator, block, name, fallback) => quote(
     fieldValue(block, name, fallback)
 );
 
+const normalizeBrickButtonName = value => (value === 'center' ? 'confirm' : value);
+
+const quoteBrickButtonField = (generator, block, name, fallback = 'confirm') => quote(
+    generator,
+    normalizeBrickButtonName(fieldValue(block, name, fallback))
+);
+
+const normalizeStopScope = value => {
+    if (value === 'exit_program') return 'all';
+    if (value === 'other_stacks') return 'other_stacks';
+    if (value === 'this_stack') return 'this_stack';
+    return 'all';
+};
+
 const numberField = (block, name, fallback = '0') => String(fieldValue(block, name, fallback));
 
 const valueOr = (generator, block, name, fallback) => (
     generator.valueToCode(block, name, orderOf(generator, 'ORDER_NONE')) || fallback
 );
+
+const ensureSpeedHelpers = generator => {
+    ensureDictionary(generator, 'libraries_').estSpeedHelpers =
+`def _est_speed(value):
+  value = int(value)
+  if value > 100:
+    return 100
+  if value < -100:
+    return -100
+  return value
+
+def _est_speed_magnitude(value):
+  value = abs(int(value))
+  if value > 100:
+    return 100
+  return value`;
+};
+
+const speedValue = (generator, block, name, fallback = '0') => {
+    ensureSpeedHelpers(generator);
+    return `_est_speed(${valueOr(generator, block, name, fallback)})`;
+};
+
+const speedMagnitudeValue = (generator, block, name, fallback = '0') => {
+    ensureSpeedHelpers(generator);
+    return `_est_speed_magnitude(${valueOr(generator, block, name, fallback)})`;
+};
 
 const statementOrPass = (generator, block, name) => {
     const code = typeof generator.statementToCode === 'function' ?
@@ -75,9 +139,14 @@ const functionCall = (generator, code) => [
 const initialiseStackNumbers = (generator, workspace) => {
     generator.estStackNumbers_ = Object.create(null);
     generator.estNextStackNumber_ = 1;
+    generator.estProgramStartCount_ = 0;
     if (!workspace || typeof workspace.getTopBlocks !== 'function') return;
 
-    workspace.getTopBlocks(true)
+    const topBlocks = workspace.getTopBlocks(true);
+    generator.estProgramStartCount_ = topBlocks
+        .filter(block => block.type === 'event_program_start')
+        .length;
+    topBlocks
         .filter(block => EVENT_HAT_IDS.has(block.type))
         .forEach(block => {
             generator.estStackNumbers_[block.id] = generator.estNextStackNumber_++;
@@ -97,6 +166,26 @@ const globalVariableNames = generator => Object.keys(generator.variables_ || {})
     .map(key => generator.variables_[key].split('=')[0].trim())
     .filter(Boolean);
 
+const hasAsyncRuntimeStatement = code => {
+    ASYNC_RUNTIME_STATEMENT_RE.lastIndex = 0;
+    return ASYNC_RUNTIME_STATEMENT_RE.test(code);
+};
+
+const stackNeedsCooperativeRuntime = (generator, block, code) => (
+    EVENT_HAT_IDS.has(block.type) &&
+    (
+        (block.type === 'event_program_start' && (generator.estProgramStartCount_ || 0) > 1) ||
+        STACK_STOP_STATEMENT_RE.test(code) ||
+        /\bawait\s+rt\./.test(code) ||
+        hasAsyncRuntimeStatement(code)
+    )
+);
+
+const asyncifyStackCode = code => {
+    ASYNC_RUNTIME_STATEMENT_RE.lastIndex = 0;
+    return code.replace(ASYNC_RUNTIME_STATEMENT_RE, '$1await $2');
+};
+
 const registerEventHat = (generator, block, decorator) => {
     ensureRuntimeImport(generator);
     const stackName = stackNameForBlock(block, generator);
@@ -113,19 +202,30 @@ const registerEventHat = (generator, block, decorator) => {
         code += `${generator.INDENT}pass\n`;
     }
 
+    if (stackNeedsCooperativeRuntime(generator, block, code)) {
+        code = code.replace(`\ndef ${stackName}():`, `\nasync def ${stackName}():`);
+        code = asyncifyStackCode(code);
+    }
+
     ensureDictionary(generator, 'libraries_')[`est_${stackName}`] = code;
     ensureDictionary(generator, 'setups_').estRun = 'rt.run()';
     return null;
 };
 
-const registerLifecycle = generator => {
+const registerLifecycle = (ScratchBlocks, generator) => {
     const originalInit = generator.init;
     if (typeof originalInit === 'function') {
         generator.init = function (workspace) {
+            installEstPythonNameSanitizer(ScratchBlocks, this);
+            if (this.variableDB_ && typeof this.variableDB_.reset === 'function') {
+                this.variableDB_.reset();
+            }
             originalInit.call(this, workspace);
+            installEstPythonNameSanitizer(ScratchBlocks, this);
             initialiseStackNumbers(this, workspace);
         };
     } else {
+        installEstPythonNameSanitizer(ScratchBlocks, generator);
         initialiseStackNumbers(generator);
     }
 };
@@ -145,6 +245,7 @@ const registerSupportGenerators = generator => {
         quoteField(generator, block, 'PORT', '1'),
         orderOf(generator, 'ORDER_ATOMIC', 0)
     ];
+    generator.est_sensor_port_picker = generator.est_event_sensor_port_picker;
 };
 
 const registerMotorGenerators = generator => {
@@ -170,7 +271,7 @@ const registerMotorGenerators = generator => {
     generator.motor_set_speed = block => {
         ensureRuntimeImport(generator);
         const port = valueOr(generator, block, 'PORT', quote(generator, 'A'));
-        const speed = valueOr(generator, block, 'SPEED', '0');
+        const speed = speedMagnitudeValue(generator, block, 'SPEED');
         return `rt.motor_set_speed(${port}, ${speed})\n`;
     };
     generator.motor_set_stop_action = block => {
@@ -182,7 +283,7 @@ const registerMotorGenerators = generator => {
     generator.motor_run_for_speed = block => {
         ensureRuntimeImport(generator);
         const port = valueOr(generator, block, 'PORT', quote(generator, 'A'));
-        const speed = valueOr(generator, block, 'SPEED', '0');
+        const speed = speedValue(generator, block, 'SPEED');
         const amount = valueOr(generator, block, 'AMOUNT', '0');
         const unit = quoteField(generator, block, 'UNIT', 'rotations');
         return `rt.motor_run_for(${port}, None, ${amount}, ${unit}, speed=${speed})\n`;
@@ -190,7 +291,7 @@ const registerMotorGenerators = generator => {
     generator.motor_start_speed = block => {
         ensureRuntimeImport(generator);
         const port = valueOr(generator, block, 'PORT', quote(generator, 'A'));
-        const speed = valueOr(generator, block, 'SPEED', '0');
+        const speed = speedValue(generator, block, 'SPEED');
         return `rt.motor(${port}).run_speed(${speed})\n`;
     };
     generator.motor_start_power = block => {
@@ -242,7 +343,7 @@ const registerMovementGenerators = generator => {
     };
     generator.drive_set_speed = block => {
         ensureRuntimeImport(generator);
-        const speed = valueOr(generator, block, 'SPEED', '0');
+        const speed = speedMagnitudeValue(generator, block, 'SPEED');
         return `rt.drive_set_speed(${speed})\n`;
     };
     generator.drive_set_pair = block => {
@@ -261,13 +362,13 @@ const registerMovementGenerators = generator => {
         const steering = valueOr(generator, block, 'STEERING', '0');
         const amount = valueOr(generator, block, 'AMOUNT', '0');
         const unit = quoteField(generator, block, 'UNIT', 'rotations');
-        const speed = valueOr(generator, block, 'SPEED', '0');
+        const speed = speedMagnitudeValue(generator, block, 'SPEED');
         return `rt.drive_steer_for(${steering}, ${amount}, ${unit}, speed=${speed})\n`;
     };
     generator.drive_dual_speed_for = block => {
         ensureRuntimeImport(generator);
-        const leftSpeed = valueOr(generator, block, 'LEFT_SPEED', '0');
-        const rightSpeed = valueOr(generator, block, 'RIGHT_SPEED', '0');
+        const leftSpeed = speedValue(generator, block, 'LEFT_SPEED');
+        const rightSpeed = speedValue(generator, block, 'RIGHT_SPEED');
         const amount = valueOr(generator, block, 'AMOUNT', '0');
         const unit = quoteField(generator, block, 'UNIT', 'rotations');
         return `rt.drive_dual_speed_for(${leftSpeed}, ${rightSpeed}, ${amount}, ${unit})\n`;
@@ -275,13 +376,13 @@ const registerMovementGenerators = generator => {
     generator.drive_start_steer_speed = block => {
         ensureRuntimeImport(generator);
         const steering = valueOr(generator, block, 'STEERING', '0');
-        const speed = valueOr(generator, block, 'SPEED', '0');
+        const speed = speedValue(generator, block, 'SPEED');
         return `rt.drive_start_steer(${steering}, speed=${speed})\n`;
     };
     generator.drive_start_dual_speed = block => {
         ensureRuntimeImport(generator);
-        const leftSpeed = valueOr(generator, block, 'LEFT_SPEED', '0');
-        const rightSpeed = valueOr(generator, block, 'RIGHT_SPEED', '0');
+        const leftSpeed = speedValue(generator, block, 'LEFT_SPEED');
+        const rightSpeed = speedValue(generator, block, 'RIGHT_SPEED');
         return `rt.drive_start_dual_speed(${leftSpeed}, ${rightSpeed})\n`;
     };
 };
@@ -289,13 +390,14 @@ const registerMovementGenerators = generator => {
 const registerDisplayGenerators = generator => {
     generator.display_image_for = block => {
         ensureRuntimeImport(generator);
-        const image = quoteField(generator, block, 'IMAGE', 'eyes_neutral');
+        const image = quoteField(generator, block, 'IMAGE', 'Eyes/Neutral');
         const seconds = valueOr(generator, block, 'SECONDS', '0');
         return `rt.display_image_for(${image}, ${seconds})\n`;
     };
     generator.display_image = block => {
         ensureHardwareImport(generator);
-        return `est.display.image(${quoteField(generator, block, 'IMAGE', 'eyes_neutral')})\n`;
+        return `est.display.image(${quoteField(generator, block, 'IMAGE', 'Eyes/Neutral')})\n` +
+            'est.display.refresh()\n';
     };
     generator.display_text_line = block => {
         ensureHardwareImport(generator);
@@ -308,16 +410,17 @@ const registerDisplayGenerators = generator => {
         const x = valueOr(generator, block, 'X', '0');
         const y = valueOr(generator, block, 'Y', '0');
         const content = valueOr(generator, block, 'TEXT', quote(generator, ''));
-        const font = quoteField(generator, block, 'FONT', 'regular_black');
-        return `est.display.text(${x}, ${y}, ${content}, font=${font})\n`;
+        const font = quoteField(generator, block, 'FONT', 'large_white');
+        return `est.display.text(${x}, ${y}, ${content}, font=${font})\nest.display.refresh()\n`;
     };
     generator.display_clear = () => {
         ensureHardwareImport(generator);
-        return 'est.display.clear()\n';
+        return 'est.display.clear()\nest.display.refresh()\n';
     };
     generator.display_status_light = block => {
         ensureHardwareImport(generator);
-        const mode = quoteField(generator, block, 'STATUS_MODE', 'off');
+        const modeName = fieldValue(block, 'STATUS_MODE', 'off');
+        const mode = STATUS_LIGHT_CONSTANTS[modeName] || STATUS_LIGHT_CONSTANTS.off;
         return `est.led.set(${mode})\n`;
     };
 };
@@ -402,7 +505,7 @@ const registerEventGenerators = generator => {
         return registerEventHat(generator, block, `@rt.on_gyro_angle(${port}, ${event}, ${value})`);
     };
     generator.event_brick_button = block => {
-        const button = quoteField(generator, block, 'BUTTON', 'center');
+        const button = quoteBrickButtonField(generator, block, 'BUTTON');
         const event = quoteField(generator, block, 'BUTTON_EVENT', 'pressed');
         return registerEventHat(generator, block, `@rt.on_brick_button(${button}, ${event})`);
     };
@@ -443,7 +546,8 @@ const registerControlGenerators = generator => {
     generator.control_repeat = block => {
         ensureRuntimeImport(generator);
         const count = valueOr(generator, block, 'TIMES', '0');
-        return `for _ in range(rt.repeat_count(${count})):\n${statementOrPass(generator, block, 'SUBSTACK')}`;
+        const body = statementOrPass(generator, block, 'SUBSTACK');
+        return `for _ in range(rt.repeat_count(${count})):\n${body}${generator.INDENT}rt.yield_once()\n`;
     };
     generator.control_forever = block => {
         ensureRuntimeImport(generator);
@@ -474,13 +578,16 @@ const registerControlGenerators = generator => {
     };
     generator.control_stop = block => {
         ensureRuntimeImport(generator);
-        const scope = quoteField(generator, block, 'STOP_SCOPE', 'all');
-        return `rt.stop(${scope})\n`;
+        const scope = normalizeStopScope(fieldValue(block, 'STOP_SCOPE', 'all'));
+        if (scope === 'other_stacks') {
+            return 'rt.stop_other_stacks()\n';
+        }
+        return `rt.stop(${quote(generator, scope)})\n`;
     };
 };
 
 const registerSensorGenerators = generator => {
-    const sensorPort = (block, fallback) => quoteField(generator, block, 'PORT', fallback);
+    const sensorPort = (block, fallback) => valueOr(generator, block, 'PORT', quote(generator, fallback));
     const compareValue = block => valueOr(generator, block, 'VALUE', '0');
     const comparator = block => quoteField(generator, block, 'COMPARATOR', 'less');
 
@@ -490,12 +597,19 @@ const registerSensorGenerators = generator => {
     };
     generator.sensor_brick_button_pressed = block => {
         ensureHardwareImport(generator);
-        const button = quoteField(generator, block, 'BUTTON', 'center');
+        const buttonName = normalizeBrickButtonName(fieldValue(block, 'BUTTON', 'confirm'));
+        const button = BRICK_BUTTON_CONSTANTS[buttonName] || BRICK_BUTTON_CONSTANTS.confirm;
+        if (buttonName === 'none') {
+            return [
+                `est.buttons.value() == ${button}`,
+                orderOf(generator, 'ORDER_RELATIONAL', 11)
+            ];
+        }
         return functionCall(generator, `est.buttons.pressed(${button})`);
     };
     generator.sensor_wait_brick_button = block => {
         ensureRuntimeImport(generator);
-        const button = quoteField(generator, block, 'BUTTON', 'center');
+        const button = quoteBrickButtonField(generator, block, 'BUTTON');
         const event = quoteField(generator, block, 'BUTTON_EVENT', 'pressed');
         return `rt.wait_brick_button(${button}, ${event})\n`;
     };
@@ -541,6 +655,11 @@ const registerSensorGenerators = generator => {
         ensureRuntimeImport(generator);
         const event = quoteField(generator, block, 'COLOR_EVENT', 'red');
         return `rt.wait_color(${sensorPort(block, '3')}, ${event})\n`;
+    };
+    generator.sensor_temperature = block => {
+        ensureRuntimeImport(generator);
+        const unit = fieldValue(block, 'UNIT', 'celsius') === 'fahrenheit' ? 'fahrenheit' : 'celsius';
+        return functionCall(generator, `rt.temperature(${sensorPort(block, '3')}).${unit}()`);
     };
     generator.sensor_touch_pressed = block => {
         ensureRuntimeImport(generator);
@@ -676,7 +795,8 @@ export const registerEstPythonGenerator = ScratchBlocks => {
     const generator = ScratchBlocks.Python;
     if (registeredGenerators.has(generator)) return;
 
-    registerLifecycle(generator);
+    installEstPythonNameSanitizer(ScratchBlocks, generator);
+    registerLifecycle(ScratchBlocks, generator);
     registerSupportGenerators(generator);
     registerMotorGenerators(generator);
     registerMovementGenerators(generator);

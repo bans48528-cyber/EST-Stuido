@@ -94,6 +94,7 @@ const CATEGORY_BLOCK_IDS = {
         'sensor_color_value',
         'sensor_color_is',
         'sensor_wait_color',
+        'sensor_temperature',
         'sensor_touch_pressed',
         'sensor_wait_touch',
         'sensor_ultrasonic_distance',
@@ -140,11 +141,13 @@ const EST_STEERING_LIMIT = 100;
 const EST_MOTOR_PORT_PICKER_ID = 'est_motor_port_picker';
 const EST_DRIVE_PORT_PICKER_ID = 'est_drive_port_picker';
 const EST_EVENT_SENSOR_PORT_PICKER_ID = 'est_event_sensor_port_picker';
+const EST_SENSOR_PORT_PICKER_ID = 'est_sensor_port_picker';
 const EST_SUPPORT_BLOCK_IDS = [
     EST_STEERING_PICKER_ID,
     EST_MOTOR_PORT_PICKER_ID,
     EST_DRIVE_PORT_PICKER_ID,
-    EST_EVENT_SENSOR_PORT_PICKER_ID
+    EST_EVENT_SENSOR_PORT_PICKER_ID,
+    EST_SENSOR_PORT_PICKER_ID
 ];
 const EST_STEERING_DIAL_COLOURS = {
     fill: CATEGORY_COLOURS.movement.secondary,
@@ -158,7 +161,51 @@ const MOTOR_DIRECTION_OPTIONS = [['顺时针', 'clockwise'], ['逆时针', 'coun
 const DRIVE_DIRECTION_OPTIONS = [['前', 'forward'], ['后', 'backward']];
 const MOTOR_UNIT_OPTIONS = [['圈', 'rotations'], ['度', 'degrees'], ['秒', 'seconds']];
 const MOTOR_STOP_ACTION_OPTIONS = [['保持位置', 'hold'], ['惯性滑行', 'float']];
-const IMAGE_OPTIONS = [['Eyes / Neutral', 'eyes_neutral']];
+const DISPLAY_IMAGE_IDS = [
+    'Expressions/Big smile',
+    'Expressions/Heart large',
+    'Expressions/Heart small',
+    'Expressions/Mouth 1 open',
+    'Expressions/Mouth 1 shut',
+    'Expressions/Mouth 2 open',
+    'Expressions/Mouth 2 shut',
+    'Expressions/Sad',
+    'Expressions/Sick',
+    'Expressions/Smile',
+    'Expressions/Swearing',
+    'Expressions/Talking',
+    'Expressions/Wink',
+    'Expressions/ZZZ',
+    'Eyes/Angry',
+    'Eyes/Awake',
+    'Eyes/Black eye',
+    'Eyes/Bottom left',
+    'Eyes/Bottom right',
+    'Eyes/Crazy 1',
+    'Eyes/Crazy 2',
+    'Eyes/Disappointed',
+    'Eyes/Dizzy',
+    'Eyes/Down',
+    'Eyes/Evil',
+    'Eyes/Hurt',
+    'Eyes/Knocked out',
+    'Eyes/Love',
+    'Eyes/Middle left',
+    'Eyes/Middle right',
+    'Eyes/Neutral',
+    'Eyes/Nuclear',
+    'Eyes/Pinch left',
+    'Eyes/Pinch middle',
+    'Eyes/Pinch right',
+    'Eyes/Tear',
+    'Eyes/Tired left',
+    'Eyes/Tired middle',
+    'Eyes/Tired right',
+    'Eyes/Toxic',
+    'Eyes/Up',
+    'Eyes/Winking'
+];
+const IMAGE_OPTIONS = DISPLAY_IMAGE_IDS.map(id => [id.replace('/', ' / '), id]);
 const FONT_OPTIONS = [
     ['常规黑色', 'regular_black'],
     ['粗体黑色', 'bold_black'],
@@ -169,12 +216,8 @@ const FONT_OPTIONS = [
 ];
 const STATUS_LIGHT_OPTIONS = [
     ['关闭', 'off'],
-    ['绿色', 'green'],
     ['红色', 'red'],
-    ['橙色', 'orange'],
-    ['绿色闪烁', 'green_flash'],
-    ['红色闪烁', 'red_flash'],
-    ['橙色闪烁', 'orange_flash']
+    ['蓝色', 'blue']
 ];
 const SOUND_OPTIONS = [['Communication / Hello', 'communication_hello']];
 const TOUCH_EVENT_OPTIONS = [['被按压', 'pressed'], ['被松开', 'released']];
@@ -195,6 +238,7 @@ const COLOR_OPTIONS = [
     ['棕色', 'brown']
 ];
 const COLOR_EVENT_OPTIONS = COLOR_OPTIONS.concat([['已改变', 'changed']]);
+const TEMPERATURE_UNIT_OPTIONS = [['摄氏', 'celsius'], ['华氏', 'fahrenheit']];
 const BEACON_EVENT_OPTIONS = [
     ['左上按钮被按压', 'top_left_pressed'],
     ['左下按钮被按压', 'bottom_left_pressed'],
@@ -215,8 +259,9 @@ const BEACON_BUTTON_OPTIONS = [
 const BEACON_CHANNEL_OPTIONS = [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']];
 const BRICK_BUTTON_OPTIONS = [
     ['无', 'none'],
+    ['返回', 'back'],
     ['左', 'left'],
-    ['中', 'center'],
+    ['确认', 'confirm'],
     ['右', 'right'],
     ['上', 'up'],
     ['下', 'down']
@@ -226,15 +271,15 @@ const BEACON_PROPERTY_OPTIONS = [['朝向', 'heading'], ['近程', 'proximity']]
 const CALIBRATION_OPTIONS = [['最小值', 'minimum'], ['最大值', 'maximum']];
 const MESSAGE_OPTIONS = [['消息1', 'message_1']];
 const STOP_SCOPE_OPTIONS = [
-    ['所有程序堆', 'all'],
     ['此程序堆', 'this_stack'],
-    ['其它程序堆', 'other_stacks'],
-    ['并退出程序', 'exit_program']
+    ['退出整个程序', 'all']
 ];
 const dropdown = (name, options) => ({type: 'field_dropdown', name, options});
 const valueInput = (name, check) => {
     const input = {type: 'input_value', name};
-    if (check) input.check = check;
+    // OpenBlock variables report String, so EST numeric inputs stay untyped at
+    // the connection layer while keeping numeric shadows in the toolbox.
+    if (check && check !== 'Number') input.check = check;
     return input;
 };
 const statementInput = name => ({type: 'input_statement', name});
@@ -308,6 +353,12 @@ const clampSteering = value => Math.max(
     Math.min(EST_STEERING_LIMIT, value)
 );
 const isSteeringDialMarkVisible = angle => angle === 0 || angle >= 180;
+const formatSteeringDisplayText = value => {
+    const steering = clampSteering(Math.round(Number(value) || 0));
+    if (steering < 0) return `左:${steering}`;
+    if (steering > 0) return `右:${steering}`;
+    return '前:0';
+};
 
 const registerEstSteeringField = ScratchBlocks => {
     if (!ScratchBlocks.Field || !ScratchBlocks.FieldAngle || !ScratchBlocks.FieldTextInput) return;
@@ -318,6 +369,11 @@ const registerEstSteeringField = ScratchBlocks => {
     EstSteeringField.prototype = Object.create(ScratchBlocks.FieldAngle.prototype);
     EstSteeringField.prototype.constructor = EstSteeringField;
     EstSteeringField.fromJson = options => new EstSteeringField(options.value);
+
+    EstSteeringField.prototype.getDisplayText_ = function () {
+        const nbsp = (ScratchBlocks.Field && ScratchBlocks.Field.NBSP) || '\u00A0';
+        return formatSteeringDisplayText(this.getText()).replace(/\s/g, nbsp);
+    };
 
     EstSteeringField.prototype.classValidator = function (text) {
         if (text === null) return null;
@@ -445,6 +501,15 @@ const makeEventSensorPortPickerDefinition = ScratchBlocks => ({
     colourTertiary: CATEGORY_COLOURS.event.tertiary
 });
 
+const makeSensorPortPickerDefinition = ScratchBlocks => ({
+    ...reporter(ScratchBlocks, 'sensing', EST_SENSOR_PORT_PICKER_ID, '%1', [
+        dropdown('PORT', SENSOR_PORT_OPTIONS)
+    ], 'String'),
+    colour: CATEGORY_COLOURS.sensing.secondary,
+    colourSecondary: CATEGORY_COLOURS.sensing.secondary,
+    colourTertiary: CATEGORY_COLOURS.sensing.tertiary
+});
+
 const makeMotorDefinitions = ScratchBlocks => [
     command('motor', 'motor_run_for', '%1 %2 运行 %3 %4', [
         valueInput('PORT'),
@@ -490,12 +555,12 @@ const makeMovementDefinitions = () => [
         valueInput('AMOUNT', 'Number'),
         dropdown('UNIT', MOTOR_UNIT_OPTIONS)
     ]),
-    command('movement', 'drive_steer_for', '向 前:%1 移动 %2 %3', [
+    command('movement', 'drive_steer_for', '向 %1 移动 %2 %3', [
         valueInput('STEERING', 'Number'),
         valueInput('AMOUNT', 'Number'),
         dropdown('UNIT', MOTOR_UNIT_OPTIONS)
     ]),
-    command('movement', 'drive_start_steer', '开始向 前:%1 移动', [valueInput('STEERING', 'Number')]),
+    command('movement', 'drive_start_steer', '开始向 %1 移动', [valueInput('STEERING', 'Number')]),
     command('movement', 'drive_stop', '停止运动'),
     command('movement', 'drive_set_speed', '将移动速度设置为 %1 %%', [valueInput('SPEED', 'Number')]),
     command('movement', 'drive_set_pair', '将运转电机设置为 %1 和 %2', [
@@ -505,7 +570,7 @@ const makeMovementDefinitions = () => [
     command('movement', 'drive_set_stop_action', '将运转电机设置为停止时 %1', [
         dropdown('STOP_ACTION', MOTOR_STOP_ACTION_OPTIONS)
     ]),
-    command('movement', 'drive_steer_for_speed', '以 %1 %% 的速度向 前:%2 移动 %3 %4', [
+    command('movement', 'drive_steer_for_speed', '以 %1 %% 的速度向 %2 移动 %3 %4', [
         valueInput('SPEED', 'Number'),
         valueInput('STEERING', 'Number'),
         valueInput('AMOUNT', 'Number'),
@@ -517,7 +582,7 @@ const makeMovementDefinitions = () => [
         valueInput('AMOUNT', 'Number'),
         dropdown('UNIT', MOTOR_UNIT_OPTIONS)
     ]),
-    command('movement', 'drive_start_steer_speed', '以 %1 %% 的速度开始向 前:%2 移动', [
+    command('movement', 'drive_start_steer_speed', '以 %1 %% 的速度开始向 %2 移动', [
         valueInput('SPEED', 'Number'),
         valueInput('STEERING', 'Number')
     ]),
@@ -671,120 +736,124 @@ const makeSensorDefinitions = ScratchBlocks => [
     ]),
     command('sensing', 'sensor_color_reset_calibration', '重置反射光线强度校准'),
     reporter(ScratchBlocks, 'sensing', 'sensor_color_reflection', '%1 反射光线强度', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS)
+        valueInput('PORT')
     ]),
     booleanReporter(ScratchBlocks, 'sensing', 'sensor_color_reflection_compare',
         '%1 反射光线强度是否 %2 %3 %%？', [
-            dropdown('PORT', SENSOR_PORT_OPTIONS),
+            valueInput('PORT'),
             dropdown('COMPARATOR', COMPARATOR_OPTIONS),
             valueInput('VALUE', 'Number')
         ]),
     reporter(ScratchBlocks, 'sensing', 'sensor_color_ambient', '%1 环境光强度', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS)
+        valueInput('PORT')
     ]),
     booleanReporter(ScratchBlocks, 'sensing', 'sensor_color_ambient_compare',
         '%1 环境光强度是否 %2 %3 %%？', [
-            dropdown('PORT', SENSOR_PORT_OPTIONS),
+            valueInput('PORT'),
             dropdown('COMPARATOR', COMPARATOR_OPTIONS),
             valueInput('VALUE', 'Number')
         ]),
     reporter(ScratchBlocks, 'sensing', 'sensor_color_value', '%1 颜色', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS)
+        valueInput('PORT')
     ]),
     booleanReporter(ScratchBlocks, 'sensing', 'sensor_color_is', '%1 颜色是否为 %2？', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('COLOR', COLOR_OPTIONS)
     ]),
     command('sensing', 'sensor_wait_color', '%1 等待直到颜色为 %2', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('COLOR_EVENT', COLOR_EVENT_OPTIONS)
     ]),
+    reporter(ScratchBlocks, 'sensing', 'sensor_temperature', '%1 温度，单位为 %2', [
+        valueInput('PORT'),
+        dropdown('UNIT', TEMPERATURE_UNIT_OPTIONS)
+    ]),
     booleanReporter(ScratchBlocks, 'sensing', 'sensor_touch_pressed', '%1 是否被按压？', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS)
+        valueInput('PORT')
     ]),
     command('sensing', 'sensor_wait_touch', '%1 等待直到 %2', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('TOUCH_EVENT', TOUCH_EVENT_OPTIONS)
     ]),
     reporter(ScratchBlocks, 'sensing', 'sensor_ultrasonic_distance', '%1 距离，单位为 %2', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('UNIT', DISTANCE_UNIT_OPTIONS)
     ]),
     booleanReporter(ScratchBlocks, 'sensing', 'sensor_ultrasonic_compare', '%1 距离是否 %2 %3 %4？', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('COMPARATOR', COMPARATOR_OPTIONS),
         valueInput('VALUE', 'Number'),
         dropdown('UNIT', DISTANCE_UNIT_OPTIONS)
     ]),
     command('sensing', 'sensor_wait_ultrasonic', '%1 等待直到距离 %2 %3 %4', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('COMPARATOR', COMPARATOR_OPTIONS),
         valueInput('VALUE', 'Number'),
         dropdown('UNIT', DISTANCE_UNIT_OPTIONS)
     ]),
     reporter(ScratchBlocks, 'sensing', 'sensor_ir_proximity', '%1 近程', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS)
+        valueInput('PORT')
     ]),
     booleanReporter(ScratchBlocks, 'sensing', 'sensor_ir_proximity_compare', '%1 近程是否 %2 %3 %%？', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('COMPARATOR', COMPARATOR_OPTIONS),
         valueInput('VALUE', 'Number')
     ]),
     command('sensing', 'sensor_wait_ir_proximity', '%1 等待直到近程 %2 %3 %%', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('COMPARATOR', COMPARATOR_OPTIONS),
         valueInput('VALUE', 'Number')
     ]),
     reporter(ScratchBlocks, 'sensing', 'sensor_ir_beacon_heading', '%1 前往信标 %2', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
     ]),
     reporter(ScratchBlocks, 'sensing', 'sensor_ir_beacon_proximity', '%1 信标 %2 近程', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
     ]),
     reporter(ScratchBlocks, 'sensing', 'sensor_ir_beacon_buttons', '%1 按压信标 %2 按钮', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
     ]),
     booleanReporter(ScratchBlocks, 'sensing', 'sensor_ir_beacon_button_pressed',
         '%1 信标 %2 %3 是否被按压？', [
-            dropdown('PORT', SENSOR_PORT_OPTIONS),
+            valueInput('PORT'),
             dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
             dropdown('BEACON_BUTTON', BEACON_BUTTON_OPTIONS)
         ]),
     command('sensing', 'sensor_wait_ir_beacon_button', '%1 等待直到信标 %2 %3', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
         dropdown('BEACON_EVENT', BEACON_EVENT_OPTIONS)
     ]),
     booleanReporter(ScratchBlocks, 'sensing', 'sensor_ir_beacon_active',
         '%1 信标 %2 是否处于活动状态？', [
-            dropdown('PORT', SENSOR_PORT_OPTIONS),
+            valueInput('PORT'),
             dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
         ]),
     booleanReporter(ScratchBlocks, 'sensing', 'sensor_ir_beacon_active_compare',
         '%1 信标 %2 是否 %3 %4 %5？', [
-            dropdown('PORT', SENSOR_PORT_OPTIONS),
+            valueInput('PORT'),
             dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
             dropdown('PROPERTY', BEACON_PROPERTY_OPTIONS),
             dropdown('COMPARATOR', COMPARATOR_OPTIONS),
             valueInput('VALUE', 'Number')
         ]),
     reporter(ScratchBlocks, 'sensing', 'sensor_gyro_angle', '%1 角度', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS)
+        valueInput('PORT')
     ]),
     reporter(ScratchBlocks, 'sensing', 'sensor_gyro_rate', '%1 角速度', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS)
+        valueInput('PORT')
     ]),
-    command('sensing', 'sensor_gyro_reset', '%1 重置角度', [dropdown('PORT', SENSOR_PORT_OPTIONS)]),
+    command('sensing', 'sensor_gyro_reset', '%1 重置角度', [valueInput('PORT')]),
     booleanReporter(ScratchBlocks, 'sensing', 'sensor_gyro_compare', '%1 角度是否 %2 %3°？', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('COMPARATOR', COMPARATOR_OPTIONS),
         valueInput('VALUE', 'Number')
     ]),
     command('sensing', 'sensor_wait_gyro', '%1 等待直到角度 %2 %3°', [
-        dropdown('PORT', SENSOR_PORT_OPTIONS),
+        valueInput('PORT'),
         dropdown('COMPARATOR', COMPARATOR_OPTIONS),
         valueInput('VALUE', 'Number')
     ]),
@@ -797,6 +866,7 @@ const makeEstBlockDefinitions = ScratchBlocks => [
     makeMotorPortPickerDefinition(ScratchBlocks, 'motor', EST_MOTOR_PORT_PICKER_ID),
     makeMotorPortPickerDefinition(ScratchBlocks, 'movement', EST_DRIVE_PORT_PICKER_ID),
     makeEventSensorPortPickerDefinition(ScratchBlocks),
+    makeSensorPortPickerDefinition(ScratchBlocks),
     ...makeMotorDefinitions(ScratchBlocks),
     ...makeMovementDefinitions(),
     ...makeDisplayDefinitions(),
@@ -905,6 +975,7 @@ export {
     EST_DRIVE_PORT_PICKER_ID,
     EST_EVENT_SENSOR_PORT_PICKER_ID,
     EST_MOTOR_PORT_PICKER_ID,
+    EST_SENSOR_PORT_PICKER_ID,
     EST_REPLACED_OPENBLOCK_BLOCK_IDS,
     EST_SUPPORT_BLOCK_IDS,
     MOTOR_BLOCK_IDS,
@@ -914,6 +985,8 @@ export {
     MOTOR_STOP_ACTION_OPTIONS,
     MOTOR_UNIT_OPTIONS,
     SENSOR_PORT_OPTIONS,
+    TEMPERATURE_UNIT_OPTIONS,
     configureEstWorkspaceControls,
+    formatSteeringDisplayText,
     isSteeringDialMarkVisible
 };

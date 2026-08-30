@@ -1,8 +1,35 @@
 import {
+    CAPABILITY_COOPERATIVE_MULTITASK,
+    CAPABILITY_DISPLAY_FONT_STYLES,
+    CAPABILITY_FIRMWARE_UPDATE,
+    CAPABILITY_FROZEN_EST_RUNTIME,
+    CAPABILITY_BATTERY,
+    CAPABILITY_DRIVE_RUN,
+    CAPABILITY_DRIVE_STEER,
+    CAPABILITY_DRIVE_STEER_FOR,
+    CAPABILITY_DRIVE_STRAIGHT,
+    CAPABILITY_HOLD_POSITION_CONTROL,
+    CAPABILITY_INPUT_SENSOR,
+    CAPABILITY_KEYS,
+    CAPABILITY_MICROPYTHON,
+    CAPABILITY_MOTOR_CONTROL,
+    CAPABILITY_MOTOR_PAIR_POSITION,
+    CAPABILITY_MOTOR_PAIR_SPEED,
+    CAPABILITY_MOTOR_POSITION,
+    CAPABILITY_MOTOR_TACHO,
+    CAPABILITY_MOTOR_TYPE,
+    CAPABILITY_PERSISTENT_PROGRAM,
+    CAPABILITY_PYTHON_PROGRAM,
+    CAPABILITY_RUNTIME_BASIC_EVENT_HATS,
+    CAPABILITY_TEMPERATURE_SENSOR,
+    CAPABILITY_UNLIMITED_PYTHON_RUN,
+    CAPABILITY_ZERO_SPEED_MOTOR_CONTROL,
     COMMAND_PERSISTENT_PROGRAM,
     COMMAND_PYTHON_PROGRAM,
     DEVICE_DIRECTION,
+    EST_ALLOW_ALL_FIRMWARE_VERSIONS,
     EST_MIN_PROTOCOL_MINOR,
+    EST_PROGRAM_COMPATIBILITY_TABLE,
     EST_PROTOCOL_MAJOR,
     EST_USB_PID,
     EST_USB_VID,
@@ -27,7 +54,8 @@ import {
     PYTHON_PROGRAM_CHUNK_SIZE,
     PYTHON_PROGRAM_MAX_SIZE,
     PYTHON_PROGRAM_MAX_TIMEOUT_MS,
-    PYTHON_PROGRAM_MIN_TIMEOUT_MS
+    PYTHON_PROGRAM_MIN_TIMEOUT_MS,
+    PYTHON_PROGRAM_NO_TIMEOUT_MS
 } from './constants';
 
 export const checksum = bytes => Array.from(bytes).reduce((sum, value) => sum + value, 0) & 0xff;
@@ -126,6 +154,81 @@ const readUint32LE = (bytes, offset) => (
 );
 const readInt32LE = (bytes, offset) => readUint32LE(bytes, offset) | 0;
 
+const EST_PROGRAM_REQUIRED_PROTOCOL_MINOR = EST_PROGRAM_COMPATIBILITY_TABLE['M1.12A'].protocolMinor;
+const EST_PROGRAM_TEMPERATURE_PROTOCOL_MINOR = EST_PROGRAM_COMPATIBILITY_TABLE['M1.14A'].protocolMinor;
+const EST_PROGRAM_COOPERATIVE_PROTOCOL_MINOR = 25;
+const EST_PROGRAM_BASIC_EVENT_HATS_PROTOCOL_MINOR = 25;
+const EST_PROGRAM_REQUIRED_CAPABILITIES = (
+    CAPABILITY_FROZEN_EST_RUNTIME |
+    CAPABILITY_UNLIMITED_PYTHON_RUN |
+    CAPABILITY_DISPLAY_FONT_STYLES |
+    CAPABILITY_ZERO_SPEED_MOTOR_CONTROL
+) >>> 0;
+const EST_PROGRAM_CAPABILITY_PROTOCOL_MINOR_REQUIREMENTS = Object.freeze([
+    [CAPABILITY_TEMPERATURE_SENSOR, EST_PROGRAM_TEMPERATURE_PROTOCOL_MINOR],
+    [CAPABILITY_COOPERATIVE_MULTITASK, EST_PROGRAM_COOPERATIVE_PROTOCOL_MINOR],
+    [CAPABILITY_RUNTIME_BASIC_EVENT_HATS, EST_PROGRAM_BASIC_EVENT_HATS_PROTOCOL_MINOR]
+]);
+export const EST_CAPABILITY_NAMES = Object.freeze([
+    [CAPABILITY_FIRMWARE_UPDATE, 'firmware-update'],
+    [CAPABILITY_MOTOR_CONTROL, 'motor-control'],
+    [CAPABILITY_MOTOR_TACHO, 'motor-tacho'],
+    [CAPABILITY_INPUT_SENSOR, 'input-sensor'],
+    [CAPABILITY_BATTERY, 'battery'],
+    [CAPABILITY_KEYS, 'keys'],
+    [CAPABILITY_MOTOR_TYPE, 'motor-type'],
+    [CAPABILITY_MOTOR_POSITION, 'motor-position'],
+    [CAPABILITY_MOTOR_PAIR_POSITION, 'motor-pair-position'],
+    [CAPABILITY_MOTOR_PAIR_SPEED, 'motor-pair-speed'],
+    [CAPABILITY_DRIVE_STRAIGHT, 'drive-straight'],
+    [CAPABILITY_DRIVE_RUN, 'drive-run'],
+    [CAPABILITY_DRIVE_STEER, 'drive-steer'],
+    [CAPABILITY_DRIVE_STEER_FOR, 'drive-steer-for'],
+    [CAPABILITY_MICROPYTHON, 'micropython'],
+    [CAPABILITY_PYTHON_PROGRAM, 'python-program'],
+    [CAPABILITY_PERSISTENT_PROGRAM, 'persistent-program'],
+    [CAPABILITY_FROZEN_EST_RUNTIME, 'frozen-est-runtime'],
+    [CAPABILITY_UNLIMITED_PYTHON_RUN, 'unlimited-python-run'],
+    [CAPABILITY_DISPLAY_FONT_STYLES, 'display-font-styles'],
+    [CAPABILITY_ZERO_SPEED_MOTOR_CONTROL, 'zero-speed-motor-control'],
+    [CAPABILITY_HOLD_POSITION_CONTROL, 'hold-position-control'],
+    [CAPABILITY_TEMPERATURE_SENSOR, 'runtime-temperature'],
+    [CAPABILITY_COOPERATIVE_MULTITASK, 'cooperative-multitask'],
+    [CAPABILITY_RUNTIME_BASIC_EVENT_HATS, 'runtime-basic-event-hats']
+]);
+
+export const capabilityNamesFor = capabilities => EST_CAPABILITY_NAMES
+    .filter(([flag]) => (capabilities & flag) !== 0)
+    .map(([, name]) => name);
+
+const protocolMinorForCapabilities = requiredProgramCapabilities => (
+    EST_PROGRAM_CAPABILITY_PROTOCOL_MINOR_REQUIREMENTS.reduce((minimum, [capability, protocolMinor]) => (
+        (requiredProgramCapabilities & capability) !== 0 ? Math.max(minimum, protocolMinor) : minimum
+    ), EST_PROGRAM_REQUIRED_PROTOCOL_MINOR)
+);
+
+export const programRequiredCapabilitiesForSource = source => {
+    const text = typeof source === 'string' ? source : Buffer.from(source || '').toString('utf8');
+    let capabilities = 0;
+    if (/\brt\.temperature\s*\(/.test(text)) {
+        capabilities |= CAPABILITY_TEMPERATURE_SENSOR;
+    }
+    if (/^@rt\.on_(?:brick_button|condition|timer_gt)\b/gm.test(text)) {
+        capabilities |= CAPABILITY_RUNTIME_BASIC_EVENT_HATS;
+    }
+    const startHandlerCount = (text.match(/^@rt\.on_start\b/gm) || []).length;
+    if (
+        startHandlerCount > 1 ||
+        /\basync\s+def\s+stack_\d+\s*\(/.test(text) ||
+        /\bawait\s+rt\.(?:yield_once|sleep|wait_until|motor_run_for|drive_move_for|drive_steer_for|display_image_for|wait_[a-z_]+)\s*\(/.test(text) ||
+        /\brt\.stop\s*\(/.test(text) ||
+        /\brt\.stop_other_stacks\s*\(/.test(text)
+    ) {
+        capabilities |= CAPABILITY_COOPERATIVE_MULTITASK;
+    }
+    return capabilities >>> 0;
+};
+
 export const crc32 = bytes => {
     let value = 0xffffffff;
     for (const byte of Uint8Array.from(bytes)) {
@@ -174,10 +277,11 @@ export const buildPythonProgramChunkFrame = (offset, chunk) => {
 
 export const buildPythonProgramRunFrame = timeoutMs => {
     if (!Number.isInteger(timeoutMs) ||
-        timeoutMs < PYTHON_PROGRAM_MIN_TIMEOUT_MS || timeoutMs > PYTHON_PROGRAM_MAX_TIMEOUT_MS) {
+        (timeoutMs !== PYTHON_PROGRAM_NO_TIMEOUT_MS &&
+            (timeoutMs < PYTHON_PROGRAM_MIN_TIMEOUT_MS || timeoutMs > PYTHON_PROGRAM_MAX_TIMEOUT_MS))) {
         throw new RangeError(
-            `Python program timeout must be ${PYTHON_PROGRAM_MIN_TIMEOUT_MS}..` +
-            `${PYTHON_PROGRAM_MAX_TIMEOUT_MS} ms`
+            `Python program timeout must be ${PYTHON_PROGRAM_NO_TIMEOUT_MS} or ` +
+            `${PYTHON_PROGRAM_MIN_TIMEOUT_MS}..${PYTHON_PROGRAM_MAX_TIMEOUT_MS} ms`
         );
     }
     const payload = new Uint8Array(5);
@@ -433,6 +537,75 @@ export const checkDeviceCompatibility = (status, requiredCapabilities = 0) => {
         requiredCapabilities: required,
         missingCapabilities,
         message: issues.join('; ')
+    };
+};
+
+export const checkProgramFirmwareCompatibility = (status, additionalProgramCapabilities = 0) => {
+    const firmwareVersion = String((status && status.firmwareVersion) || '');
+    const tableEntry = EST_PROGRAM_COMPATIBILITY_TABLE[firmwareVersion] || null;
+    const protocolMajor = Number(status && status.protocolMajor);
+    const protocolMinor = Number(status && status.protocolMinor);
+    const availableCapabilities = Number(status && status.capabilities) >>> 0;
+    const requiredProgramCapabilities = (
+        EST_PROGRAM_REQUIRED_CAPABILITIES |
+        (Number(additionalProgramCapabilities) >>> 0)
+    ) >>> 0;
+    const requiredProgramProtocolMinor = protocolMinorForCapabilities(requiredProgramCapabilities);
+    const missingProgramCapabilities = (requiredProgramCapabilities & ~availableCapabilities) >>> 0;
+    const missingProgramCapabilityNames = capabilityNamesFor(missingProgramCapabilities);
+    const hasProtocolVersion = Number.isInteger(protocolMajor) && Number.isInteger(protocolMinor);
+    const protocolMatches = Boolean(tableEntry) && hasProtocolVersion &&
+        protocolMajor === tableEntry.protocolMajor && protocolMinor === tableEntry.protocolMinor;
+    const programProtocolCompatible = hasProtocolVersion &&
+        protocolMajor === EST_PROTOCOL_MAJOR &&
+        protocolMinor >= requiredProgramProtocolMinor;
+    const programIssues = [];
+    const verified = Boolean(tableEntry) && protocolMatches;
+    let message = '';
+
+    if (!tableEntry) {
+        message = firmwareVersion ?
+            `EST firmware ${firmwareVersion} is not in the verified program compatibility table` :
+            'EST firmware version is unavailable';
+    } else if (!hasProtocolVersion) {
+        message = `EST firmware ${firmwareVersion} did not report a protocol version`;
+    } else if (!protocolMatches) {
+        message = `EST firmware ${firmwareVersion} reported protocol ${protocolMajor}.${protocolMinor}; ` +
+            `expected ${tableEntry.protocolMajor}.${tableEntry.protocolMinor}`;
+    }
+
+    if (!hasProtocolVersion) {
+        programIssues.push('无法读取 EST 固件协议版本');
+    } else if (protocolMajor !== EST_PROTOCOL_MAJOR) {
+        programIssues.push(`当前协议 ${protocolMajor}.${protocolMinor} 不支持；需要 ` +
+            `${EST_PROTOCOL_MAJOR}.${requiredProgramProtocolMinor} 或更新版本`);
+    } else if (protocolMinor < requiredProgramProtocolMinor) {
+        programIssues.push(`当前协议 ${protocolMajor}.${protocolMinor} 不支持；需要 ` +
+            `${EST_PROTOCOL_MAJOR}.${requiredProgramProtocolMinor} 或更新版本`);
+    }
+    if (missingProgramCapabilities !== 0) {
+        programIssues.push(`缺少能力: ${missingProgramCapabilityNames.join(', ')}`);
+    }
+
+    const programCompatible = programIssues.length === 0;
+
+    return {
+        compatible: EST_ALLOW_ALL_FIRMWARE_VERSIONS || (verified && programCompatible),
+        enforcementEnabled: !EST_ALLOW_ALL_FIRMWARE_VERSIONS,
+        firmwareVersion,
+        knownFirmware: Boolean(tableEntry),
+        programCompatible,
+        programMessage: programIssues.join('; '),
+        programProtocolCompatible,
+        requiredProgramProtocolMajor: EST_PROTOCOL_MAJOR,
+        requiredProgramProtocolMinor,
+        requiredProgramCapabilities,
+        missingProgramCapabilities,
+        missingProgramCapabilityNames,
+        verified,
+        expectedProtocolMajor: tableEntry ? tableEntry.protocolMajor : null,
+        expectedProtocolMinor: tableEntry ? tableEntry.protocolMinor : null,
+        message
     };
 };
 

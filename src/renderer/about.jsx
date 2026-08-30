@@ -1,7 +1,7 @@
 import React from 'react';
 import {productName, version} from '../../package.json';
 
-import logo from '../icon/OpenBlockDesktop.svg';
+import logo from '../icon/OpenBlockDesktop.png';
 import styles from './about.css';
 
 const AboutElement = () => (

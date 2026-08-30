@@ -27,7 +27,13 @@ const {
     EST_SUPPORT_BLOCK_IDS,
     registerEstBlocks
 } = require(path.join(estBlocksRoot, 'definitions.js'));
-const {registerEstPythonGenerator} = require(path.join(estBlocksRoot, 'python-generator.js'));
+const {
+    registerEstPythonGenerator
+} = require(path.join(estBlocksRoot, 'python-generator.js'));
+const {
+    isValidEstPythonIdentifier,
+    toEstPythonIdentifier
+} = require(path.join(estBlocksRoot, 'python-names.js'));
 
 const nativeOperatorIds = [
     'operator_add',
@@ -238,6 +244,203 @@ const programPreamble = () => [
     dictionaryCode(generator.imports_),
     dictionaryCode(generator.variables_)
 ].filter(Boolean).join('\n');
+const assertAsciiIdentifier = name => {
+    assert.strictEqual(isValidEstPythonIdentifier(name), true, name);
+    assert.doesNotMatch(name, /_E[0-9A-F]{2}/i, name);
+};
+
+assert.strictEqual(toEstPythonIdentifier('速度'), 'su_du');
+assert.strictEqual(toEstPythonIdentifier('电机速度'), 'dian_ji_su_du');
+assert.strictEqual(toEstPythonIdentifier('数据列表'), 'shu_ju_lie_biao');
+assert.strictEqual(toEstPythonIdentifier('设置电机速度'), 'she_zhi_dian_ji_su_du');
+assert.strictEqual(toEstPythonIdentifier('我不喜欢'), 'wo_bu_xi_huan');
+assert.strictEqual(toEstPythonIdentifier('不是吧'), 'bu_shi_ba');
+assert.strictEqual(toEstPythonIdentifier('晚上'), 'wan_shang');
+assert.strictEqual(toEstPythonIdentifier('张乱搞'), 'zhang_luan_gao');
+assert.strictEqual(toEstPythonIdentifier('东西'), 'dong_xi');
+assert.strictEqual(toEstPythonIdentifier('1速度'), 'value_1_su_du');
+assert.strictEqual(toEstPythonIdentifier('for'), 'for_value');
+assert.strictEqual(toEstPythonIdentifier('est'), 'est_value');
+assert.strictEqual(toEstPythonIdentifier('龘'), 'da');
+assert.match(toEstPythonIdentifier('!!!'), /^name_[a-z0-9]+$/);
+
+const generatedNameSequence = () => {
+    resetGenerator();
+    const type = global.Blockly.Variables.NAME_TYPE;
+    return [
+        generator.variableDB_.getName('速度', type),
+        generator.variableDB_.getName('速 度', type),
+        generator.variableDB_.getName('速-度', type),
+        generator.variableDB_.getName('速度', type),
+        generator.variableDB_.getName('for', type),
+        generator.variableDB_.getName('est', type),
+        generator.variableDB_.getName('1速度', type),
+        generator.variableDB_.getName('!!!', type)
+    ];
+};
+const firstGeneratedNameSequence = generatedNameSequence();
+const secondGeneratedNameSequence = generatedNameSequence();
+assert.deepStrictEqual(firstGeneratedNameSequence, [
+    'su_du',
+    'su_du_2',
+    'su_du_3',
+    'su_du',
+    'for_value',
+    'est_value',
+    'value_1_su_du',
+    toEstPythonIdentifier('!!!')
+]);
+assert.deepStrictEqual(secondGeneratedNameSequence, firstGeneratedNameSequence);
+firstGeneratedNameSequence.forEach(assertAsciiIdentifier);
+
+resetGenerator();
+const variableMap = {
+    getVariableById: id => ({
+        variableSpeed: {name: '速度'},
+        listData: {name: '数据列表'},
+        duplicateSpeed: {name: '速 度'},
+        dislike: {name: '我不喜欢'}
+    }[id] || null)
+};
+generator.variableDB_.setVariableMap(variableMap);
+const pythonVariableName = generator.variableDB_.getName('variableSpeed', global.Blockly.Variables.NAME_TYPE);
+const pythonListName = generator.variableDB_.getName('listData', global.Blockly.Variables.NAME_TYPE);
+const pythonDuplicateVariableName = generator.variableDB_.getName(
+    'duplicateSpeed',
+    global.Blockly.Variables.NAME_TYPE
+);
+const pythonDislikeVariableName = generator.variableDB_.getName('dislike', global.Blockly.Variables.NAME_TYPE);
+generator.variables_ = {
+    0: `${pythonVariableName} = 0`,
+    1: `${pythonListName} = []`,
+    2: `${pythonDuplicateVariableName} = 0`,
+    3: `${pythonDislikeVariableName} = 0`
+};
+assert.strictEqual(pythonVariableName, 'su_du');
+assert.strictEqual(pythonListName, 'shu_ju_lie_biao');
+assert.strictEqual(pythonDuplicateVariableName, 'su_du_2');
+assert.strictEqual(pythonDislikeVariableName, 'wo_bu_xi_huan');
+[
+    pythonVariableName,
+    pythonListName,
+    pythonDuplicateVariableName,
+    pythonDislikeVariableName
+].forEach(assertAsciiIdentifier);
+assert.deepStrictEqual(generator.data_variable({
+    getFieldValue: () => 'variableSpeed'
+}), ['su_du', 0]);
+assert.strictEqual(generator.data_setvariableto({
+    values: {VALUE: '5'},
+    getFieldValue: () => 'variableSpeed'
+}), 'su_du = 5\n');
+assert.strictEqual(generator.data_changevariableby({
+    values: {VALUE: '1'},
+    getFieldValue: () => 'variableSpeed'
+}), 'su_du += 1\n');
+assert.strictEqual(generator.data_setvariableto({
+    values: {VALUE: '0'},
+    getFieldValue: () => 'dislike'
+}), 'wo_bu_xi_huan = 0\n');
+assert.deepStrictEqual(generator.data_listcontents({
+    getFieldValue: () => 'listData'
+}), ['shu_ju_lie_biao', 0]);
+assert.strictEqual(generator.data_addtolist({
+    values: {ITEM: quotePython('EST')},
+    getFieldValue: () => 'listData'
+}), "shu_ju_lie_biao.append('EST')\n");
+
+const chineseEventBlock = {
+    type: 'event_program_start',
+    id: 'chinese-variable-global',
+    nextCode: `${generator.INDENT}su_du += 1\n`,
+    nextConnection: {targetBlock: () => ({type: 'data_changevariableby'})}
+};
+assert.strictEqual(generator.event_program_start(chineseEventBlock), null);
+assert.match(
+    generator.libraries_.est_stack_1,
+    /global su_du, shu_ju_lie_biao, su_du_2, wo_bu_xi_huan/
+);
+assert.doesNotMatch(generator.libraries_.est_stack_1, /[\u3400-\u9fff]|_E[0-9A-F]{2}/i);
+
+resetGenerator();
+const screenshotVariableMap = {
+    getVariableById: id => ({
+        night: {name: '晚上'},
+        messList: {name: '张乱搞'}
+    }[id] || null)
+};
+generator.variableDB_.setVariableMap(screenshotVariableMap);
+const screenshotVariableName = generator.variableDB_.getName('night', global.Blockly.Variables.NAME_TYPE);
+const screenshotListName = generator.variableDB_.getName('messList', global.Blockly.Variables.NAME_TYPE);
+assert.strictEqual(screenshotVariableName, 'wan_shang');
+assert.strictEqual(screenshotListName, 'zhang_luan_gao');
+assert.strictEqual(generator.data_setvariableto({
+    values: {VALUE: '0'},
+    getFieldValue: () => 'night'
+}), 'wan_shang = 0\n');
+assert.strictEqual(generator.data_addtolist({
+    values: {ITEM: quotePython('东西')},
+    getFieldValue: () => 'messList'
+}), "zhang_luan_gao.append('东西')\n");
+[
+    screenshotVariableName,
+    screenshotListName
+].forEach(assertAsciiIdentifier);
+
+resetGenerator();
+const screenshotProcedureHead = generator.procedures_prototype({
+    displayNames_: [],
+    getProcCode: () => '不是吧'
+});
+assert.strictEqual(screenshotProcedureHead, 'def bu_shi_ba()');
+assertAsciiIdentifier('bu_shi_ba');
+
+resetGenerator();
+const procedurePrototypeBlock = {
+    displayNames_: ['速度', '数据列表', '1参数'],
+    getProcCode: () => '设置电机速度 %n %s %b'
+};
+const procedureDefinitionHead = generator.procedures_prototype(procedurePrototypeBlock);
+assert.strictEqual(
+    procedureDefinitionHead,
+    'def she_zhi_dian_ji_su_du_n_s_b(su_du, shu_ju_lie_biao, value_1_can_shu)'
+);
+assert.deepStrictEqual(generator.argument_reporter_number({
+    getFieldValue: () => '速度'
+}), ['su_du', 0]);
+assert.deepStrictEqual(generator.argument_reporter_string({
+    getFieldValue: () => '数据列表'
+}), ['shu_ju_lie_biao', 0]);
+assert.deepStrictEqual(generator.argument_reporter_boolean({
+    getFieldValue: () => '1参数'
+}), ['value_1_can_shu', 0]);
+const chineseProcedureCall = generator.procedures_call({
+    getProcCode: () => '设置电机速度 %n %s %b',
+    inputList: [
+        {type: global.Blockly.INPUT_VALUE, connection: {targetBlock: () => ({generatedCode: ['su_du', 0]})}},
+        {type: global.Blockly.INPUT_VALUE, connection: {targetBlock: () => ({generatedCode: [quotePython('A'), 0]})}},
+        {type: global.Blockly.INPUT_VALUE, connection: {targetBlock: () => ({generatedCode: ['True', 0]})}}
+    ]
+});
+assert.strictEqual(chineseProcedureCall, "she_zhi_dian_ji_su_du_n_s_b(su_du, 'A', True);\n");
+generator.variables_ = {0: 'su_du = 0'};
+const chineseProcedureDefinitionBlock = {
+    id: 'chinese-procedure-definition',
+    statements: {custom_block: `${generator.INDENT}${procedureDefinitionHead}`},
+    nextCode: `${generator.INDENT}return su_du\n`,
+    nextConnection: {targetBlock: () => ({type: 'argument_reporter_number'})}
+};
+assert.strictEqual(generator.procedures_definition(chineseProcedureDefinitionBlock), null);
+assert.match(
+    dictionaryCode(generator.customFunctions_),
+    /def she_zhi_dian_ji_su_du_n_s_b\(su_du, shu_ju_lie_biao, value_1_can_shu\):/
+);
+[
+    'she_zhi_dian_ji_su_du_n_s_b',
+    'su_du',
+    'shu_ju_lie_biao',
+    'value_1_can_shu'
+].forEach(assertAsciiIdentifier);
 
 const syntaxCases = [];
 const addSyntaxCase = (name, source) => {
@@ -261,7 +464,11 @@ allEstGeneratorIds.forEach(blockId => {
         ].filter(Boolean).join('\n'));
     } else {
         assert.strictEqual(typeof output, 'string', blockId);
-        addSyntaxCase(blockId, `${preamble}\ndef generated_statement():\n${indentCode(output || 'pass')}`);
+        addSyntaxCase(blockId, [
+            preamble,
+            dictionaryCode(generator.libraries_),
+            `def generated_statement():\n${indentCode(output || 'pass')}`
+        ].filter(Boolean).join('\n'));
     }
 });
 
@@ -343,6 +550,213 @@ const quotedMessage = generator.event_broadcast({
 });
 addSyntaxCase('quoted_unicode_message', `${programPreamble()}\n${quotedMessage}`);
 
+resetGenerator();
+const displayImageWithSpace = generator.display_image({
+    values: {},
+    getFieldValue: name => (name === 'IMAGE' ? 'Expressions/Big smile' : null)
+});
+assert.strictEqual(
+    displayImageWithSpace,
+    "est.display.image('Expressions/Big smile')\nest.display.refresh()\n"
+);
+assert.strictEqual((displayImageWithSpace.match(/refresh/g) || []).length, 1);
+addSyntaxCase('display_image_with_space', `${programPreamble()}\ndef generated_statement():\n${
+    indentCode(displayImageWithSpace)
+}`);
+
+resetGenerator();
+const displayImageDefault = generator.display_image({
+    values: {},
+    getFieldValue: () => null
+});
+assert.strictEqual(
+    displayImageDefault,
+    "est.display.image('Eyes/Neutral')\nest.display.refresh()\n"
+);
+
+resetGenerator();
+const displayImageForWithSpace = generator.display_image_for({
+    values: {SECONDS: '2'},
+    getFieldValue: name => (name === 'IMAGE' ? 'Expressions/Big smile' : null)
+});
+assert.strictEqual(displayImageForWithSpace, "rt.display_image_for('Expressions/Big smile', 2)\n");
+assert.doesNotMatch(displayImageForWithSpace, /refresh/);
+addSyntaxCase('display_image_for_with_space', `${programPreamble()}\ndef generated_statement():\n${
+    indentCode(displayImageForWithSpace)
+}`);
+
+resetGenerator();
+const displayImageForDefault = generator.display_image_for({
+    values: {SECONDS: '2'},
+    getFieldValue: () => null
+});
+assert.strictEqual(displayImageForDefault, "rt.display_image_for('Eyes/Neutral', 2)\n");
+
+const singleAsyncStart = {
+    type: 'event_program_start',
+    id: 'single-async-start',
+    nextCode:
+        '  rt.sleep(0.1)\n' +
+        '  rt.wait_until(lambda: ready)\n' +
+        '  while True:\n' +
+        '    rt.yield_once()\n',
+    getFieldValue: () => null,
+    nextConnection: {targetBlock: () => ({type: 'control_forever'})}
+};
+resetGenerator([singleAsyncStart]);
+assert.strictEqual(generator.event_program_start(singleAsyncStart), null);
+assert.match(generator.libraries_.est_stack_1, /@rt\.on_start\nasync def stack_1\(\):/);
+assert.match(generator.libraries_.est_stack_1, /await rt\.sleep\(0\.1\)/);
+assert.match(generator.libraries_.est_stack_1, /await rt\.wait_until\(lambda: ready\)/);
+assert.match(generator.libraries_.est_stack_1, /await rt\.yield_once\(\)/);
+addSyntaxCase('cooperative_single_start_wait_and_loop', [
+    programPreamble(),
+    dictionaryCode(generator.libraries_),
+    dictionaryCode(generator.setups_)
+].filter(Boolean).join('\n'));
+
+const cooperativeStartA = {
+    type: 'event_program_start',
+    id: 'cooperative-start-a',
+    nextCode:
+        '  rt.sleep(0.1)\n' +
+        '  for _ in range(rt.repeat_count(2)):\n' +
+        '    rt.yield_once()\n',
+    getFieldValue: () => null,
+    nextConnection: {targetBlock: () => ({type: 'control_repeat'})}
+};
+const cooperativeStartB = {
+    type: 'event_program_start',
+    id: 'cooperative-start-b',
+    nextCode:
+        "  rt.drive_move_for('forward', 1, 'rotations')\n" +
+        '  rt.stop_other_stacks()\n',
+    getFieldValue: () => null,
+    nextConnection: {targetBlock: () => ({type: 'drive_move_for'})}
+};
+resetGenerator([cooperativeStartA, cooperativeStartB]);
+assert.strictEqual(generator.event_program_start(cooperativeStartA), null);
+assert.strictEqual(generator.event_program_start(cooperativeStartB), null);
+assert.match(generator.libraries_.est_stack_1, /async def stack_1\(\):/);
+assert.match(generator.libraries_.est_stack_1, /await rt\.sleep\(0\.1\)/);
+assert.match(generator.libraries_.est_stack_1, /await rt\.yield_once\(\)/);
+assert.match(generator.libraries_.est_stack_2, /async def stack_2\(\):/);
+assert.match(generator.libraries_.est_stack_2, /await rt\.drive_move_for\('forward', 1, 'rotations'\)/);
+assert.match(generator.libraries_.est_stack_2, /rt\.stop_other_stacks\(\)/);
+const cooperativeProgram = [
+    programPreamble(),
+    dictionaryCode(generator.libraries_),
+    dictionaryCode(generator.setups_)
+].filter(Boolean).join('\n');
+assert.strictEqual((cooperativeProgram.match(/\brt\.run\(\)/g) || []).length, 1);
+addSyntaxCase('cooperative_multi_start', cooperativeProgram);
+
+resetGenerator();
+const zeroLeftDualSpeed = generator.drive_start_dual_speed({
+    values: {LEFT_SPEED: '0', RIGHT_SPEED: '50'},
+    getFieldValue: () => null
+});
+assert.strictEqual(zeroLeftDualSpeed, 'rt.drive_start_dual_speed(_est_speed(0), _est_speed(50))\n');
+const zeroRightDualSpeed = generator.drive_start_dual_speed({
+    values: {LEFT_SPEED: '50', RIGHT_SPEED: '0'},
+    getFieldValue: () => null
+});
+assert.strictEqual(zeroRightDualSpeed, 'rt.drive_start_dual_speed(_est_speed(50), _est_speed(0))\n');
+const zeroBothDualSpeed = generator.drive_start_dual_speed({
+    values: {LEFT_SPEED: '0', RIGHT_SPEED: '0'},
+    getFieldValue: () => null
+});
+assert.strictEqual(zeroBothDualSpeed, 'rt.drive_start_dual_speed(_est_speed(0), _est_speed(0))\n');
+const speedRuntimeAssertions = `${dictionaryCode(generator.libraries_)}
+assert _est_speed(0) == 0
+assert _est_speed(1) == 1
+assert _est_speed(9) == 9
+assert _est_speed(-1) == -1
+assert _est_speed(-9) == -9
+assert _est_speed(101) == 100
+assert _est_speed(-101) == -100
+assert _est_speed_magnitude(0) == 0
+assert _est_speed_magnitude(1) == 1
+assert _est_speed_magnitude(9) == 9
+assert _est_speed_magnitude(101) == 100
+`;
+
+[
+    'regular_black',
+    'bold_black',
+    'large_black',
+    'regular_white',
+    'bold_white',
+    'large_white'
+].forEach(font => {
+    resetGenerator();
+    const displayTextXY = generator.display_text_xy({
+        values: {X: '10', Y: '20', TEXT: quotePython('EST')},
+        getFieldValue: name => (name === 'FONT' ? font : null)
+    });
+    assert.strictEqual(
+        displayTextXY,
+        `est.display.text(10, 20, 'EST', font='${font}')\nest.display.refresh()\n`
+    );
+});
+
+const sensorPortBlock = ({values = {}, fields = {}} = {}) => ({
+    values: {PORT: 'port_var', ...values},
+    getFieldValue: name => fields[name]
+});
+[
+    ['sensor_color_reflection', {}, 'rt.color(port_var).reflection()'],
+    ['sensor_color_reflection_compare', {
+        values: {VALUE: '50'},
+        fields: {COMPARATOR: 'less'}
+    }, "rt.compare(rt.color(port_var).reflection(), 'less', 50)"],
+    ['sensor_temperature', {
+        fields: {UNIT: 'celsius'}
+    }, 'rt.temperature(port_var).celsius()'],
+    ['sensor_temperature', {
+        fields: {UNIT: 'fahrenheit'}
+    }, 'rt.temperature(port_var).fahrenheit()'],
+    ['sensor_touch_pressed', {}, 'rt.touch(port_var).pressed()'],
+    ['sensor_ultrasonic_distance', {
+        fields: {UNIT: 'centimeters'}
+    }, "rt.ultrasonic(port_var).distance('centimeters')"],
+    ['sensor_ir_proximity', {}, 'rt.infrared(port_var).proximity()'],
+    ['sensor_ir_beacon_heading', {
+        fields: {CHANNEL: '1'}
+    }, 'rt.infrared(port_var).beacon_heading(1)'],
+    ['sensor_ir_beacon_active_compare', {
+        values: {VALUE: '0'},
+        fields: {CHANNEL: '1', PROPERTY: 'heading', COMPARATOR: 'less'}
+    }, "rt.ir_beacon_compare(port_var, 1, 'heading', 'less', 0)"],
+    ['sensor_gyro_angle', {}, 'rt.gyro(port_var).angle()'],
+    ['sensor_gyro_reset', {}, 'rt.gyro(port_var).reset_angle()\n']
+].forEach(([blockId, blockOptions, expectedCode]) => {
+    resetGenerator();
+    const output = generator[blockId](sensorPortBlock(blockOptions));
+    const code = Array.isArray(output) ? output[0] : output;
+    assert.strictEqual(code, expectedCode, `${blockId} variable port`);
+});
+
+const sensorDefaultPortBlock = ({values = {}, fields = {}} = {}) => ({
+    values,
+    getFieldValue: name => fields[name]
+});
+[
+    ['sensor_color_reflection', {}, "rt.color('3').reflection()"],
+    ['sensor_temperature', {}, "rt.temperature('3').celsius()"],
+    ['sensor_touch_pressed', {}, "rt.touch('1').pressed()"],
+    ['sensor_ultrasonic_distance', {
+        fields: {UNIT: 'centimeters'}
+    }, "rt.ultrasonic('4').distance('centimeters')"],
+    ['sensor_ir_proximity', {}, "rt.infrared('4').proximity()"],
+    ['sensor_gyro_angle', {}, "rt.gyro('2').angle()"]
+].forEach(([blockId, blockOptions, expectedCode]) => {
+    resetGenerator();
+    const output = generator[blockId](sensorDefaultPortBlock(blockOptions));
+    const code = Array.isArray(output) ? output[0] : output;
+    assert.strictEqual(code, expectedCode, `${blockId} default port`);
+});
+
 const combinedBlocks = allEstGeneratorIds.map(blockId => (
     makeBlockFromDefinition(definitionById.get(blockId), 'combined')
 ));
@@ -386,6 +800,26 @@ const python = pythonCandidates.find(candidate => {
     return !result.error && result.status === 0;
 });
 assert.ok(python, 'Python 3 is required to run generated-code syntax tests.');
+
+const speedRuntimeResult = childProcess.spawnSync(
+    python.command,
+    python.args.concat(['-c', speedRuntimeAssertions]),
+    {
+        encoding: 'utf8',
+        env: {
+            ...process.env,
+            PYTHONIOENCODING: 'utf-8',
+            PYTHONUTF8: '1'
+        },
+        windowsHide: true
+    }
+);
+if (speedRuntimeResult.status !== 0) {
+    throw new Error(
+        `Generated EST speed helper runtime validation failed:\n` +
+        `${speedRuntimeResult.stdout}${speedRuntimeResult.stderr}`
+    );
+}
 
 const syntaxResult = childProcess.spawnSync(
     python.command,

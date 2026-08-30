@@ -5,6 +5,12 @@ import React from 'react';
 import Box from 'openblock-gui/src/components/box/box.jsx';
 import CodeEditor from 'openblock-gui/src/containers/code-editor.jsx';
 
+import {
+    EST_CODE_DRAWER_REQUEST_STATE_EVENT,
+    EST_CODE_DRAWER_TOGGLE_EVENT,
+    publishCodeDrawerState,
+    resizeBlocklyWorkspace
+} from './est-code-drawer-events';
 import styles from './EstCodeDrawer.css';
 
 import lockIcon from 'openblock-gui/src/components/hardware/icon--lock.svg';
@@ -15,6 +21,7 @@ const DEFAULT_WIDTH = 480;
 const MIN_WIDTH = 320;
 const MIN_WORKSPACE_WIDTH = 600;
 const MAX_WIDTH = 900;
+const EDITOR_CHROME_WIDTH = 6;
 const WIDTH_STORAGE_KEY = 'estStudio.pythonCodeDrawerWidth';
 
 const clampDrawerWidth = width => {
@@ -45,15 +52,22 @@ class EstCodeDrawer extends React.Component {
         this.handleResetWidth = this.handleResetWidth.bind(this);
         this.handleToggle = this.handleToggle.bind(this);
         this.handleWindowResize = this.handleWindowResize.bind(this);
+        this.publishDrawerState = this.publishDrawerState.bind(this);
         this.scheduleLayoutRefresh = this.scheduleLayoutRefresh.bind(this);
     }
 
     componentDidMount () {
         window.addEventListener('resize', this.handleWindowResize);
+        window.addEventListener(EST_CODE_DRAWER_TOGGLE_EVENT, this.handleToggle);
+        window.addEventListener(EST_CODE_DRAWER_REQUEST_STATE_EVENT, this.publishDrawerState);
+        this.publishDrawerState();
+        this.scheduleLayoutRefresh();
     }
 
     componentWillUnmount () {
         window.removeEventListener('resize', this.handleWindowResize);
+        window.removeEventListener(EST_CODE_DRAWER_TOGGLE_EVENT, this.handleToggle);
+        window.removeEventListener(EST_CODE_DRAWER_REQUEST_STATE_EVENT, this.publishDrawerState);
         if (this.layoutFrame) {
             window.cancelAnimationFrame(this.layoutFrame);
         }
@@ -70,7 +84,13 @@ class EstCodeDrawer extends React.Component {
     }
 
     handleToggle () {
-        this.setState(state => ({isOpen: !state.isOpen}), this.scheduleLayoutRefresh);
+        this.setState(
+            state => ({isOpen: !state.isOpen}),
+            () => {
+                this.publishDrawerState();
+                this.scheduleLayoutRefresh();
+            }
+        );
     }
 
     handleResizeStart (event) {
@@ -132,6 +152,10 @@ class EstCodeDrawer extends React.Component {
         document.body.style.userSelect = '';
     }
 
+    publishDrawerState () {
+        publishCodeDrawerState(this.state.isOpen);
+    }
+
     scheduleLayoutRefresh () {
         if (this.layoutFrame) {
             window.cancelAnimationFrame(this.layoutFrame);
@@ -139,6 +163,8 @@ class EstCodeDrawer extends React.Component {
         this.layoutFrame = window.requestAnimationFrame(() => {
             this.layoutFrame = null;
             window.dispatchEvent(new Event('resize'));
+            resizeBlocklyWorkspace();
+            window.requestAnimationFrame(resizeBlocklyWorkspace);
         });
     }
 
@@ -156,7 +182,7 @@ class EstCodeDrawer extends React.Component {
         } = this.props;
         const {drawerWidth, isOpen, isResizing} = this.state;
         const visibleWidth = isOpen ? drawerWidth : COLLAPSED_WIDTH;
-        const editorWidth = Math.max(1, drawerWidth - 18);
+        const editorWidth = Math.max(1, drawerWidth - EDITOR_CHROME_WIDTH);
 
         return (
             <Box
@@ -206,18 +232,6 @@ class EstCodeDrawer extends React.Component {
                         />
                     </Box>
                 </Box>
-                <button
-                    aria-expanded={isOpen}
-                    className={classNames(
-                        styles.button,
-                        styles.toggleButton,
-                        !isOpen && styles.toggleButtonCollapsed
-                    )}
-                    title={isOpen ? '收起 Python 代码区' : '展开 Python 代码区'}
-                    onClick={this.handleToggle}
-                >
-                    <span className={styles.toggleIcon}>{'</>'}</span>
-                </button>
             </Box>
         );
     }

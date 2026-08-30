@@ -1,6 +1,4 @@
 import {
-    CAPABILITY_PERSISTENT_PROGRAM,
-    CAPABILITY_PYTHON_PROGRAM,
     COMMAND_PERSISTENT_PROGRAM,
     COMMAND_PYTHON_PROGRAM,
     COMMAND_DEVICE_STATUS,
@@ -9,11 +7,12 @@ import {
     LEGACY_REPORT_SIZE,
     PERSISTENT_PROGRAM_REQUEST_TIMEOUT_MS,
     PROGRAM_REQUEST_TIMEOUT_MS,
+    PROGRAM_STATUS_REQUEST_TIMEOUT_MS,
     PROGRAM_STATUS_POLL_INTERVAL_MS,
     PYTHON_PROGRAM_CHUNK_SIZE,
     PYTHON_PROGRAM_FLAG_TIMEOUT_ARMED,
     PYTHON_PROGRAM_MAX_SIZE,
-    PYTHON_PROGRAM_MAX_TIMEOUT_MS,
+    PYTHON_PROGRAM_NO_TIMEOUT_MS,
     PYTHON_PROGRAM_STATE_COMPLETED,
     PYTHON_PROGRAM_STATE_EXCEPTION,
     PYTHON_PROGRAM_STATE_INVALID,
@@ -32,7 +31,8 @@ import {
     buildPythonProgramStatusFrame,
     buildPythonProgramStopFrame,
     buildFrame,
-    checkDeviceCompatibility,
+    capabilityNamesFor,
+    checkProgramFirmwareCompatibility,
     crc32,
     defaultReportDataSize,
     isEstDevice,
@@ -41,24 +41,45 @@ import {
     parseHeartbeatResponse,
     parsePersistentProgramResponse,
     parsePythonProgramResponse,
+    programRequiredCapabilitiesForSource,
     splitReports
 } from './protocol';
 
-const REQUIRED_PROGRAM_CAPABILITIES = CAPABILITY_PYTHON_PROGRAM | CAPABILITY_PERSISTENT_PROGRAM;
+const PROGRAM_FIRMWARE_UPGRADE_MESSAGE =
+    '当前 EST 固件不支持这个程序使用的功能。请升级到支持相应 EST Studio 功能的固件后再运行。';
+const EST_USB_DISCONNECTED_MESSAGE = 'EST USB 连接已断开，请重新连接 EST 后重试。';
+
+const normalizeStatusOptions = options => ({
+    includeProgramStatus: Boolean(options && options.includeProgramStatus)
+});
+
+const programFirmwareUpgradeError = compatibility => {
+    const detail = compatibility && compatibility.programMessage ? ` ${compatibility.programMessage}` : '';
+    return new Error(`${PROGRAM_FIRMWARE_UPGRADE_MESSAGE}${detail}`);
+};
+
+const isTransportDisconnectError = error => {
+    const message = String(error && error.message ? error.message : error);
+    return /cannot write to hid device|cannot read from hid device|hid device is disconnected|device not open/i
+        .test(message);
+};
 
 export class EstDeviceService {
     constructor ({
         transportFactory,
         requestTimeoutMs = PROGRAM_REQUEST_TIMEOUT_MS,
         fragmentWriteDelayMs = FRAGMENT_WRITE_DELAY_MS,
+        programStatusRequestTimeoutMs = PROGRAM_STATUS_REQUEST_TIMEOUT_MS,
         programStatusPollIntervalMs = PROGRAM_STATUS_POLL_INTERVAL_MS
     } = {}) {
         this.transportFactory = transportFactory;
         this.requestTimeoutMs = requestTimeoutMs;
         this.fragmentWriteDelayMs = fragmentWriteDelayMs;
+        this.programStatusRequestTimeoutMs = programStatusRequestTimeoutMs;
         this.programStatusPollIntervalMs = programStatusPollIntervalMs;
         this.transport = null;
         this.device = null;
+        this.firmwareVersion = null;
         this.commandQueue = Promise.resolve();
         this.autoConnectPromise = null;
         this.lastDeviceStatus = null;
@@ -87,6 +108,7 @@ export class EstDeviceService {
             this.device = device;
             try {
                 const firmwareVersion = await this._requestNow(0x01);
+                this.firmwareVersion = firmwareVersion;
                 return {device: this.device, firmwareVersion};
             } catch (error) {
                 await this._disconnectNow();
@@ -100,37 +122,65 @@ export class EstDeviceService {
     }
 
     async _disconnectNow () {
-        if (this.transport && typeof this.transport.close === 'function') {
-            await this.transport.close();
-        }
+        const transport = this.transport;
         this.transport = null;
         this.device = null;
+        this.firmwareVersion = null;
         this.lastDeviceStatus = null;
         this.pythonProgramActive = false;
+        if (transport && typeof transport.close === 'function') {
+            try {
+                await transport.close();
+            } catch (error) {
+                // The HID handle may already be gone after a USB unplug.
+            }
+        }
     }
 
-    getStatus () {
-        return this._enqueueCommand(() => this._getStatusNow());
+    getStatus (options = {}) {
+        const statusOptions = normalizeStatusOptions(options);
+        return this._enqueueCommand(() => this._getStatusNow(statusOptions));
     }
 
-    async _getStatusNow () {
+    _decorateDeviceStatus (status) {
+        return {
+            ...status,
+            capabilityNames: capabilityNamesFor(status.capabilities),
+            compatibility: checkProgramFirmwareCompatibility(status)
+        };
+    }
+
+    async _getStatusNow (options = {}) {
+        const {includeProgramStatus} = normalizeStatusOptions(options);
+        if (this.pythonProgramActive && this.transport) {
+            return this._getProgramStatusSnapshotNow();
+        }
         try {
             const response = await this._requestNow(COMMAND_DEVICE_STATUS);
             const status = parseDeviceStatusResponse(response);
             if (!status) {
                 throw new Error('EST returned an invalid device status snapshot');
             }
-            this.lastDeviceStatus = {
-                ...status,
-                compatibility: checkDeviceCompatibility(status, REQUIRED_PROGRAM_CAPABILITIES)
-            };
-            if (this.pythonProgramActive) {
+            this.lastDeviceStatus = this._decorateDeviceStatus(status);
+            this.firmwareVersion = status.firmwareVersion;
+            if (this.pythonProgramActive || includeProgramStatus) {
                 try {
-                    const programStatus = await this._pythonProgramActionNow(buildPythonProgramStatusFrame());
+                    const programStatus = await this._pythonProgramActionNow(
+                        buildPythonProgramStatusFrame(),
+                        this.programStatusRequestTimeoutMs
+                    );
                     this._updatePythonProgramActivity(programStatus);
                     return {...this.lastDeviceStatus, programStatus};
                 } catch (programStatusError) {
-                    // Keep the active marker until STOP or a later status check confirms a terminal state.
+                    if (this.pythonProgramActive) {
+                        // Keep the active marker until STOP or a later status check confirms a terminal state.
+                    } else {
+                        return {
+                            ...this.lastDeviceStatus,
+                            programStatus: null,
+                            programStatusError: programStatusError.message
+                        };
+                    }
                 }
             }
             return this.lastDeviceStatus;
@@ -138,33 +188,63 @@ export class EstDeviceService {
             if (!this.pythonProgramActive || !this.transport) {
                 throw error;
             }
-            let programStatus = null;
-            try {
-                programStatus = await this._pythonProgramActionNow(buildPythonProgramStatusFrame());
-                this._updatePythonProgramActivity(programStatus);
-            } catch (programStatusError) {
-                // Preserve the existing HID transport so the stop command can still use it.
+            return this._getProgramStatusSnapshotNow(error.message);
+        }
+    }
+
+    async _getProgramStatusSnapshotNow (statusPollingError = null) {
+        let programStatus = null;
+        try {
+            programStatus = await this._pythonProgramActionNow(
+                buildPythonProgramStatusFrame(),
+                this.programStatusRequestTimeoutMs
+            );
+            this._updatePythonProgramActivity(programStatus);
+        } catch (programStatusError) {
+            if (!this.transport) {
+                throw programStatusError;
             }
+            // Preserve the existing HID transport so the stop command can still use it.
             if (!this.lastDeviceStatus) {
-                throw error;
+                throw programStatusError;
             }
             return {
                 ...this.lastDeviceStatus,
                 programStatus,
                 statusPollingDeferred: true,
-                statusPollingError: error.message
+                statusPollingError: programStatusError.message
             };
         }
+
+        const snapshot = this.lastDeviceStatus || {
+            compatibility: checkProgramFirmwareCompatibility({
+                firmwareVersion: this.firmwareVersion
+            }),
+            firmwareVersion: this.firmwareVersion
+        };
+        const deferredStatus = {
+            ...snapshot,
+            programStatus,
+            statusPollingDeferred: true
+        };
+        if (statusPollingError) {
+            deferredStatus.statusPollingError = statusPollingError;
+        }
+        return deferredStatus;
     }
 
-    async autoConnect () {
+    async autoConnect (options = {}) {
+        const statusOptions = normalizeStatusOptions(options);
         if (this.shuttingDown) {
             return {state: 'shutting-down'};
+        }
+        if (statusOptions.includeProgramStatus) {
+            return this._autoConnect(statusOptions);
         }
         if (this.autoConnectPromise) {
             return this.autoConnectPromise;
         }
-        this.autoConnectPromise = this._autoConnect();
+        this.autoConnectPromise = this._autoConnect(statusOptions);
         try {
             return await this.autoConnectPromise;
         } finally {
@@ -172,8 +252,11 @@ export class EstDeviceService {
         }
     }
 
-    async _autoConnect () {
+    async _autoConnect (options = {}) {
         try {
+            if (this.pythonProgramActive && this.transport && this.device) {
+                return await this._getActiveProgramConnectionNow(options);
+            }
             const devices = await this.listDevices();
             if (devices.length === 0) {
                 if (this.pythonProgramActive && this.transport) {
@@ -197,11 +280,11 @@ export class EstDeviceService {
                 }
                 await this.connect(device);
             }
-            const status = await this.getStatus();
+            const status = await this.getStatus(options);
             return {
                 state: 'connected',
                 device,
-                firmwareVersion: status ? status.firmwareVersion : null,
+                firmwareVersion: status ? status.firmwareVersion : this.firmwareVersion,
                 compatible: status.compatibility.compatible,
                 status
             };
@@ -209,9 +292,35 @@ export class EstDeviceService {
             if (this.pythonProgramActive && this.transport) {
                 return this._programConnectionFallback(error.message);
             }
+            if (this.transport && this.device && this.firmwareVersion) {
+                const compatibility = checkProgramFirmwareCompatibility({
+                    firmwareVersion: this.firmwareVersion
+                });
+                if (compatibility.compatible) {
+                    return {
+                        state: 'connected',
+                        device: this.device,
+                        firmwareVersion: this.firmwareVersion,
+                        compatible: true,
+                        status: null,
+                        message: error.message
+                    };
+                }
+            }
             await this.disconnect();
             return {state: 'error', message: error.message};
         }
+    }
+
+    async _getActiveProgramConnectionNow (options = {}) {
+        const status = await this.getStatus(options);
+        return {
+            state: 'connected',
+            device: this.device,
+            firmwareVersion: status ? status.firmwareVersion : this.firmwareVersion,
+            compatible: status && status.compatibility ? status.compatibility.compatible : null,
+            status
+        };
     }
 
     _programConnectionFallback (message) {
@@ -251,7 +360,7 @@ export class EstDeviceService {
         return this._enqueueCommand(() => this._saveProgramToSlotNow(source, slot, programName));
     }
 
-    loadAndRunProgram (slot, timeoutMs = PYTHON_PROGRAM_MAX_TIMEOUT_MS) {
+    loadAndRunProgram (slot, timeoutMs = PYTHON_PROGRAM_NO_TIMEOUT_MS) {
         return this._enqueueCommand(() => this._loadAndRunProgramNow(slot, timeoutMs));
     }
 
@@ -259,7 +368,7 @@ export class EstDeviceService {
         source,
         slot,
         programName = `Program ${slot}`,
-        timeoutMs = PYTHON_PROGRAM_MAX_TIMEOUT_MS
+        timeoutMs = PYTHON_PROGRAM_NO_TIMEOUT_MS
     } = {}) {
         return this._enqueueCommand(async () => {
             const download = await this._saveProgramToSlotNow(source, slot, programName);
@@ -301,6 +410,7 @@ export class EstDeviceService {
 
     async _uploadPythonNow (source) {
         const sourceBytes = this._normalizePythonSource(source);
+        await this._requireProgramCompatibilityNow(programRequiredCapabilitiesForSource(sourceBytes));
         await this._stopCurrentProgramNow();
         const sourceCrc32 = crc32(sourceBytes);
         let status = await this._pythonProgramActionNow(
@@ -325,6 +435,34 @@ export class EstDeviceService {
         };
     }
 
+    async _requireProgramCompatibilityNow (additionalProgramCapabilities = 0) {
+        const additionalCapabilities = Number(additionalProgramCapabilities) >>> 0;
+        let status = this.lastDeviceStatus;
+        let compatibility = status && status.compatibility;
+        if (status && additionalCapabilities !== 0) {
+            compatibility = checkProgramFirmwareCompatibility(status, additionalCapabilities);
+        }
+        if (!status || !compatibility || typeof compatibility.programCompatible !== 'boolean') {
+            try {
+                status = await this._getStatusNow();
+                compatibility = status && status.compatibility;
+                if (status && additionalCapabilities !== 0) {
+                    compatibility = checkProgramFirmwareCompatibility(status, additionalCapabilities);
+                }
+            } catch (error) {
+                if (!this.transport) {
+                    throw error;
+                }
+                throw programFirmwareUpgradeError(checkProgramFirmwareCompatibility({
+                    firmwareVersion: this.firmwareVersion
+                }, additionalCapabilities));
+            }
+        }
+        if (!compatibility || !compatibility.programCompatible) {
+            throw programFirmwareUpgradeError(compatibility);
+        }
+    }
+
     async _saveProgramToSlotNow (source, slot, programName) {
         const saveFrame = buildPersistentProgramSaveFrame(slot, programName);
         const upload = await this._uploadPythonNow(source);
@@ -339,6 +477,7 @@ export class EstDeviceService {
     }
 
     async _loadAndRunProgramNow (slot, timeoutMs) {
+        await this._requireProgramCompatibilityNow();
         const loadFrame = buildPersistentProgramLoadFrame(slot);
         const runFrame = buildPythonProgramRunFrame(timeoutMs);
         const loadedStatus = await this._persistentProgramActionNow(loadFrame);
@@ -382,11 +521,11 @@ export class EstDeviceService {
         this.pythonProgramActive = this._pythonProgramActive(status);
     }
 
-    async _pythonProgramActionNow (frame) {
+    async _pythonProgramActionNow (frame, timeoutMs = this.requestTimeoutMs) {
         const report = await this._requestFrameNow(
             frame,
             COMMAND_PYTHON_PROGRAM,
-            this.requestTimeoutMs
+            timeoutMs
         );
         const status = parsePythonProgramResponse(report);
         if (!status) {
@@ -468,24 +607,32 @@ export class EstDeviceService {
         if (!this.transport) {
             throw new Error('No EST device is connected');
         }
-        const reportDataSize = defaultReportDataSize(this.device) || LEGACY_REPORT_SIZE;
-        const reports = splitReports(frame, reportDataSize);
-        for (let index = 0; index < reports.length; index++) {
-            await this.transport.write(reports[index]);
-            if (index < reports.length - 1) {
-                await this._delay(this.fragmentWriteDelayMs);
+        try {
+            const reportDataSize = defaultReportDataSize(this.device) || LEGACY_REPORT_SIZE;
+            const reports = splitReports(frame, reportDataSize);
+            for (let index = 0; index < reports.length; index++) {
+                await this.transport.write(reports[index]);
+                if (index < reports.length - 1) {
+                    await this._delay(this.fragmentWriteDelayMs);
+                }
             }
-        }
 
-        const deadline = Date.now() + timeoutMs;
-        while (Date.now() < deadline) {
-            const remainingMs = Math.max(1, deadline - Date.now());
-            const report = await this.transport.read(Math.min(HID_READ_TIMEOUT_MS, remainingMs));
-            const parsed = parseFrame(report, command);
-            if (parsed) {
-                return report;
+            const deadline = Date.now() + timeoutMs;
+            while (Date.now() < deadline) {
+                const remainingMs = Math.max(1, deadline - Date.now());
+                const report = await this.transport.read(Math.min(HID_READ_TIMEOUT_MS, remainingMs));
+                const parsed = parseFrame(report, command);
+                if (parsed) {
+                    return report;
+                }
             }
+            throw new Error(`Timed out waiting for EST command 0x${command.toString(16)}`);
+        } catch (error) {
+            if (isTransportDisconnectError(error)) {
+                await this._disconnectNow();
+                throw new Error(EST_USB_DISCONNECTED_MESSAGE);
+            }
+            throw error;
         }
-        throw new Error(`Timed out waiting for EST command 0x${command.toString(16)}`);
     }
 }

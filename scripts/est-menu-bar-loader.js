@@ -50,6 +50,14 @@ module.exports = function (source) {
         '[\\s\\S]*?\\r?\\n',
         ' {36}<\\/MenuItem>\\r?\\n'
     ].join(''));
+    const checkUpdateMenuItemPattern = new RegExp([
+        ' {36}<MenuItem(?: onClick=\\{this\\.handleCheckUpdate\\}>|\\r?\\n',
+        '(?: {40}isRtl=\\{this\\.props\\.isRtl\\}\\r?\\n)?',
+        ' {40}onClick=\\{this\\.handleCheckUpdate\\}\\r?\\n',
+        ' {36}>)\\r?\\n',
+        '[\\s\\S]*?\\r?\\n',
+        ' {36}<\\/MenuItem>\\r?\\n'
+    ].join(''));
     const installDriverMenuSectionPattern = new RegExp([
         ' {32}<MenuSection>\\r?\\n',
         ' {36}<MenuItem\\r?\\n',
@@ -66,6 +74,18 @@ module.exports = function (source) {
         ' {4}\\}\\r?\\n'
     ].join(''));
     const aboutTitlePropType = '                title: PropTypes.string, // text for the menu item';
+    const openBlockLogoImport = "import openblockLogo from './openblock-logo.svg';\n";
+    const openBlockLogoSmallImport = "import openblockLogoSmall from './openblock-logo-small.svg';\n";
+    const openBlockLogoSrc =
+        'src={this.state.isOverflow ? this.props.logoSmall : this.props.logo}';
+    const openBlockLogoDefaultProps = [
+        '    logo: openblockLogo,',
+        '    logoSmall: openblockLogoSmall,'
+    ].join('\n');
+    const estLogoDefaultProps = [
+        '    logo: estMenuLogo,',
+        '    logoSmall: estMenuLogo,'
+    ].join('\n');
 
     if (!deviceSelectionPattern.test(source)) {
         throw new Error('Unable to locate the OpenBlock hardware selection menu item.');
@@ -91,6 +111,10 @@ module.exports = function (source) {
         throw new Error('Unable to locate the OpenBlock clear-cache menu item.');
     }
 
+    if (!checkUpdateMenuItemPattern.test(source)) {
+        throw new Error('Unable to locate the OpenBlock check-update menu item.');
+    }
+
     if (!installDriverMenuSectionPattern.test(source)) {
         throw new Error('Unable to locate the OpenBlock driver installation menu item.');
     }
@@ -105,9 +129,13 @@ module.exports = function (source) {
 
     let transformedSource = source
         .replace(deviceSelectionPattern, '')
-        .replace(connectionButtonPattern, '                    <EstStatusPanel />')
+        .replace(
+            connectionButtonPattern,
+            '                    <EstStatusPanel />\n                    <EstHardwareStatusButton />'
+        )
         .replace(editMenuPattern, '')
         .replace(openBlockUtilityItemsPattern, '')
+        .replace(checkUpdateMenuItemPattern, '')
         .replace(clearCacheMenuItemPattern, '')
         .replace(installDriverMenuSectionPattern, '')
         .replace(communityImport, '')
@@ -180,9 +208,6 @@ module.exports = function (source) {
     openFileMenu,
     closeFileMenu,
     fileMenuOpen,
-    openSettingMenu,
-    closeSettingMenu,
-    settingMenuOpen,
     openLanguageMenu,
     closeLanguageMenu,
     languageMenuOpen
@@ -314,6 +339,7 @@ module.exports = function (source) {
             .replace('    const user = state.session && state.session.session && state.session.session.user;\n', '')
             .replace('        accountMenuOpen: accountMenuOpen(state),\n', '')
             .replace('        editMenuOpen: editMenuOpen(state),\n', '')
+            .replace('        settingMenuOpen: settingMenuOpen(state),\n', '')
             .replace('        isUpdating: getIsUpdating(loadingState),\n', '')
             .replace('        isShowingProject: getIsShowingProject(loadingState),\n', '')
             .replace('        loginMenuOpen: loginMenuOpen(state),\n', '')
@@ -332,6 +358,8 @@ module.exports = function (source) {
             .replace('    onRequestCloseAccount: () => dispatch(closeAccountMenu()),\n', '')
             .replace('    onClickEdit: () => dispatch(openEditMenu()),\n', '')
             .replace('    onRequestCloseEdit: () => dispatch(closeEditMenu()),\n', '')
+            .replace('    onClickSetting: () => dispatch(openSettingMenu()),\n', '')
+            .replace('    onRequestCloseSetting: () => dispatch(closeSettingMenu()),\n', '')
             .replace('    onClickLogin: () => dispatch(openLoginMenu()),\n', '')
             .replace('    onRequestCloseLogin: () => dispatch(closeLoginMenu()),\n', '')
             .replace('    onClickRemix: () => dispatch(remixProject()),\n', '')
@@ -389,17 +417,21 @@ module.exports = function (source) {
         }
 
         transformedSource = transformedSource
-            .replace(obsoleteHardwareModalImports, "import {openUpdateModal} from '../../reducers/modals';")
+            .replace(obsoleteHardwareModalImports, '')
             .replace("import VM from 'openblock-vm';\n\n", '')
+            .replace("import {isScratchDesktop} from '../../lib/isScratchDesktop';\n", '')
+            .replace("import {UPDATE_MODAL_STATE} from '../../lib/update-state.js';\n\n", '')
             .replace("import {setStageSize} from '../../reducers/stage-size';\n", '')
             .replace("import {setUploadMode, setRealtimeMode} from '../../reducers/program-mode';\n", '')
             .replace(obsoleteConnectionImport, '')
             .replace("import {STAGE_SIZE_MODES} from '../../lib/layout-constants';\n", '')
+            .replace("import {setUpdate} from '../../reducers/update';\n", '')
             .replace("import helpIcon from '../../lib/assets/icon--tutorials.svg';\n", '')
             .replace("import wikiIcon from './icon--wiki.svg';\n", '')
             .replace("import unconnectedIcon from './icon--unconnected.svg';\n", '')
             .replace("import connectedIcon from './icon--connected.svg';\n", '')
             .replace("import screenshotIcon from './icon--screenshot.svg';\n", '')
+            .replace("import settingIcon from './icon--setting.svg';\n\n", '')
             .replace("import uploadFirmwareIcon from './icon--upload-firmware.svg';\n", '')
             .replace("import saveSvgAsPng from 'openblock-save-svg-as-png';\n", '')
             .replace("import {showAlertWithTimeout} from '../../reducers/alerts';\n", '')
@@ -411,6 +443,7 @@ module.exports = function (source) {
             .replace(/ {12}'handleProgramModeSwitchOnChange',\r?\n/, '')
             .replace(/ {12}'handleProgramModeUpdate',\r?\n/, '')
             .replace(/ {12}'handleScreenshot',\r?\n/, '')
+            .replace(/ {12}'handleCheckUpdate',\r?\n/, '')
             .replace(/ {12}'handleClearCache'\r?\n/, '')
             .replace("        this.props.vm.on('PERIPHERAL_DISCONNECTED', this.props.onDisconnect);\n", '')
             .replace("        this.props.vm.on('PROGRAM_MODE_UPDATE', this.handleProgramModeUpdate);\n", '')
@@ -418,6 +451,17 @@ module.exports = function (source) {
             .replace("        this.props.vm.removeListener('PROGRAM_MODE_UPDATE', this.handleProgramModeUpdate);\n", '')
             .replace(obsoleteHardwareMethodsPattern, '')
             .replace(clearCacheMethodPattern, '')
+            .replace(new RegExp([
+                ' {4}handleCheckUpdate \\(\\) \\{[\\s\\S]*?',
+                ' {4}\\}\\r?\\n',
+                '(?= {4}buildAboutMenu)'
+            ].join('')), '')
+            .replace(new RegExp([
+                ' {8}const checkUpdate = \\(\\r?\\n[\\s\\S]*?',
+                ' {8}const clearCache = \\(\\r?\\n[\\s\\S]*?',
+                ' {8}\\);\\r?\\n',
+                '(?= {8}\\/\\/ Show the About button)'
+            ].join('')), '')
             .replace('    confirmClearCache: PropTypes.func,\n', '')
             .replace('    isRealtimeMode: PropTypes.bool.isRequired,\n', '')
             .replace('    isSupportSwitchMode: PropTypes.bool,\n', '')
@@ -451,13 +495,7 @@ module.exports = function (source) {
             .replace('        peripheralName: state.scratchGui.connectionModal.peripheralName,\n', '')
             .replace('        deviceId: state.scratchGui.device.deviceId,\n', '')
             .replace('        deviceName: state.scratchGui.device.deviceName\n', '')
-            .replace(obsoleteHardwareDispatchPattern, [
-                '    onSetUpdate: message => {',
-                '        dispatch(setUpdate(message));',
-                '        dispatch(openUpdateModal());',
-                '    }',
-                ''
-            ].join('\n'));
+            .replace(obsoleteHardwareDispatchPattern, '');
 
         const obsoleteMenuPropTypes = [
             'accountMenuOpen: PropTypes.bool',
@@ -474,18 +512,23 @@ module.exports = function (source) {
             'isShared: PropTypes.bool',
             'isShowingProject: PropTypes.bool',
             'loginMenuOpen: PropTypes.bool',
+            'settingMenuOpen: PropTypes.bool',
             'onClickAccount: PropTypes.func',
             'onClickEdit: PropTypes.func',
             'onClickLogin: PropTypes.func',
             'onClickRemix: PropTypes.func',
             'onClickSave: PropTypes.func',
             'onClickSaveAsCopy: PropTypes.func',
+            'onClickCheckUpdate: PropTypes.func',
+            'onClickSetting: PropTypes.func',
             'onLogOut: PropTypes.func',
             'onOpenRegistration: PropTypes.func',
             'onRequestCloseAccount: PropTypes.func',
             'onRequestCloseEdit: PropTypes.func',
             'onRequestCloseLogin: PropTypes.func',
+            'onRequestCloseSetting: PropTypes.func',
             'onSeeCommunity: PropTypes.func',
+            'onSetUpdate: PropTypes.func.isRequired',
             'onShare: PropTypes.func',
             'onToggleLoginOpen: PropTypes.func',
             'projectTitle: PropTypes.string',
@@ -504,5 +547,67 @@ module.exports = function (source) {
         }
     }
 
-    return `import EstStatusPanel from 'est-status-panel';\n${transformedSource}`;
+    if (source.includes(openBlockLogoImport) || source.includes(openBlockLogoSmallImport)) {
+        for (const logoFragment of [
+            openBlockLogoImport,
+            openBlockLogoSmallImport,
+            openBlockLogoSrc,
+            openBlockLogoDefaultProps,
+            'alt="OpenBlock"'
+        ]) {
+            if (!transformedSource.includes(logoFragment)) {
+                throw new Error('Unable to locate the OpenBlock menu logo for EST replacement.');
+            }
+        }
+
+        transformedSource = transformedSource
+            .replace(openBlockLogoImport, '')
+            .replace(openBlockLogoSmallImport, '')
+            .replace(openBlockLogoSrc, 'src={estMenuLogo}')
+            .replace(openBlockLogoDefaultProps, estLogoDefaultProps)
+            .replace('alt="OpenBlock"', 'alt="EST Studio"');
+    }
+
+    const settingMenuPattern = new RegExp([
+        ' {20}\\{isScratchDesktop\\(\\) \\? \\(\\r?\\n',
+        ' {24}<div\\r?\\n',
+        ' {28}className=\\{classNames\\(styles\\.menuBarItem, styles\\.hoverable, \\{\\r?\\n',
+        ' {32}\\[styles\\.active\\]: this\\.props\\.settingMenuOpen[\\s\\S]*?',
+        ' {24}<\\/div>\\r?\\n',
+        ' {20}\\) : null\\}\\r?\\n'
+    ].join(''));
+    if (settingMenuPattern.test(transformedSource)) {
+        transformedSource = transformedSource.replace(
+            settingMenuPattern,
+            '                    <EstCodeDrawerToggle />\n'
+        );
+    }
+
+    transformedSource = transformedSource
+        .replace(
+            '                {this.state.isOverflow ? null :\n' +
+                '                    (<div className={styles.fileMenu}>\n',
+            '                <div className={styles.fileMenu}>\n'
+        )
+        .replace(
+            '                    </div>)}\n                <div className={styles.tailMenu}>\n',
+            '                </div>\n                <div className={styles.tailMenu}>\n'
+        );
+
+    const layoutInsertionMarker = '                componentRef={this.containerRef}\n            >\n';
+    if (transformedSource.includes(layoutInsertionMarker)) {
+        transformedSource = transformedSource.replace(
+            layoutInsertionMarker,
+            `${layoutInsertionMarker}                <EstMenuBarLayout />\n`
+        );
+    }
+
+    return [
+        "import EstCodeDrawerToggle from 'est-code-drawer-toggle';",
+        "import EstHardwareStatusButton from 'est-hardware-status-button';",
+        "import EstMenuBarLayout from 'est-menu-bar-layout';",
+        "import estMenuLogo from 'est-menu-logo';",
+        "import EstStatusPanel from 'est-status-panel';",
+        transformedSource
+    ].join('\n');
 };

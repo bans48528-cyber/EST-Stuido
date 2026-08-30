@@ -14,6 +14,7 @@ const EST_HARDWARE_WORKSPACE_LOADER = path.resolve(__dirname, './scripts/est-har
 const EST_GUI_CLEANUP_LOADER = path.resolve(__dirname, './scripts/est-gui-cleanup-loader.js');
 const EST_GUI_CONTAINER_LOADER = path.resolve(__dirname, './scripts/est-gui-container-loader.js');
 const EST_APP_STATE_LOADER = path.resolve(__dirname, './scripts/est-app-state-loader.js');
+const EST_LOCALES_LOADER = path.resolve(__dirname, './scripts/est-locales-loader.js');
 const EST_LOCAL_PROJECT_FETCHER_LOADER = path.resolve(
     __dirname,
     './scripts/est-local-project-fetcher-loader.js'
@@ -45,7 +46,11 @@ const OPENBLOCK_NATIVE_EDITORS_LOADER = path.resolve(
     './scripts/openblock-native-editors-loader.js'
 );
 const EST_STATUS_PANEL = path.resolve(__dirname, './src/renderer/EstStatusPanel.jsx');
+const EST_HARDWARE_STATUS_BUTTON = path.resolve(__dirname, './src/renderer/EstHardwareStatusButton.jsx');
 const EST_CODE_DRAWER = path.resolve(__dirname, './src/renderer/EstCodeDrawer.jsx');
+const EST_CODE_DRAWER_TOGGLE = path.resolve(__dirname, './src/renderer/EstCodeDrawerToggle.jsx');
+const EST_MENU_BAR_LAYOUT = path.resolve(__dirname, './src/renderer/EstMenuBarLayout.jsx');
+const EST_MENU_LOGO = path.resolve(__dirname, './src/renderer/est-menu-logo.png');
 const EST_PROGRAM_CONTROLS = path.resolve(__dirname, './src/renderer/EstProgramControls.jsx');
 const EST_BLOCK_DEFINITIONS = path.resolve(__dirname, './src/renderer/est-blocks/definitions.js');
 const EST_TOOLBOX = path.resolve(__dirname, './src/renderer/est-blocks/toolbox.js');
@@ -156,6 +161,11 @@ const makeConfig = function (defaultConfig, options) {
                     test: /node_modules[/\\]openblock-gui[/\\]src[/\\]lib[/\\]app-state-hoc\.jsx$/,
                     enforce: 'pre',
                     loader: EST_APP_STATE_LOADER
+                },
+                {
+                    test: /node_modules[/\\]openblock-l10n[/\\]locales[/\\]editor-msgs\.js$/,
+                    enforce: 'pre',
+                    loader: EST_LOCALES_LOADER
                 },
                 {
                     test: /node_modules[/\\]openblock-gui[/\\]src[/\\]lib[/\\]project-fetcher-hoc\.jsx$/,
@@ -283,7 +293,7 @@ const makeConfig = function (defaultConfig, options) {
                     }]
                 },
                 {
-                    test: /\.(svg|png|wav|gif|jpg|ttf)$/,
+                    test: /\.(svg|png|ico|wav|gif|jpg|ttf)$/,
                     loader: 'file-loader',
                     options: {
                         outputPath: 'static/assets/'
@@ -311,7 +321,11 @@ const makeConfig = function (defaultConfig, options) {
                 //   "browser": "./src/index.js"
                 'openblock-gui$': path.resolve(__dirname, 'node_modules', 'openblock-gui', 'src', 'index.js'),
                 'est-status-panel$': EST_STATUS_PANEL,
+                'est-hardware-status-button$': EST_HARDWARE_STATUS_BUTTON,
                 'est-code-drawer$': EST_CODE_DRAWER,
+                'est-code-drawer-toggle$': EST_CODE_DRAWER_TOGGLE,
+                'est-menu-bar-layout$': EST_MENU_BAR_LAYOUT,
+                'est-menu-logo$': EST_MENU_LOGO,
                 'est-program-controls$': EST_PROGRAM_CONTROLS,
                 'est-block-definitions$': EST_BLOCK_DEFINITIONS,
                 'est-toolbox$': EST_TOOLBOX,

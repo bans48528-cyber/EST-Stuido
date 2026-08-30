@@ -4,7 +4,6 @@ import log from 'electron-log';
 import bytes from 'bytes';
 import path from 'path';
 
-import formatMessage from 'format-message';
 import parseReleaseMessage from 'openblock-parse-release-message';
 import {UPDATE_TARGET, UPDATE_MODAL_STATE} from 'openblock-gui/src/lib/update-state.js';
 
@@ -68,56 +67,6 @@ class OpenblockDesktopUpdater {
         autoUpdater.once('update-not-available', () => {
             this.removeAllAutoUpdaterListeners();
             this.updaterState = null;
-        });
-
-        this.updaterState = UPDATE_MODAL_STATE.checkingApplication;
-        autoUpdater.checkForUpdates();
-    }
-
-    reqeustCheckUpdate () {
-        autoUpdater.on('error', err => {
-            this.removeAllAutoUpdaterListeners();
-            if (err.message === 'net::ERR_INTERNET_DISCONNECTED') {
-                this.reportUpdateState({
-                    phase: UPDATE_MODAL_STATE.error,
-                    info: {
-                        message: formatMessage({
-                            id: 'index.internetDisconnectedError',
-                            default: 'Internet disconnected, please verify your internet connection and try again.',
-                            description: 'Error message of internet disconnected'
-                        })
-                    }
-                });
-            } else if (err.message === 'net::ERR_CONNECTION_TIMED_OUT') {
-                this.reportUpdateState({
-                    phase: UPDATE_MODAL_STATE.error,
-                    info: {
-                        message: formatMessage({
-                            id: 'index.connectionTimeOut',
-                            default: 'Connection timed out, please check your network status and try again.',
-                            description: 'Error message when the connection times out due to a slow or unresponsive network.' // eslint-disable-line max-len
-                        })
-                    }
-                });
-            } else {
-                this.reportUpdateState({
-                    phase: UPDATE_MODAL_STATE.error,
-                    info: {
-                        message: err.message
-                    }
-                });
-            }
-        });
-        autoUpdater.once('update-available', applicationUpdateInfo => {
-            this.updaterState = UPDATE_MODAL_STATE.applicationUpdateAvailable;
-            this.removeAllAutoUpdaterListeners();
-            this.applicationAvailable(applicationUpdateInfo);
-        });
-
-        autoUpdater.once('update-not-available', () => {
-            this.removeAllAutoUpdaterListeners();
-            this.updaterState = null;
-            this.reportUpdateState({phase: 'latest'});
         });
 
         this.updaterState = UPDATE_MODAL_STATE.checkingApplication;

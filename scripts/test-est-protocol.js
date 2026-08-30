@@ -8,7 +8,8 @@ const validateProject = require('scratch-parser');
 const estRoots = [
     path.resolve(__dirname, '..', 'src', 'main', 'est'),
     path.resolve(__dirname, '..', 'src', 'renderer', 'est-blocks'),
-    path.resolve(__dirname, '..', 'src', 'renderer', 'est-project')
+    path.resolve(__dirname, '..', 'src', 'renderer', 'est-project'),
+    path.resolve(__dirname, '..', 'src', 'renderer')
 ];
 const originalLoader = Module._extensions['.js'];
 const originalSvgLoader = Module._extensions['.svg'];
@@ -30,6 +31,7 @@ Module._extensions['.js'] = (module, filename) => {
 const estRoot = estRoots[0];
 const estBlocksRoot = estRoots[1];
 const estProjectRoot = estRoots[2];
+const estRendererRoot = estRoots[3];
 
 const {
     buildPersistentProgramLoadFrame,
@@ -42,7 +44,9 @@ const {
     buildPythonProgramStatusFrame,
     buildPythonProgramStopFrame,
     buildFrame,
+    capabilityNamesFor,
     checkDeviceCompatibility,
+    checkProgramFirmwareCompatibility,
     checksum,
     crc32,
     isEstDevice,
@@ -51,14 +55,26 @@ const {
     parseHeartbeatResponse,
     parsePersistentProgramResponse,
     parsePythonProgramResponse,
+    programRequiredCapabilitiesForSource,
     splitReports
 } = require(path.join(estRoot, 'protocol.js'));
 const {
+    CAPABILITY_COOPERATIVE_MULTITASK,
+    CAPABILITY_DISPLAY_FONT_STYLES,
+    CAPABILITY_FROZEN_EST_RUNTIME,
+    CAPABILITY_HOLD_POSITION_CONTROL,
     CAPABILITY_MOTOR_CONTROL,
     CAPABILITY_MOTOR_PAIR_POSITION,
+    CAPABILITY_RUNTIME_BASIC_EVENT_HATS,
+    CAPABILITY_TEMPERATURE_SENSOR,
+    CAPABILITY_UNLIMITED_PYTHON_RUN,
+    CAPABILITY_ZERO_SPEED_MOTOR_CONTROL,
     COMMAND_DEVICE_STATUS,
     COMMAND_PERSISTENT_PROGRAM,
-    COMMAND_PYTHON_PROGRAM
+    COMMAND_PYTHON_PROGRAM,
+    EST_ALLOW_ALL_FIRMWARE_VERSIONS,
+    EST_PROGRAM_COMPATIBILITY_TABLE,
+    PYTHON_PROGRAM_NO_TIMEOUT_MS
 } = require(path.join(estRoot, 'constants.js'));
 const {EstDeviceService} = require(path.join(estRoot, 'device-service.js'));
 const {
@@ -74,9 +90,11 @@ const {
     EST_EVENT_SENSOR_PORT_PICKER_ID,
     EST_MOTOR_PORT_PICKER_ID,
     EST_REPLACED_OPENBLOCK_BLOCK_IDS,
+    EST_SENSOR_PORT_PICKER_ID,
     EST_SUPPORT_BLOCK_IDS,
     MOTOR_COLOURS,
     configureEstWorkspaceControls,
+    formatSteeringDisplayText,
     isSteeringDialMarkVisible,
     registerEstBlocks
 } = require(path.join(estBlocksRoot, 'definitions.js'));
@@ -88,9 +106,64 @@ const {
     default: createEstDefaultProjectAssets
 } = require(path.join(estProjectRoot, 'default-project.js'));
 const {
+    EST_PROGRAM_NAME_MAX_BYTES,
+    buildEstProgramRequest,
+    normalizeEstProgramName,
+    utf8ByteLength
+} = require(path.join(estRendererRoot, 'est-program-name.js'));
+const {
     registerEstPythonGenerator,
     stackNameForBlock
 } = require(path.join(estBlocksRoot, 'python-generator.js'));
+
+const EST_PROGRAM_REQUIRED_CAPABILITIES = (
+    CAPABILITY_FROZEN_EST_RUNTIME |
+    CAPABILITY_UNLIMITED_PYTHON_RUN |
+    CAPABILITY_DISPLAY_FONT_STYLES |
+    CAPABILITY_ZERO_SPEED_MOTOR_CONTROL
+) >>> 0;
+const EST_TEMPERATURE_PROGRAM_REQUIRED_CAPABILITIES = (
+    EST_PROGRAM_REQUIRED_CAPABILITIES |
+    CAPABILITY_TEMPERATURE_SENSOR
+) >>> 0;
+const EST_COOPERATIVE_PROGRAM_REQUIRED_CAPABILITIES = (
+    EST_PROGRAM_REQUIRED_CAPABILITIES |
+    CAPABILITY_COOPERATIVE_MULTITASK
+) >>> 0;
+const EST_BASIC_EVENT_HATS_PROGRAM_REQUIRED_CAPABILITIES = (
+    EST_PROGRAM_REQUIRED_CAPABILITIES |
+    CAPABILITY_RUNTIME_BASIC_EVENT_HATS
+) >>> 0;
+
+assert.strictEqual(EST_PROGRAM_NAME_MAX_BYTES, 31);
+const englishProgramRequest = buildEstProgramRequest({
+    projectTitle: 'Line Follower.ests',
+    slot: 2,
+    source: 'import est_runtime as rt\n'
+});
+assert.deepStrictEqual(englishProgramRequest, {
+    programName: 'Line Follower',
+    slot: 2,
+    source: 'import est_runtime as rt\n'
+});
+const runProgramRequest = buildEstProgramRequest({
+    projectTitle: 'RunProject',
+    slot: 5,
+    source: 'rt.run()\n'
+});
+assert.strictEqual(runProgramRequest.programName, 'RunProject');
+assert.strictEqual(normalizeEstProgramName('巡线项目', 0), '巡线项目');
+assert.ok(utf8ByteLength(normalizeEstProgramName('巡线项目', 0)) <= EST_PROGRAM_NAME_MAX_BYTES);
+const truncatedChineseName = normalizeEstProgramName('一二三四五六七八九十十一', 4);
+assert.strictEqual(truncatedChineseName, '一二三四五六七八九十');
+assert.ok(utf8ByteLength(truncatedChineseName) <= EST_PROGRAM_NAME_MAX_BYTES);
+const truncatedEmojiName = normalizeEstProgramName('😀😀😀😀😀😀😀😀', 7);
+assert.strictEqual(truncatedEmojiName, '😀😀😀😀😀😀😀');
+assert.ok(utf8ByteLength(truncatedEmojiName) <= EST_PROGRAM_NAME_MAX_BYTES);
+assert.ok(!truncatedEmojiName.includes('\uFFFD'));
+assert.strictEqual(normalizeEstProgramName('   .ests  ', 6), 'Program 6');
+assert.strictEqual(normalizeEstProgramName('C:\\Users\\EST\\机器狗.ESTS', 1), '机器狗');
+assert.strictEqual(normalizeEstProgramName('A\0B.ests', 3), 'AB');
 
 const OPENBLOCK_NATIVE_OPERATOR_IDS = [
     'operator_add',
@@ -111,6 +184,51 @@ const OPENBLOCK_NATIVE_OPERATOR_IDS = [
     'operator_mod',
     'operator_round',
     'operator_mathop'
+];
+
+const DISPLAY_IMAGE_IDS = [
+    'Expressions/Big smile',
+    'Expressions/Heart large',
+    'Expressions/Heart small',
+    'Expressions/Mouth 1 open',
+    'Expressions/Mouth 1 shut',
+    'Expressions/Mouth 2 open',
+    'Expressions/Mouth 2 shut',
+    'Expressions/Sad',
+    'Expressions/Sick',
+    'Expressions/Smile',
+    'Expressions/Swearing',
+    'Expressions/Talking',
+    'Expressions/Wink',
+    'Expressions/ZZZ',
+    'Eyes/Angry',
+    'Eyes/Awake',
+    'Eyes/Black eye',
+    'Eyes/Bottom left',
+    'Eyes/Bottom right',
+    'Eyes/Crazy 1',
+    'Eyes/Crazy 2',
+    'Eyes/Disappointed',
+    'Eyes/Dizzy',
+    'Eyes/Down',
+    'Eyes/Evil',
+    'Eyes/Hurt',
+    'Eyes/Knocked out',
+    'Eyes/Love',
+    'Eyes/Middle left',
+    'Eyes/Middle right',
+    'Eyes/Neutral',
+    'Eyes/Nuclear',
+    'Eyes/Pinch left',
+    'Eyes/Pinch middle',
+    'Eyes/Pinch right',
+    'Eyes/Tear',
+    'Eyes/Tired left',
+    'Eyes/Tired middle',
+    'Eyes/Tired right',
+    'Eyes/Toxic',
+    'Eyes/Up',
+    'Eyes/Winking'
 ];
 
 const heartbeatRequest = buildFrame(0x01);
@@ -164,9 +282,9 @@ assert.strictEqual(parseDeviceStatusResponse(damagedStatusResponse), null);
 
 const oldProtocolCompatibility = checkDeviceCompatibility(deviceStatus);
 assert.strictEqual(oldProtocolCompatibility.compatible, false);
-assert.match(oldProtocolCompatibility.message, /requires 1\.19 or newer/);
+assert.match(oldProtocolCompatibility.message, /requires 1\.20 or newer/);
 
-const supportedStatus = {...deviceStatus, protocolMinor: 19};
+const supportedStatus = {...deviceStatus, protocolMinor: 20};
 assert.strictEqual(checkDeviceCompatibility(supportedStatus).compatible, true);
 assert.strictEqual(
     checkDeviceCompatibility(supportedStatus, CAPABILITY_MOTOR_CONTROL).compatible,
@@ -175,6 +293,184 @@ assert.strictEqual(
 const missingPairControl = checkDeviceCompatibility(supportedStatus, CAPABILITY_MOTOR_PAIR_POSITION);
 assert.strictEqual(missingPairControl.compatible, false);
 assert.strictEqual(missingPairControl.missingCapabilities, CAPABILITY_MOTOR_PAIR_POSITION);
+const m110AStatus = {
+    ...supportedStatus,
+    capabilities: 0,
+    firmwareVersion: 'M1.10A'
+};
+assert.strictEqual(EST_ALLOW_ALL_FIRMWARE_VERSIONS, true);
+assert.deepStrictEqual(Object.keys(EST_PROGRAM_COMPATIBILITY_TABLE), [
+    'M1.10A',
+    'M1.10B',
+    'M1.10C',
+    'M1.12A',
+    'M1.13A',
+    'M1.14A'
+]);
+assert.deepStrictEqual(
+    {
+        compatible: checkProgramFirmwareCompatibility(m110AStatus).compatible,
+        enforcementEnabled: checkProgramFirmwareCompatibility(m110AStatus).enforcementEnabled,
+        programCompatible: checkProgramFirmwareCompatibility(m110AStatus).programCompatible,
+        verified: checkProgramFirmwareCompatibility(m110AStatus).verified
+    },
+    {compatible: true, enforcementEnabled: false, programCompatible: false, verified: true}
+);
+assert.strictEqual(checkProgramFirmwareCompatibility({
+    ...m110AStatus,
+    firmwareVersion: 'M1.10B'
+}).compatible, true);
+assert.strictEqual(checkProgramFirmwareCompatibility({
+    ...m110AStatus,
+    firmwareVersion: 'M1.10C'
+}).compatible, true);
+assert.strictEqual(checkProgramFirmwareCompatibility({
+    ...m110AStatus,
+    firmwareVersion: 'M1.09A',
+    protocolMinor: 19
+}).compatible, true);
+assert.strictEqual(checkProgramFirmwareCompatibility({
+    ...m110AStatus,
+    firmwareVersion: 'M1.09A',
+    protocolMinor: 19
+}).programCompatible, false);
+const unknownNewFirmware = checkProgramFirmwareCompatibility({
+    ...m110AStatus,
+    firmwareVersion: 'M1.11A',
+    protocolMinor: 21
+});
+assert.strictEqual(unknownNewFirmware.compatible, true);
+assert.strictEqual(unknownNewFirmware.knownFirmware, false);
+assert.strictEqual(unknownNewFirmware.programCompatible, false);
+assert.strictEqual(unknownNewFirmware.verified, false);
+assert.strictEqual(checkProgramFirmwareCompatibility({
+    ...m110AStatus,
+    protocolMinor: 21
+}).compatible, true);
+assert.strictEqual(checkProgramFirmwareCompatibility(null).compatible, true);
+assert.strictEqual(checkProgramFirmwareCompatibility(null).programCompatible, false);
+const m112AStatus = {
+    ...supportedStatus,
+    capabilities: EST_PROGRAM_REQUIRED_CAPABILITIES,
+    firmwareVersion: 'M1.12A',
+    protocolMinor: 21
+};
+const m112ACompatibility = checkProgramFirmwareCompatibility(m112AStatus);
+assert.strictEqual(m112ACompatibility.compatible, true);
+assert.strictEqual(m112ACompatibility.programCompatible, true);
+assert.strictEqual(m112ACompatibility.programProtocolCompatible, true);
+assert.strictEqual(m112ACompatibility.missingProgramCapabilities, 0);
+assert.strictEqual(m112ACompatibility.requiredProgramCapabilities, EST_PROGRAM_REQUIRED_CAPABILITIES);
+assert.strictEqual(programRequiredCapabilitiesForSource('import est_runtime as rt\nvalue = 1\n'), 0);
+assert.strictEqual(
+    programRequiredCapabilitiesForSource('import est_runtime as rt\nvalue = rt.temperature(port).celsius()\n'),
+    CAPABILITY_TEMPERATURE_SENSOR
+);
+assert.strictEqual(
+    programRequiredCapabilitiesForSource(Buffer.from('value = rt.temperature(port).fahrenheit()\n', 'utf8')),
+    CAPABILITY_TEMPERATURE_SENSOR
+);
+assert.strictEqual(
+    programRequiredCapabilitiesForSource(
+        '@rt.on_start\nasync def stack_1():\n  await rt.sleep(1)\nrt.run()\n'
+    ),
+    CAPABILITY_COOPERATIVE_MULTITASK
+);
+assert.strictEqual(
+    programRequiredCapabilitiesForSource(
+        '@rt.on_brick_button("confirm", "pressed")\ndef stack_1():\n  pass\nrt.run()\n'
+    ),
+    CAPABILITY_RUNTIME_BASIC_EVENT_HATS
+);
+assert.strictEqual(
+    programRequiredCapabilitiesForSource(
+        '@rt.on_condition(lambda: ready)\nasync def stack_1():\n  await rt.sleep(1)\nrt.run()\n'
+    ),
+    (CAPABILITY_RUNTIME_BASIC_EVENT_HATS | CAPABILITY_COOPERATIVE_MULTITASK) >>> 0
+);
+assert.strictEqual(
+    programRequiredCapabilitiesForSource(
+        '@rt.on_timer_gt(1)\ndef stack_1():\n  pass\nrt.run()\n'
+    ),
+    CAPABILITY_RUNTIME_BASIC_EVENT_HATS
+);
+assert.strictEqual(
+    programRequiredCapabilitiesForSource(
+        '@rt.on_start\ndef stack_1():\n  rt.stop("this_stack")\nrt.run()\n'
+    ),
+    CAPABILITY_COOPERATIVE_MULTITASK
+);
+assert.strictEqual(
+    programRequiredCapabilitiesForSource(
+        '@rt.on_start\ndef stack_1():\n  pass\n@rt.on_start\ndef stack_2():\n  pass\nrt.run()\n'
+    ),
+    CAPABILITY_COOPERATIVE_MULTITASK
+);
+const missingTemperatureCompatibility = checkProgramFirmwareCompatibility(
+    m112AStatus,
+    CAPABILITY_TEMPERATURE_SENSOR
+);
+assert.strictEqual(missingTemperatureCompatibility.programCompatible, false);
+assert.strictEqual(missingTemperatureCompatibility.programProtocolCompatible, false);
+assert.strictEqual(missingTemperatureCompatibility.requiredProgramProtocolMinor, 24);
+assert.strictEqual(
+    missingTemperatureCompatibility.requiredProgramCapabilities,
+    EST_TEMPERATURE_PROGRAM_REQUIRED_CAPABILITIES
+);
+assert.strictEqual(missingTemperatureCompatibility.missingProgramCapabilities, CAPABILITY_TEMPERATURE_SENSOR);
+assert.deepStrictEqual(missingTemperatureCompatibility.missingProgramCapabilityNames, ['runtime-temperature']);
+const m114ATemperatureStatus = {
+    ...m112AStatus,
+    firmwareVersion: 'M1.14A',
+    protocolMinor: 24,
+    capabilities: EST_TEMPERATURE_PROGRAM_REQUIRED_CAPABILITIES
+};
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(m114ATemperatureStatus, CAPABILITY_TEMPERATURE_SENSOR).programCompatible,
+    true
+);
+const missingCooperativeCompatibility = checkProgramFirmwareCompatibility(
+    m112AStatus,
+    CAPABILITY_COOPERATIVE_MULTITASK
+);
+assert.strictEqual(missingCooperativeCompatibility.programCompatible, false);
+assert.strictEqual(missingCooperativeCompatibility.programProtocolCompatible, false);
+assert.strictEqual(missingCooperativeCompatibility.requiredProgramProtocolMinor, 25);
+assert.strictEqual(
+    missingCooperativeCompatibility.requiredProgramCapabilities,
+    EST_COOPERATIVE_PROGRAM_REQUIRED_CAPABILITIES
+);
+assert.strictEqual(missingCooperativeCompatibility.missingProgramCapabilities, CAPABILITY_COOPERATIVE_MULTITASK);
+assert.deepStrictEqual(missingCooperativeCompatibility.missingProgramCapabilityNames, ['cooperative-multitask']);
+const m114ACooperativeStatus = {
+    ...m112AStatus,
+    firmwareVersion: 'M1.14A',
+    protocolMinor: 25,
+    capabilities: EST_COOPERATIVE_PROGRAM_REQUIRED_CAPABILITIES
+};
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(m114ACooperativeStatus, CAPABILITY_COOPERATIVE_MULTITASK).programCompatible,
+    true
+);
+const missingBasicEventHatsCompatibility = checkProgramFirmwareCompatibility(
+    m112AStatus,
+    CAPABILITY_RUNTIME_BASIC_EVENT_HATS
+);
+assert.strictEqual(missingBasicEventHatsCompatibility.programCompatible, false);
+assert.strictEqual(missingBasicEventHatsCompatibility.programProtocolCompatible, false);
+assert.strictEqual(missingBasicEventHatsCompatibility.requiredProgramProtocolMinor, 25);
+assert.strictEqual(
+    missingBasicEventHatsCompatibility.requiredProgramCapabilities,
+    EST_BASIC_EVENT_HATS_PROGRAM_REQUIRED_CAPABILITIES
+);
+assert.strictEqual(
+    missingBasicEventHatsCompatibility.missingProgramCapabilities,
+    CAPABILITY_RUNTIME_BASIC_EVENT_HATS
+);
+assert.deepStrictEqual(
+    missingBasicEventHatsCompatibility.missingProgramCapabilityNames,
+    ['runtime-basic-event-hats']
+);
 
 const pythonSource = Buffer.from('import est\nest._program_result(12345)\n', 'utf8');
 const pythonSourceCrc32 = crc32(pythonSource);
@@ -201,6 +497,10 @@ assert.deepStrictEqual(
 assert.deepStrictEqual(
     Array.from(buildPythonProgramRunFrame(2000)),
     Array.from(buildFrame(COMMAND_PYTHON_PROGRAM, Uint8Array.from([3, 0xd0, 0x07, 0, 0])))
+);
+assert.deepStrictEqual(
+    Array.from(buildPythonProgramRunFrame(PYTHON_PROGRAM_NO_TIMEOUT_MS)),
+    Array.from(buildFrame(COMMAND_PYTHON_PROGRAM, Uint8Array.from([3, 0, 0, 0, 0])))
 );
 assert.deepStrictEqual(
     Array.from(buildPythonProgramStatusFrame()),
@@ -369,7 +669,7 @@ const expectedCategoryCounts = {
     sound: 6,
     event: 13,
     control: 9,
-    sensing: 34
+    sensing: 35
 };
 assert.deepStrictEqual(
     Object.fromEntries(Object.entries(CATEGORY_BLOCK_IDS).map(([categoryId, blockIds]) => [
@@ -378,8 +678,8 @@ assert.deepStrictEqual(
     ])),
     expectedCategoryCounts
 );
-assert.strictEqual(registeredBlockDefinitions.length, 94);
-assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 90);
+assert.strictEqual(registeredBlockDefinitions.length, 96);
+assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 91);
 assert.deepStrictEqual(EST_REPLACED_OPENBLOCK_BLOCK_IDS, [
     'sound_play',
     'event_broadcast',
@@ -411,7 +711,8 @@ assert.deepStrictEqual(EST_SUPPORT_BLOCK_IDS, [
     EST_STEERING_PICKER_ID,
     EST_MOTOR_PORT_PICKER_ID,
     EST_DRIVE_PORT_PICKER_ID,
-    EST_EVENT_SENSOR_PORT_PICKER_ID
+    EST_EVENT_SENSOR_PORT_PICKER_ID,
+    EST_SENSOR_PORT_PICKER_ID
 ]);
 const motorPortPickerDefinition = registeredBlockDefinitions.find(
     definition => definition.type === EST_MOTOR_PORT_PICKER_ID
@@ -435,6 +736,18 @@ assert.deepStrictEqual(
     eventSensorPortPickerDefinition.args0[0].options.map(option => option[1]),
     ['1', '2', '3', '4']
 );
+const sensorPortPickerDefinition = registeredBlockDefinitions.find(
+    definition => definition.type === EST_SENSOR_PORT_PICKER_ID
+);
+assert.strictEqual(sensorPortPickerDefinition.output, 'String');
+assert.strictEqual(sensorPortPickerDefinition.outputShape, fakeScratchBlocks.OUTPUT_SHAPE_ROUND);
+assert.strictEqual(sensorPortPickerDefinition.colour, CATEGORY_COLOURS.sensing.secondary);
+assert.strictEqual(sensorPortPickerDefinition.colourSecondary, CATEGORY_COLOURS.sensing.secondary);
+assert.strictEqual(sensorPortPickerDefinition.colourTertiary, CATEGORY_COLOURS.sensing.tertiary);
+assert.deepStrictEqual(
+    sensorPortPickerDefinition.args0[0].options.map(option => option[1]),
+    ['1', '2', '3', '4']
+);
 assert.strictEqual(EST_STEERING_LIMIT, 100);
 assert.deepStrictEqual(EST_STEERING_DIAL_COLOURS, {
     fill: '#d8009b',
@@ -447,12 +760,19 @@ assert.strictEqual(isSteeringDialMarkVisible(165), false);
 assert.strictEqual(isSteeringDialMarkVisible(180), true);
 assert.strictEqual(isSteeringDialMarkVisible(270), true);
 assert.strictEqual(isSteeringDialMarkVisible(345), true);
+assert.strictEqual(formatSteeringDisplayText(-40), '左:-40');
+assert.strictEqual(formatSteeringDisplayText(0), '前:0');
+assert.strictEqual(formatSteeringDisplayText(40), '右:40');
+assert.strictEqual(formatSteeringDisplayText(-120), '左:-100');
+assert.strictEqual(formatSteeringDisplayText(120), '右:100');
 assert.strictEqual(typeof registeredFields[EST_STEERING_FIELD_TYPE], 'function');
 const steeringField = new registeredFields[EST_STEERING_FIELD_TYPE](0);
 assert.strictEqual(steeringField.classValidator('-120'), '-100');
 assert.strictEqual(steeringField.classValidator('43.6'), '44');
 assert.strictEqual(steeringField.classValidator('150'), '100');
 assert.strictEqual(steeringField.classValidator('not-a-number'), null);
+steeringField.getText = () => '-40';
+assert.strictEqual(steeringField.getDisplayText_(), '左:-40');
 const styleForBlock = blockId => Object.entries(CATEGORY_BLOCK_IDS)
     .find(([, blockIds]) => blockIds.includes(blockId))[0];
 registeredBlockDefinitions.slice(EST_SUPPORT_BLOCK_IDS.length).forEach(definition => {
@@ -494,12 +814,54 @@ assert.deepStrictEqual(
     driveMoveForDefinition.args0[2].options.map(option => option[1]),
     ['rotations', 'degrees', 'seconds']
 );
+assert.deepStrictEqual(
+    Object.fromEntries([
+        'drive_steer_for',
+        'drive_start_steer',
+        'drive_steer_for_speed',
+        'drive_start_steer_speed'
+    ].map(blockId => [
+        blockId,
+        registeredBlockDefinitions.find(definition => definition.type === blockId).message0
+    ])),
+    {
+        drive_steer_for: '向 %1 移动 %2 %3',
+        drive_start_steer: '开始向 %1 移动',
+        drive_steer_for_speed: '以 %1 %% 的速度向 %2 移动 %3 %4',
+        drive_start_steer_speed: '以 %1 %% 的速度开始向 %2 移动'
+    }
+);
+[
+    'display_image_for',
+    'display_image'
+].forEach(blockId => {
+    const definition = registeredBlockDefinitions.find(item => item.type === blockId);
+    const imageDropdown = definition.args0.find(argument => argument.name === 'IMAGE');
+    assert.ok(imageDropdown, `${blockId}.IMAGE`);
+    assert.strictEqual(imageDropdown.type, 'field_dropdown');
+    assert.strictEqual(imageDropdown.options.length, 42);
+    assert.strictEqual(new Set(imageDropdown.options.map(option => option[1])).size, 42);
+    assert.deepStrictEqual(
+        imageDropdown.options,
+        DISPLAY_IMAGE_IDS.map(id => [id.replace('/', ' / '), id])
+    );
+});
 const driveSetPairDefinition = registeredBlockDefinitions.find(
     definition => definition.type === 'drive_set_pair'
 );
 driveSetPairDefinition.args0.forEach(portArgument => {
     assert.strictEqual(portArgument.type, 'input_value');
 });
+const sensorTemperatureDefinition = registeredBlockDefinitions.find(
+    definition => definition.type === 'sensor_temperature'
+);
+assert.strictEqual(sensorTemperatureDefinition.output, 'Number');
+assert.strictEqual(sensorTemperatureDefinition.args0[0].type, 'input_value');
+assert.strictEqual(sensorTemperatureDefinition.args0[1].type, 'field_dropdown');
+assert.deepStrictEqual(
+    sensorTemperatureDefinition.args0[1].options,
+    [['摄氏', 'celsius'], ['华氏', 'fahrenheit']]
+);
 [
     'event_color',
     'event_touch',
@@ -525,10 +887,133 @@ const eventBrickButtonDefinition = registeredBlockDefinitions.find(
 eventBrickButtonDefinition.args0.forEach(argument => {
     assert.strictEqual(argument.type, 'field_dropdown');
 });
+assert.deepStrictEqual(eventBrickButtonDefinition.args0[0].options.map(option => option[1]), [
+    'none',
+    'back',
+    'left',
+    'confirm',
+    'right',
+    'up',
+    'down'
+]);
+assert.ok(!eventBrickButtonDefinition.args0[0].options.some(option => option[1] === 'center'));
 ['event_broadcast_received', 'event_broadcast', 'event_broadcast_wait'].forEach(blockId => {
     const definition = registeredBlockDefinitions.find(item => item.type === blockId);
     assert.strictEqual(definition.args0[0].type, 'field_dropdown');
 });
+const definitionArguments = definition => Object.keys(definition)
+    .filter(key => /^args\d+$/.test(key))
+    .reduce((argumentsList, key) => argumentsList.concat(definition[key]), []);
+const sensorPortDefaults = {
+    sensor_color_reflection: '3',
+    sensor_color_reflection_compare: '3',
+    sensor_color_ambient: '3',
+    sensor_color_ambient_compare: '3',
+    sensor_color_value: '3',
+    sensor_color_is: '3',
+    sensor_wait_color: '3',
+    sensor_temperature: '3',
+    sensor_touch_pressed: '1',
+    sensor_wait_touch: '1',
+    sensor_ultrasonic_distance: '4',
+    sensor_ultrasonic_compare: '4',
+    sensor_wait_ultrasonic: '4',
+    sensor_ir_proximity: '4',
+    sensor_ir_proximity_compare: '4',
+    sensor_wait_ir_proximity: '4',
+    sensor_ir_beacon_heading: '4',
+    sensor_ir_beacon_proximity: '4',
+    sensor_ir_beacon_buttons: '4',
+    sensor_ir_beacon_button_pressed: '4',
+    sensor_wait_ir_beacon_button: '4',
+    sensor_ir_beacon_active: '4',
+    sensor_ir_beacon_active_compare: '4',
+    sensor_gyro_angle: '2',
+    sensor_gyro_rate: '2',
+    sensor_gyro_reset: '2',
+    sensor_gyro_compare: '2',
+    sensor_wait_gyro: '2'
+};
+assert.strictEqual(Object.keys(sensorPortDefaults).length, 28);
+Object.keys(sensorPortDefaults).forEach(blockId => {
+    const definition = registeredBlockDefinitions.find(item => item.type === blockId);
+    const port = definitionArguments(definition).find(argument => argument.name === 'PORT');
+    assert.ok(port, `${blockId}.PORT`);
+    assert.strictEqual(port.type, 'input_value', `${blockId}.PORT`);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(port, 'check'), false, `${blockId}.PORT`);
+});
+assert.deepStrictEqual(
+    Object.keys(sensorPortDefaults).flatMap(blockId => {
+        const definition = registeredBlockDefinitions.find(item => item.type === blockId);
+        return definitionArguments(definition)
+            .filter(argument => argument.name === 'PORT' && argument.type === 'field_dropdown')
+            .map(argument => `${definition.type}.${argument.name}`);
+    }),
+    []
+);
+const relaxedNumericInputs = {
+    motor_run_for: ['AMOUNT'],
+    motor_set_speed: ['SPEED'],
+    motor_run_for_speed: ['SPEED', 'AMOUNT'],
+    motor_start_speed: ['SPEED'],
+    motor_start_power: ['POWER'],
+    drive_move_for: ['AMOUNT'],
+    drive_steer_for: ['STEERING', 'AMOUNT'],
+    drive_start_steer: ['STEERING'],
+    drive_set_speed: ['SPEED'],
+    drive_steer_for_speed: ['SPEED', 'STEERING', 'AMOUNT'],
+    drive_dual_speed_for: ['LEFT_SPEED', 'RIGHT_SPEED', 'AMOUNT'],
+    drive_start_steer_speed: ['SPEED', 'STEERING'],
+    drive_start_dual_speed: ['LEFT_SPEED', 'RIGHT_SPEED'],
+    display_image_for: ['SECONDS'],
+    display_text_line: ['LINE'],
+    display_text_xy: ['X', 'Y'],
+    sound_beep_for: ['NOTE', 'SECONDS'],
+    sound_beep: ['NOTE'],
+    sound_set_volume: ['VOLUME'],
+    event_ultrasonic: ['VALUE'],
+    event_ir_proximity: ['VALUE'],
+    event_gyro_angle: ['VALUE'],
+    event_timer: ['SECONDS'],
+    control_wait_seconds: ['SECONDS'],
+    control_repeat: ['TIMES'],
+    sensor_color_calibrate_reflection: ['VALUE'],
+    sensor_color_reflection_compare: ['VALUE'],
+    sensor_color_ambient_compare: ['VALUE'],
+    sensor_ultrasonic_compare: ['VALUE'],
+    sensor_wait_ultrasonic: ['VALUE'],
+    sensor_ir_proximity_compare: ['VALUE'],
+    sensor_wait_ir_proximity: ['VALUE'],
+    sensor_ir_beacon_active_compare: ['VALUE'],
+    sensor_gyro_compare: ['VALUE'],
+    sensor_wait_gyro: ['VALUE']
+};
+Object.entries(relaxedNumericInputs).forEach(([blockId, inputNames]) => {
+    const definition = registeredBlockDefinitions.find(item => item.type === blockId);
+    const args = definitionArguments(definition);
+    inputNames.forEach(inputName => {
+        const input = args.find(argument => argument.name === inputName);
+        assert.ok(input, `${blockId}.${inputName}`);
+        assert.strictEqual(input.type, 'input_value', `${blockId}.${inputName}`);
+        assert.strictEqual(
+            Object.prototype.hasOwnProperty.call(input, 'check'),
+            false,
+            `${blockId}.${inputName} should accept variables, numbers and expressions`
+        );
+    });
+});
+const numberCheckedInputs = registeredBlockDefinitions.flatMap(definition => (
+    definitionArguments(definition)
+        .filter(argument => argument.type === 'input_value' && argument.check === 'Number')
+        .map(argument => `${definition.type}.${argument.name}`)
+));
+assert.deepStrictEqual(numberCheckedInputs, []);
+['event_condition', 'control_wait_until', 'control_repeat_until', 'control_if', 'control_if_else']
+    .forEach(blockId => {
+        const definition = registeredBlockDefinitions.find(item => item.type === blockId);
+        const condition = definitionArguments(definition).find(argument => argument.name === 'CONDITION');
+        assert.strictEqual(condition.check, 'Boolean', blockId);
+    });
 const estToolboxCategories = getEstToolboxCategories();
 ['电机', '移动', '显示', '声音', '事件', '控制', '传感器']
     .forEach(categoryName => {
@@ -536,8 +1021,60 @@ const estToolboxCategories = getEstToolboxCategories();
     });
 assert.match(estToolboxCategories, /<category[^>]*name="%\{BKY_CATEGORY_OPERATORS\}"/s);
 assert.strictEqual((estToolboxCategories.match(/<category/g) || []).length, 8);
-ALL_EST_BLOCK_IDS.forEach(blockId => {
+const hiddenUnsupportedEventBlockIds = [
+    'event_color',
+    'event_touch',
+    'event_ultrasonic',
+    'event_ir_proximity',
+    'event_ir_beacon_button',
+    'event_gyro_angle',
+    'event_broadcast_received',
+    'event_broadcast',
+    'event_broadcast_wait'
+];
+ALL_EST_BLOCK_IDS.filter(blockId => !hiddenUnsupportedEventBlockIds.includes(blockId)).forEach(blockId => {
     assert.ok(estToolboxCategories.includes(`<block type="${blockId}"`));
+});
+hiddenUnsupportedEventBlockIds.forEach(blockId => {
+    assert.ok(!estToolboxCategories.includes(`<block type="${blockId}"`), `${blockId} should stay hidden`);
+});
+const toolboxBlockXml = blockId => {
+    const match = estToolboxCategories.match(new RegExp(`<block type="${blockId}">([\\s\\S]*?)</block>`));
+    return match ? match[1] : '';
+};
+const steeringShadowInputs = new Set([
+    'drive_steer_for.STEERING',
+    'drive_start_steer.STEERING',
+    'drive_steer_for_speed.STEERING',
+    'drive_start_steer_speed.STEERING'
+]);
+Object.entries(relaxedNumericInputs).forEach(([blockId, inputNames]) => {
+    if (hiddenUnsupportedEventBlockIds.includes(blockId)) return;
+    const xml = toolboxBlockXml(blockId);
+    assert.ok(xml, blockId);
+    inputNames.forEach(inputName => {
+        const shadowType = steeringShadowInputs.has(`${blockId}.${inputName}`) ?
+            'est_steering_picker' :
+            'math_number';
+        assert.match(
+            xml,
+            new RegExp(`<value name="${inputName}">[\\s\\S]*?<shadow type="${shadowType}">`),
+            `${blockId}.${inputName}`
+        );
+    });
+});
+Object.entries(sensorPortDefaults).forEach(([blockId, defaultPort]) => {
+    const xml = toolboxBlockXml(blockId);
+    assert.ok(xml, blockId);
+    assert.match(
+        xml,
+        new RegExp(
+            `<value name="PORT">[\\s\\S]*?` +
+            `<shadow type="est_sensor_port_picker">[\\s\\S]*?` +
+            `<field name="PORT">${defaultPort}<\\/field>`
+        ),
+        `${blockId}.PORT shadow`
+    );
 });
 OPENBLOCK_NATIVE_OPERATOR_IDS.forEach(blockId => {
     assert.ok(estToolboxCategories.includes(`<block type="${blockId}"`), blockId);
@@ -568,6 +1105,14 @@ assert.match(
 assert.match(estToolboxCategories, /<field name="NUM">75<\/field>/);
 assert.match(estToolboxCategories, /<field name="NUM">100<\/field>/);
 assert.match(estToolboxCategories, /<field name="NUM">50<\/field>/);
+assert.match(toolboxBlockXml('display_image'), /<field name="IMAGE">Eyes\/Neutral<\/field>/);
+assert.match(toolboxBlockXml('display_image_for'), /<field name="IMAGE">Eyes\/Neutral<\/field>/);
+assert.match(toolboxBlockXml('sensor_temperature'), /<field name="PORT">3<\/field>/);
+assert.match(toolboxBlockXml('sensor_temperature'), /<field name="UNIT">celsius<\/field>/);
+assert.match(toolboxBlockXml('event_brick_button'), /<field name="BUTTON">confirm<\/field>/);
+assert.match(toolboxBlockXml('sensor_brick_button_pressed'), /<field name="BUTTON">confirm<\/field>/);
+assert.match(toolboxBlockXml('sensor_wait_brick_button'), /<field name="BUTTON">confirm<\/field>/);
+assert.match(toolboxBlockXml('control_stop'), /<field name="STOP_SCOPE">all<\/field>/);
 assert.match(estToolboxCategories, /<value name="LEFT_PORT">[\s\S]*?<field name="PORT">B<\/field>/);
 assert.match(estToolboxCategories, /<value name="RIGHT_PORT">[\s\S]*?<field name="PORT">C<\/field>/);
 assert.match(estToolboxCategories, /<field name="PORT">3<\/field>/);
@@ -581,10 +1126,20 @@ assert.match(
     estToolboxCategories,
     /<block type="drive_start_steer">[\s\S]*?<shadow type="est_steering_picker">/
 );
+assert.match(
+    estToolboxCategories,
+    /<block type="drive_steer_for_speed">[\s\S]*?<value name="STEERING">[\s\S]*?<shadow type="est_steering_picker">/
+);
+assert.match(
+    estToolboxCategories,
+    /<block type="drive_start_steer_speed">[\s\S]*?<value name="STEERING">[\s\S]*?<shadow type="est_steering_picker">/
+);
+assert.strictEqual((estToolboxCategories.match(/<shadow type="est_steering_picker">/g) || []).length, 4);
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_motor_port_picker">/g) || []).length, 11);
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_drive_port_picker">/g) || []).length, 2);
-assert.strictEqual((estToolboxCategories.match(/<shadow type="est_event_sensor_port_picker">/g) || []).length, 6);
-assert.strictEqual((estToolboxCategories.match(/<shadow type="est_event_/g) || []).length, 6);
+assert.strictEqual((estToolboxCategories.match(/<shadow type="est_event_sensor_port_picker">/g) || []).length, 0);
+assert.strictEqual((estToolboxCategories.match(/<shadow type="est_sensor_port_picker">/g) || []).length, 28);
+assert.strictEqual((estToolboxCategories.match(/<shadow type="est_event_/g) || []).length, 0);
 assert.ok(!estToolboxCategories.includes('data_variable'));
 assert.ok(!estToolboxCategories.includes('procedure_definition'));
 assert.strictEqual(typeof fakeScratchBlocks.Blocks.data_variable, 'undefined');
@@ -702,9 +1257,9 @@ assert.strictEqual(fakePythonGenerator.imports_.estRuntime, 'import est_runtime 
 assert.strictEqual(fakePythonGenerator.setups_.estRun, 'rt.run()');
 assert.strictEqual(
     fakePythonGenerator.libraries_.est_stack_1,
-    `@rt.on_start\ndef stack_1():\n` +
+    `@rt.on_start\nasync def stack_1():\n` +
         `  global speed\n` +
-        `  rt.motor_run_for('B', 'clockwise', 2, 'rotations')\n` +
+        `  await rt.motor_run_for('B', 'clockwise', 2, 'rotations')\n` +
         `  rt.motor_stop('B')\n`
 );
 assert.strictEqual(
@@ -714,13 +1269,201 @@ assert.strictEqual(
         `  pass\n`
 );
 
+const multiStartBlockA = makeFakeBlock('event_program_start', {
+    id: 'multi-start-a',
+    nextBlock: {type: 'control_wait_seconds'}
+});
+const multiStartBlockB = makeFakeBlock('event_program_start', {
+    id: 'multi-start-b',
+    nextBlock: {type: 'drive_move_for'}
+});
+fakePythonGenerator.init({getTopBlocks: () => [multiStartBlockA, multiStartBlockB]});
+multiStartBlockA.nextCode =
+    `  rt.sleep(1)\n` +
+    `  for _ in range(rt.repeat_count(3)):\n` +
+    `    rt.yield_once()\n`;
+multiStartBlockB.nextCode =
+    `  rt.drive_move_for('forward', 1, 'rotations')\n` +
+    `  rt.display_image_for('Eyes/Neutral', 2)\n`;
+assert.strictEqual(fakePythonGenerator.event_program_start(multiStartBlockA), null);
+assert.strictEqual(fakePythonGenerator.event_program_start(multiStartBlockB), null);
+assert.strictEqual(
+    fakePythonGenerator.libraries_.est_stack_1,
+    `@rt.on_start\nasync def stack_1():\n` +
+        `  global speed\n` +
+        `  await rt.sleep(1)\n` +
+        `  for _ in range(rt.repeat_count(3)):\n` +
+        `    await rt.yield_once()\n`
+);
+assert.strictEqual(
+    fakePythonGenerator.libraries_.est_stack_2,
+    `@rt.on_start\nasync def stack_2():\n` +
+        `  global speed\n` +
+        `  await rt.drive_move_for('forward', 1, 'rotations')\n` +
+        `  await rt.display_image_for('Eyes/Neutral', 2)\n`
+);
+
+const singleWaitStartBlock = makeFakeBlock('event_program_start', {
+    id: 'single-wait-start',
+    nextBlock: {type: 'control_wait_until'},
+    nextCode:
+        `  rt.sleep(0.25)\n` +
+        `  rt.wait_until(lambda: ready)\n`
+});
+fakePythonGenerator.init({getTopBlocks: () => [singleWaitStartBlock]});
+assert.strictEqual(fakePythonGenerator.event_program_start(singleWaitStartBlock), null);
+assert.strictEqual(
+    fakePythonGenerator.libraries_.est_stack_1,
+    `@rt.on_start\nasync def stack_1():\n` +
+        `  global speed\n` +
+        `  await rt.sleep(0.25)\n` +
+        `  await rt.wait_until(lambda: ready)\n`
+);
+
+const singleLoopStartBlock = makeFakeBlock('event_program_start', {
+    id: 'single-loop-start',
+    nextBlock: {type: 'control_forever'},
+    nextCode:
+        `  while True:\n` +
+        `    rt.drive_stop()\n` +
+        `    rt.yield_once()\n`
+});
+fakePythonGenerator.init({getTopBlocks: () => [singleLoopStartBlock]});
+assert.strictEqual(fakePythonGenerator.event_program_start(singleLoopStartBlock), null);
+assert.strictEqual(
+    fakePythonGenerator.libraries_.est_stack_1,
+    `@rt.on_start\nasync def stack_1():\n` +
+        `  global speed\n` +
+        `  while True:\n` +
+        `    rt.drive_stop()\n` +
+        `    await rt.yield_once()\n`
+);
+
+fakePythonGenerator.init({getTopBlocks: () => []});
+assert.strictEqual(fakePythonGenerator.drive_set_speed(makeFakeBlock('drive_set_speed', {
+    values: {SPEED: '8'}
+})), 'rt.drive_set_speed(_est_speed_magnitude(8))\n');
+assert.match(fakePythonGenerator.libraries_.estSpeedHelpers, /def _est_speed\(value\):/);
+assert.match(fakePythonGenerator.libraries_.estSpeedHelpers, /def _est_speed_magnitude\(value\):/);
+assert.doesNotMatch(fakePythonGenerator.libraries_.estSpeedHelpers, /^\s*return 10$/m);
+assert.doesNotMatch(fakePythonGenerator.libraries_.estSpeedHelpers, /^\s*return -10$/m);
+assert.strictEqual(fakePythonGenerator.motor_start_speed(makeFakeBlock('motor_start_speed', {
+    values: {PORT: "'A'", SPEED: 'speed'}
+})), "rt.motor('A').run_speed(_est_speed(speed))\n");
+assert.strictEqual(fakePythonGenerator.drive_start_steer_speed(makeFakeBlock('drive_start_steer_speed', {
+    values: {STEERING: 'speed + 2', SPEED: 'speed - 3'}
+})), 'rt.drive_start_steer(speed + 2, speed=_est_speed(speed - 3))\n');
 assert.strictEqual(fakePythonGenerator.drive_dual_speed_for(makeFakeBlock('drive_dual_speed_for', {
     values: {LEFT_SPEED: '30', RIGHT_SPEED: '40', AMOUNT: '2'},
     fields: {UNIT: 'seconds'}
-})), "rt.drive_dual_speed_for(30, 40, 2, 'seconds')\n");
+})), "rt.drive_dual_speed_for(_est_speed(30), _est_speed(40), 2, 'seconds')\n");
+assert.strictEqual(fakePythonGenerator.drive_start_dual_speed(makeFakeBlock('drive_start_dual_speed', {
+    values: {LEFT_SPEED: '0', RIGHT_SPEED: '50'}
+})), 'rt.drive_start_dual_speed(_est_speed(0), _est_speed(50))\n');
+assert.strictEqual(fakePythonGenerator.drive_start_dual_speed(makeFakeBlock('drive_start_dual_speed', {
+    values: {LEFT_SPEED: '50', RIGHT_SPEED: '0'}
+})), 'rt.drive_start_dual_speed(_est_speed(50), _est_speed(0))\n');
+assert.strictEqual(fakePythonGenerator.drive_start_dual_speed(makeFakeBlock('drive_start_dual_speed', {
+    values: {LEFT_SPEED: '0', RIGHT_SPEED: '0'}
+})), 'rt.drive_start_dual_speed(_est_speed(0), _est_speed(0))\n');
+assert.strictEqual(fakePythonGenerator.display_image(makeFakeBlock('display_image', {
+    fields: {IMAGE: 'Expressions/Big smile'}
+})), "est.display.image('Expressions/Big smile')\nest.display.refresh()\n");
+assert.strictEqual(fakePythonGenerator.display_image(makeFakeBlock('display_image')), (
+    "est.display.image('Eyes/Neutral')\nest.display.refresh()\n"
+));
+const timedImageWithSpace = fakePythonGenerator.display_image_for(makeFakeBlock('display_image_for', {
+    values: {SECONDS: '2'},
+    fields: {IMAGE: 'Expressions/Big smile'}
+}));
+assert.strictEqual(timedImageWithSpace, "rt.display_image_for('Expressions/Big smile', 2)\n");
+assert.doesNotMatch(timedImageWithSpace, /refresh/);
+assert.strictEqual(fakePythonGenerator.display_image_for(makeFakeBlock('display_image_for', {
+    values: {SECONDS: '2'}
+})), "rt.display_image_for('Eyes/Neutral', 2)\n");
 assert.strictEqual(fakePythonGenerator.display_text_line(makeFakeBlock('display_text_line', {
     values: {LINE: '2', TEXT: "'EST'"}
 })), "est.display.text_line(2, 'EST')\n");
+[
+    'regular_black',
+    'bold_black',
+    'large_black',
+    'regular_white',
+    'bold_white',
+    'large_white'
+].forEach(font => {
+    assert.strictEqual(fakePythonGenerator.display_text_xy(makeFakeBlock('display_text_xy', {
+        values: {X: '10', Y: '20', TEXT: "'EST'"},
+        fields: {FONT: font}
+    })), `est.display.text(10, 20, 'EST', font='${font}')\nest.display.refresh()\n`);
+});
+assert.strictEqual(
+    fakePythonGenerator.display_clear(makeFakeBlock('display_clear')),
+    'est.display.clear()\nest.display.refresh()\n'
+);
+[
+    ['off', 'est.led.OFF'],
+    ['red', 'est.led.RED'],
+    ['blue', 'est.led.BLUE']
+].forEach(([mode, constant]) => {
+    assert.strictEqual(fakePythonGenerator.display_status_light(makeFakeBlock('display_status_light', {
+        fields: {STATUS_MODE: mode}
+    })), `est.led.set(${constant})\n`);
+});
+[
+    ['back', 'est.buttons.BACK'],
+    ['left', 'est.buttons.LEFT'],
+    ['confirm', 'est.buttons.CONFIRM'],
+    ['center', 'est.buttons.CONFIRM'],
+    ['right', 'est.buttons.RIGHT'],
+    ['up', 'est.buttons.UP'],
+    ['down', 'est.buttons.DOWN']
+].forEach(([button, constant]) => {
+    assert.deepStrictEqual(fakePythonGenerator.sensor_brick_button_pressed(
+        makeFakeBlock('sensor_brick_button_pressed', {fields: {BUTTON: button}})
+    ), [`est.buttons.pressed(${constant})`, 2.2]);
+});
+assert.deepStrictEqual(fakePythonGenerator.sensor_brick_button_pressed(
+    makeFakeBlock('sensor_brick_button_pressed', {fields: {BUTTON: 'none'}})
+), ['est.buttons.value() == est.buttons.NONE', 11]);
+assert.strictEqual(fakePythonGenerator.event_brick_button(makeFakeBlock('event_brick_button', {
+    id: 'old-center-button-hat',
+    fields: {BUTTON: 'center', BUTTON_EVENT: 'pressed'},
+    nextBlock: {type: 'drive_stop'},
+    nextCode: '  rt.drive_stop()\n'
+})), null);
+assert.match(fakePythonGenerator.libraries_.est_stack_1, /@rt\.on_brick_button\('confirm', 'pressed'\)/);
+assert.strictEqual(fakePythonGenerator.sensor_wait_brick_button(makeFakeBlock('sensor_wait_brick_button', {
+    fields: {BUTTON: 'center', BUTTON_EVENT: 'released'}
+})), "rt.wait_brick_button('confirm', 'released')\n");
+assert.strictEqual(fakePythonGenerator.control_repeat(makeFakeBlock('control_repeat', {
+    values: {TIMES: '3'},
+    statements: {SUBSTACK: '  rt.drive_stop()\n'}
+})), 'for _ in range(rt.repeat_count(3)):\n  rt.drive_stop()\n  rt.yield_once()\n');
+assert.strictEqual(fakePythonGenerator.control_stop(makeFakeBlock('control_stop', {
+    fields: {STOP_SCOPE: 'this_stack'}
+})), "rt.stop('this_stack')\n");
+assert.strictEqual(fakePythonGenerator.control_stop_other_stacks(makeFakeBlock('control_stop_other_stacks')),
+    'rt.stop_other_stacks()\n');
+assert.strictEqual(fakePythonGenerator.control_stop(makeFakeBlock('control_stop', {
+    fields: {STOP_SCOPE: 'other_stacks'}
+})), 'rt.stop_other_stacks()\n');
+assert.strictEqual(fakePythonGenerator.control_stop(makeFakeBlock('control_stop', {
+    fields: {STOP_SCOPE: 'exit_program'}
+})), "rt.stop('all')\n");
+const singleStopStartBlock = makeFakeBlock('event_program_start', {
+    id: 'single-stop-start',
+    nextBlock: {type: 'control_stop'},
+    nextCode: "  rt.stop('this_stack')\n"
+});
+fakePythonGenerator.init({getTopBlocks: () => [singleStopStartBlock]});
+assert.strictEqual(fakePythonGenerator.event_program_start(singleStopStartBlock), null);
+assert.strictEqual(
+    fakePythonGenerator.libraries_.est_stack_1,
+    `@rt.on_start\nasync def stack_1():\n` +
+        `  global speed\n` +
+        `  rt.stop('this_stack')\n`
+);
 assert.strictEqual(fakePythonGenerator.sound_beep_for(makeFakeBlock('sound_beep_for', {
     values: {NOTE: '60', SECONDS: '1'}
 })), 'est.audio.tone(60, rt.seconds_to_ms(1), wait=True)\n');
@@ -747,6 +1490,12 @@ assert.deepStrictEqual(fakePythonGenerator.sensor_ultrasonic_compare(
         fields: {PORT: '4', COMPARATOR: 'less', UNIT: 'centimeters'}
     })
 ), ["rt.compare(rt.ultrasonic('4').distance('centimeters'), 'less', 15)", 2.2]);
+assert.deepStrictEqual(fakePythonGenerator.sensor_temperature(
+    makeFakeBlock('sensor_temperature', {
+        values: {PORT: 'port_var'},
+        fields: {UNIT: 'fahrenheit'}
+    })
+), ['rt.temperature(port_var).fahrenheit()', 2.2]);
 const blocksLoader = require('./est-blocks-loader');
 const transformedBlocks = blocksLoader('before\n    return ScratchBlocks;\nafter');
 assert.ok(transformedBlocks.indexOf('registerEstBlocks(ScratchBlocks);') <
@@ -776,6 +1525,22 @@ const pythonGeneratorWithHeader = 'before var output="# generated by OpenBlock\\
 const pythonGeneratorWithoutHeader = pythonGeneratorHeaderLoader(pythonGeneratorWithHeader);
 assert.ok(!pythonGeneratorWithoutHeader.includes('# generated by OpenBlock'));
 assert.strictEqual(pythonGeneratorWithoutHeader, 'before var output=""; after');
+const localesLoader = require('./est-locales-loader');
+const openBlockEditorMessagesSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'node_modules',
+    'openblock-l10n',
+    'locales',
+    'editor-msgs.js'
+), 'utf8');
+const transformedEditorMessages = localesLoader(openBlockEditorMessagesSource);
+babel.transformSync(transformedEditorMessages, {
+    babelrc: false,
+    presets: ['@babel/preset-env']
+});
+assert.match(transformedEditorMessages, /"gui\.sharedMessages\.loadFromComputerTitle": "从电脑打开"/);
+assert.ok(!transformedEditorMessages.includes('"gui.sharedMessages.loadFromComputerTitle": "从电脑中上传"'));
 const menuBarLoader = require('./est-menu-bar-loader');
 const menuBarSource = `import CommunityButton from './community-button.jsx'; // eslint-disable-line no-unused-vars
     handleClickOpenCommunity () {
@@ -856,8 +1621,12 @@ assert.ok(!transformedMenuBar.includes('this.handleClearCache'));
 assert.ok(!transformedMenuBar.includes('this.props.onClickInstallDriver'));
 assert.ok(!transformedMenuBar.includes('CommunityButton'));
 assert.ok(!transformedMenuBar.includes('community.openblock.cc'));
-assert.ok(transformedMenuBar.includes('this.handleCheckUpdate'));
-assert.match(transformedMenuBar, /<EstStatusPanel \/>/);
+assert.ok(!transformedMenuBar.includes('this.handleCheckUpdate'));
+assert.match(transformedMenuBar, /<EstStatusPanel \/>\s*<EstHardwareStatusButton \/>/);
+assert.match(transformedMenuBar, /import EstCodeDrawerToggle from 'est-code-drawer-toggle';/);
+assert.match(transformedMenuBar, /import EstHardwareStatusButton from 'est-hardware-status-button';/);
+assert.match(transformedMenuBar, /import EstMenuBarLayout from 'est-menu-bar-layout';/);
+assert.match(transformedMenuBar, /import estMenuLogo from 'est-menu-logo';/);
 assert.match(transformedMenuBar, /title: PropTypes\.node, \/\/ rendered menu label/);
 const openBlockMenuBarSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -908,6 +1677,24 @@ for (const removedHardwareMenuToken of [
 ]) {
     assert.ok(!transformedFullMenuBar.includes(removedHardwareMenuToken));
 }
+for (const removedSettingMenuToken of [
+    'settingMenuOpen',
+    'openSettingMenu',
+    'closeSettingMenu',
+    'onClickSetting',
+    'onRequestCloseSetting',
+    'settingIcon',
+    'isScratchDesktop',
+    'handleCheckUpdate',
+    'onClickCheckUpdate',
+    'UPDATE_MODAL_STATE',
+    'openUpdateModal',
+    'checkUpdate',
+    'installDriver',
+    'clearCache'
+]) {
+    assert.ok(!transformedFullMenuBar.includes(removedSettingMenuToken));
+}
 for (const removedObsoleteMenuToken of [
     'accountMenuOpen',
     'authorId',
@@ -935,8 +1722,27 @@ for (const removedObsoleteMenuToken of [
 assert.match(transformedFullMenuBar, /<ProjectTitleInput/);
 assert.match(transformedFullMenuBar, /<SB3Downloader>/);
 assert.match(transformedFullMenuBar, /requestNewProject/);
-assert.match(transformedFullMenuBar, /<EstStatusPanel \/>/);
-assert.match(transformedFullMenuBar, /handleCheckUpdate/);
+assert.match(transformedFullMenuBar, /<EstStatusPanel \/>\s*<EstHardwareStatusButton \/>/);
+assert.match(transformedFullMenuBar, /<EstMenuBarLayout \/>[\s\S]*<div className=\{styles\.mainMenu\}>/);
+assert.ok(!transformedFullMenuBar.includes(
+    '{this.state.isOverflow ? null :\n                    (<div className={styles.fileMenu}>'
+));
+assert.match(transformedFullMenuBar, /<div className=\{styles\.fileMenu\}>[\s\S]*<ProjectTitleInput/);
+assert.match(
+    transformedFullMenuBar,
+    /<div className=\{styles\.tailMenu\}>[\s\S]*<EstCodeDrawerToggle \/>[\s\S]*<\/div>/
+);
+assert.strictEqual((transformedFullMenuBar.match(/<EstCodeDrawerToggle \/>/g) || []).length, 1);
+assert.strictEqual((transformedFullMenuBar.match(/<EstHardwareStatusButton \/>/g) || []).length, 1);
+assert.ok(!transformedFullMenuBar.includes("import openblockLogo from './openblock-logo.svg';"));
+assert.ok(!transformedFullMenuBar.includes("import openblockLogoSmall from './openblock-logo-small.svg';"));
+assert.match(transformedFullMenuBar, /alt="EST Studio"/);
+assert.match(transformedFullMenuBar, /src=\{estMenuLogo\}/);
+assert.match(transformedFullMenuBar, /logo: estMenuLogo/);
+assert.match(transformedFullMenuBar, /logoSmall: estMenuLogo/);
+const estMenuLogoPath = path.resolve(__dirname, '..', 'src', 'renderer', 'est-menu-logo.png');
+assert.ok(fs.existsSync(estMenuLogoPath));
+assert.ok(fs.statSync(estMenuLogoPath).size > 10000);
 const hardwareWorkspaceLoader = require('./est-hardware-workspace-loader');
 const openBlockHardwareSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -962,9 +1768,67 @@ assert.match(estCodeDrawerSource, /handleResizeStart/);
 assert.match(estCodeDrawerSource, /handleResizeMove/);
 assert.match(estCodeDrawerSource, /estStudio\.pythonCodeDrawerWidth/);
 assert.match(estCodeDrawerSource, /isOpen: false/);
+assert.match(estCodeDrawerSource, /EST_CODE_DRAWER_TOGGLE_EVENT/);
+assert.match(estCodeDrawerSource, /EST_CODE_DRAWER_REQUEST_STATE_EVENT/);
+assert.match(estCodeDrawerSource, /publishCodeDrawerState/);
+assert.match(estCodeDrawerSource, /resizeBlocklyWorkspace/);
+assert.match(estCodeDrawerSource, /EDITOR_CHROME_WIDTH = 6/);
+assert.ok(!estCodeDrawerSource.includes('styles.toggleButton'));
+assert.ok(!estCodeDrawerSource.includes('styles.toggleButtonCollapsed'));
 assert.ok(!estCodeDrawerSource.includes('pythonCodeDrawerOpen'));
 assert.match(estCodeDrawerSource, /<CodeEditor/);
 assert.ok(!estCodeDrawerSource.includes('HardwareConsole'));
+const estCodeDrawerStyles = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'renderer',
+    'EstCodeDrawer.css'
+), 'utf8');
+assert.match(estCodeDrawerStyles, /\.drawer[\s\S]*background: #f1f3f5;/);
+assert.match(estCodeDrawerStyles, /\.content[\s\S]*padding: 0 2px;/);
+const estCodeDrawerToggleSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'renderer',
+    'EstCodeDrawerToggle.jsx'
+), 'utf8');
+assert.match(estCodeDrawerToggleSource, /EST_CODE_DRAWER_STATE_EVENT/);
+assert.match(estCodeDrawerToggleSource, /EST_CODE_DRAWER_REQUEST_STATE_EVENT/);
+assert.match(estCodeDrawerToggleSource, /EST_CODE_DRAWER_TOGGLE_EVENT/);
+assert.match(estCodeDrawerToggleSource, /aria-expanded=\{isOpen\}/);
+assert.match(estCodeDrawerToggleSource, /import codeIcon from '\.\/file-code-fill\.svg';/);
+assert.match(estCodeDrawerToggleSource, /className=\{styles\.toggleIcon\}[\s\S]*src=\{codeIcon\}/);
+const estCodeDrawerToggleStyles = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'renderer',
+    'EstCodeDrawerToggle.css'
+), 'utf8');
+assert.match(estCodeDrawerToggleStyles, /\.toggle-button:hover/);
+assert.match(estCodeDrawerToggleStyles, /\.toggle-button:active/);
+assert.match(estCodeDrawerToggleStyles, /\.toggle-button-open/);
+assert.match(estCodeDrawerToggleStyles, /height: \$menu-bar-height;/);
+assert.match(estCodeDrawerToggleStyles, /min-width: calc\(24px \+ 1\.5rem\);/);
+assert.match(estCodeDrawerToggleStyles, /padding: 0 0\.75rem;/);
+assert.match(estCodeDrawerToggleStyles, /border-radius: 0;/);
+assert.match(estCodeDrawerToggleStyles, /background-color: \$ui-black-transparent;/);
+assert.ok(!estCodeDrawerToggleStyles.includes('rgba(255, 255, 255, 0.18)'));
+const estMenuBarLayoutSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'renderer',
+    'EstMenuBarLayout.jsx'
+), 'utf8');
+assert.match(estMenuBarLayoutSource, /CENTER_MENU_WIDTH_PROPERTY = '--est-centered-file-menu-width'/);
+assert.match(estMenuBarLayoutSource, /CENTER_MENU_MAX_WIDTH = 252/);
+assert.match(estMenuBarLayoutSource, /getContentBounds/);
+assert.match(estMenuBarLayoutSource, /mainBounds\.right/);
+assert.match(estMenuBarLayoutSource, /tailBounds\.left/);
+assert.ok(!estMenuBarLayoutSource.includes('est-menu-bar-hide-centered-file-menu'));
 const guiCleanupLoader = require('./est-gui-cleanup-loader');
 const openBlockGuiSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -987,6 +1851,7 @@ assert.ok(!transformedGui.includes('<HardwareHeader'));
 assert.match(transformedGui, /<UploadProgress/);
 assert.match(transformedGui, /import EstProgramControls from 'est-program-controls'/);
 assert.match(transformedGui, /<EstProgramControls \/>/);
+assert.ok(!transformedGui.includes('onClickCheckUpdate'));
 const estProgramControlsSource = fs.readFileSync(path.resolve(
     __dirname,
     '..',
@@ -998,10 +1863,133 @@ assert.match(estProgramControlsSource, /SLOT_OPTIONS = \[0, 1, 2, 3, 4, 5, 6, 7\
 assert.match(estProgramControlsSource, /download: 'est-download-program'/);
 assert.match(estProgramControlsSource, /run: 'est-run-program'/);
 assert.match(estProgramControlsSource, /stop: 'est-stop-program'/);
+assert.match(estProgramControlsSource, /import \{buildEstProgramRequest\} from '\.\/est-program-name'/);
 assert.match(estProgramControlsSource, /state\.scratchGui\.code\.codeEditorValue/);
+assert.match(estProgramControlsSource, /projectTitle: state\.scratchGui\.projectTitle/);
+assert.match(estProgramControlsSource, /projectTitle: this\.props\.projectTitle/);
+assert.match(
+    estProgramControlsSource,
+    new RegExp(
+        'buildEstProgramRequest\\(\\{[\\s\\S]*source: this\\.props\\.codeEditorValue,[\\s\\S]*slot,' +
+        '[\\s\\S]*projectTitle: this\\.props\\.projectTitle[\\s\\S]*\\}\\)'
+    )
+);
 assert.match(estProgramControlsSource, /data-action="stop"/);
 assert.ok(!estProgramControlsSource.includes('data-action="pause"'));
 assert.match(estProgramControlsSource, /PROGRAM_SLOT_CHANGE_EVENT/);
+assert.match(estProgramControlsSource, /EST_CONNECTION_STATUS_EVENT/);
+assert.match(estProgramControlsSource, /formatProgramOperationError/);
+assert.match(estProgramControlsSource, /cannot write to hid device/);
+assert.match(estProgramControlsSource, /EST_PROGRAM_ACTIVITY_EVENT/);
+assert.match(estProgramControlsSource, /detail: \{isRunning: action === 'run'\}/);
+assert.match(estProgramControlsSource, /programActionsAllowed: false/);
+assert.strictEqual(
+    (estProgramControlsSource.match(/disabled=\{controlsBusy \|\| !programActionsAllowed\}/g) || []).length,
+    2
+);
+const estStatusPanelSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'renderer',
+    'EstStatusPanel.jsx'
+), 'utf8');
+assert.match(estStatusPanelSource, /result\.compatible === true/);
+assert.match(estStatusPanelSource, /EST 需升级/);
+assert.match(estStatusPanelSource, /EST_CONNECTION_STATUS_EVENT/);
+assert.match(estStatusPanelSource, /EST_PROGRAM_ACTIVITY_EVENT/);
+assert.match(estStatusPanelSource, /RUNNING_REFRESH_INTERVAL_MS = 10000/);
+assert.match(estStatusPanelSource, /NORMAL_REFRESH_INTERVAL_MS = 3000/);
+assert.match(estStatusPanelSource, /isProgramStatusActive/);
+assert.match(estStatusPanelSource, /scheduleRefresh\(this\.programRunning \? RUNNING_REFRESH_INTERVAL_MS : 0\)/);
+assert.ok(!estStatusPanelSource.includes('setInterval'));
+const estHardwareStatusButtonSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'renderer',
+    'EstHardwareStatusButton.jsx'
+), 'utf8');
+assert.match(estHardwareStatusButtonSource, /aria-label="硬件状态"/);
+assert.match(estHardwareStatusButtonSource, /className=\{styles\.overlay\}/);
+assert.ok(!estHardwareStatusButtonSource.includes('aria-modal'));
+assert.match(estHardwareStatusButtonSource, /handleToggle/);
+assert.match(estHardwareStatusButtonSource, /isOpen: !state\.isOpen/);
+assert.match(estHardwareStatusButtonSource, /handleClose/);
+assert.match(estHardwareStatusButtonSource, /handlePanelDragStart/);
+assert.match(estHardwareStatusButtonSource, /handlePanelDragMove/);
+assert.match(estHardwareStatusButtonSource, /handlePanelDragEnd/);
+assert.match(estHardwareStatusButtonSource, /onMouseDown=\{this\.handlePanelDragStart\}/);
+assert.match(estHardwareStatusButtonSource, /style=\{panelStyle\}/);
+assert.match(estHardwareStatusButtonSource, /renderPortsOverview/);
+assert.match(estHardwareStatusButtonSource, /renderConnectionAndBattery/);
+assert.match(
+    estHardwareStatusButtonSource,
+    /\{this\.renderPortsOverview\(\)\}\s*\{this\.renderConnectionAndBattery\(\)\}/
+);
+assert.match(estHardwareStatusButtonSource, /手动刷新/);
+assert.match(estHardwareStatusButtonSource, /includeProgramStatus: true/);
+assert.match(estHardwareStatusButtonSource, /REFRESH_INTERVAL_MS = 3000/);
+assert.match(estHardwareStatusButtonSource, /PANEL_DEFAULT_WIDTH = 600/);
+assert.match(estHardwareStatusButtonSource, /PANEL_DEFAULT_HEIGHT = 420/);
+assert.match(estHardwareStatusButtonSource, /isProgramRunning\(this\.state\.status\)/);
+assert.match(estHardwareStatusButtonSource, /程序运行中，外设详情暂停刷新/);
+assert.match(estHardwareStatusButtonSource, /EST USB 连接已断开/);
+assert.match(estHardwareStatusButtonSource, /stripRemoteErrorPrefix/);
+for (const hardwareStatusLabel of [
+    '连接状态',
+    '连接与电池',
+    '固件版本',
+    '协议版本',
+    '电量',
+    '采样电压',
+    '电机',
+    '传感器',
+    'EST 未连接'
+]) {
+    assert.ok(estHardwareStatusButtonSource.includes(hardwareStatusLabel), hardwareStatusLabel);
+}
+assert.ok(!estHardwareStatusButtonSource.includes('<h3 className={styles.sectionTitle}>能力</h3>'));
+assert.ok(!estHardwareStatusButtonSource.includes('<h3 className={styles.sectionTitle}>Python 程序</h3>'));
+assert.ok(!estHardwareStatusButtonSource.includes('renderCapabilities'));
+assert.ok(!estHardwareStatusButtonSource.includes('renderProgramStatus'));
+assert.ok(!estHardwareStatusButtonSource.includes('renderConnectionSummary'));
+assert.ok(!estHardwareStatusButtonSource.includes('renderBattery'));
+const estHardwareStatusButtonStyles = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'renderer',
+    'EstHardwareStatusButton.css'
+), 'utf8');
+assert.match(estHardwareStatusButtonStyles, /\.menu-button:hover/);
+assert.match(estHardwareStatusButtonStyles, /background-color: \$ui-black-transparent/);
+assert.match(estHardwareStatusButtonStyles, /\.overlay/);
+assert.match(estHardwareStatusButtonStyles, /\.overlay\s*\{[\s\S]*pointer-events: none/);
+assert.match(estHardwareStatusButtonStyles, /\.panel/);
+assert.match(estHardwareStatusButtonStyles, /\.panel\s*\{[\s\S]*position: fixed/);
+assert.match(estHardwareStatusButtonStyles, /\.panel\s*\{[\s\S]*pointer-events: auto/);
+assert.match(estHardwareStatusButtonStyles, /\.panel\s*\{[\s\S]*width: min\(600px/);
+assert.match(estHardwareStatusButtonStyles, /\.panel\s*\{[\s\S]*max-height: min\(520px/);
+assert.match(estHardwareStatusButtonStyles, /\.port-list\s*\{[\s\S]*grid-template-columns: repeat\(4/);
+assert.match(estHardwareStatusButtonStyles, /\.port-section\s*\{[\s\S]*border-top: 0/);
+assert.match(estHardwareStatusButtonStyles, /\.summary-grid\s*\{[\s\S]*grid-template-columns: auto minmax\(0, 1fr\) auto/);
+assert.match(estHardwareStatusButtonStyles, /@media \(max-width: 720px\)[\s\S]*\.port-list\s*\{[\s\S]*repeat\(2/);
+assert.match(estHardwareStatusButtonStyles, /@media \(max-width: 720px\)[\s\S]*\.summary-grid\s*\{[\s\S]*minmax\(70px/);
+assert.match(estHardwareStatusButtonStyles, /\.panel-header\s*\{[\s\S]*cursor: move/);
+assert.ok(!estHardwareStatusButtonStyles.includes('border-left: 1px solid'));
+const estDeviceServiceSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'main',
+    'est',
+    'device-service.js'
+), 'utf8');
+assert.match(estDeviceServiceSource, /checkProgramFirmwareCompatibility/);
+assert.match(estDeviceServiceSource, /capabilityNamesFor/);
+assert.match(estDeviceServiceSource, /includeProgramStatus/);
+assert.ok(!estDeviceServiceSource.includes('CAPABILITY_FROZEN_EST_RUNTIME'));
 const estProgramMainSource = fs.readFileSync(path.resolve(
     __dirname,
     '..',
@@ -1012,6 +2000,8 @@ const estProgramMainSource = fs.readFileSync(path.resolve(
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-download-program'/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-run-program'/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-stop-program'/);
+assert.match(estProgramMainSource, /ipcMain\.handle\('est-get-status', \(event, options\)/);
+assert.match(estProgramMainSource, /ipcMain\.handle\('est-auto-connect', \(event, options\)/);
 assert.ok(!transformedGui.includes('<CostumeTab'));
 assert.ok(!transformedGui.includes('<SoundTab'));
 assert.ok(!transformedGui.includes('<StageWrapper'));
@@ -1128,6 +2118,39 @@ const estRendererAppSource = fs.readFileSync(path.resolve(
 ), 'utf8');
 assert.match(estRendererAppSource, /openblock-gui\/src\/containers\/gui\.jsx/);
 assert.ok(!estRendererAppSource.includes('openblock-gui/src/index'));
+const estRendererAppStyles = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'src',
+    'renderer',
+    'app.css'
+), 'utf8');
+assert.match(estRendererAppStyles, /\.app :global\(\.injectionDiv\) \{[\s\S]*overflow: hidden !important;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar_"\][\s\S]*position: relative;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar_"\][\s\S]*background-color: #f1f3f5;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar_"\][\s\S]*color: #1f2937;/);
+assert.match(estRendererAppStyles, /\[class\*="gui_body-wrapper_"\][\s\S]*background-color: #f1f3f5;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*left: 50%;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*z-index: 3;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*transform: translateX\(-50%\);/);
+assert.match(estRendererAppStyles, /--est-centered-file-menu-width/);
+assert.match(estRendererAppStyles, /var\(--est-centered-file-menu-width, 252px\)/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_file-menu_"\][\s\S]*overflow: hidden;/);
+assert.match(
+    estRendererAppStyles,
+    /img:not\(\[class\*="menu-bar_openblock-logo_"\]\)[\s\S]*filter: brightness\(0\) invert\(16%\);/
+);
+assert.match(estRendererAppStyles, /\[class\*="project-title-input_title-field_"\][\s\S]*color: #111827;/);
+assert.match(estRendererAppStyles, /project-title-input_title-field_"\]::placeholder\)[\s\S]*color: #4b5563;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar-menu_"\]\[class\*="menu_menu_"\][\s\S]*background-color: #f8fafc !important;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar-menu_"\] \[class\*="menu_menu-item_"\][\s\S]*justify-content: flex-start;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar-menu_"\] \[class\*="menu_menu-item_"\][\s\S]*background-color: #f8fafc !important;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar-menu_"\] \[class\*="menu_menu-item_"\][\s\S]*text-align: left;/);
+assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar-menu_"\] \[class\*="menu_menu-item_"\]:hover[\s\S]*background-color: #e5e7eb !important;/);
+assert.ok(!estRendererAppStyles.includes('--est-centered-file-menu-max-width'));
+assert.ok(!estRendererAppStyles.includes('est-menu-bar-hide-centered-file-menu'));
+assert.match(estRendererAppStyles, /\[class\*="gui_tab-list_"\][\s\S]*display: none !important;/);
+assert.match(estRendererAppStyles, /\[class\*="gui_tab-list_"\][\s\S]*height: 0 !important;/);
 const localProjectFetcherLoader = require('./est-local-project-fetcher-loader');
 const openBlockProjectFetcherSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -1212,6 +2235,9 @@ const electronBuilderSource = fs.readFileSync(path.resolve(
     'electron-builder.yaml'
 ), 'utf8');
 assert.match(electronBuilderSource, /fileAssociations:\r?\n {2}ext: ests/);
+assert.match(electronBuilderSource, /win:\r?\n {2}icon: buildResources\/OpenBlockDesktop\.ico/);
+assert.match(electronBuilderSource, /mac:[\s\S]*icon: buildResources\/OpenBlockDesktop\.icns/);
+assert.match(electronBuilderSource, /linux:[\s\S]*icon: buildResources\/linux/);
 const alertsLoader = require('./est-alerts-loader');
 const openBlockAlertsSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -1370,10 +2396,16 @@ assert.match(desktopGuiSource, /onStorageInit=\{ignoreStorageInit\}/);
 const rendererAppSource = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'renderer', 'app.jsx'), 'utf8');
 assert.ok(!rendererAppSource.includes('ScratchDesktopAppStateHOC'));
 const mainProcessSource = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'main', 'index.js'), 'utf8');
+assert.match(mainProcessSource, /import appIconIco from '\.\.\/icon\/OpenBlockDesktop\.ico';/);
+assert.match(mainProcessSource, /import appIconPng from '\.\.\/icon\/OpenBlockDesktop\.png';/);
+assert.match(mainProcessSource, /app\.setAppUserModelId\(estStudioAppId\)/);
+assert.match(mainProcessSource, /process\.platform === 'win32' \? appIconIco : appIconPng/);
+assert.match(mainProcessSource, /icon: getWindowIcon\(\)/);
 assert.ok(!mainProcessSource.includes('OpenblockDesktopTelemetry'));
 assert.ok(!mainProcessSource.includes("send('setUserId'"));
 assert.ok(!mainProcessSource.includes("ipcMain.on('clearCache'"));
 assert.ok(!mainProcessSource.includes("ipcMain.on('installDriver'"));
+assert.ok(!mainProcessSource.includes("ipcMain.on('reqeustCheckUpdate'"));
 assert.ok(!mainProcessSource.includes('DesktopLink'));
 assert.ok(!mainProcessSource.includes('desktopLink'));
 assert.ok(!mainProcessSource.includes('host-resolver-rules'));
@@ -1385,6 +2417,19 @@ assert.ok(!fs.existsSync(path.resolve(
     'main',
     'OpenblockDesktopLink.js'
 )));
+assert.ok(fs.statSync(path.resolve(__dirname, '..', 'src', 'icon', 'OpenBlockDesktop.png')).size > 100000);
+assert.ok(fs.statSync(path.resolve(__dirname, '..', 'src', 'icon', 'OpenBlockDesktop.ico')).size > 100000);
+assert.ok(fs.statSync(path.resolve(__dirname, '..', 'buildResources', 'OpenBlockDesktop.ico')).size > 100000);
+assert.ok(fs.statSync(path.resolve(__dirname, '..', 'buildResources', 'OpenBlockDesktop.icns')).size > 1000000);
+assert.ok(fs.statSync(path.resolve(__dirname, '..', 'buildResources', 'linux', '512x512.png')).size > 100000);
+assert.ok(!fs.existsSync(path.resolve(__dirname, '..', 'src', 'icon', 'OpenBlockDesktop.svg')));
+assert.ok(!fs.existsSync(path.resolve(__dirname, '..', 'src', 'icon', 'OpenBlockLoading.svg')));
+const aboutSource = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'renderer', 'about.jsx'), 'utf8');
+const loadingSource = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'renderer', 'loading.jsx'), 'utf8');
+assert.match(aboutSource, /import logo from '\.\.\/icon\/OpenBlockDesktop\.png';/);
+assert.match(loadingSource, /import logo from '\.\.\/icon\/OpenBlockDesktop\.png';/);
+const iconBuildScript = fs.readFileSync(path.resolve(__dirname, '..', 'buildResources', 'make-icons.sh'), 'utf8');
+assert.match(iconBuildScript, /SRC=\.\.\/src\/icon\/OpenBlockDesktop\.png/);
 const packageConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf8'));
 assert.strictEqual(typeof packageConfig.dependencies['openblock-link'], 'undefined');
 assert.strictEqual(typeof packageConfig.scripts['fetch:firmwares'], 'undefined');
@@ -1420,6 +2465,18 @@ const sharedWebpackConfig = fs.readFileSync(path.resolve(
     'webpack.makeConfig.js'
 ), 'utf8');
 assert.match(sharedWebpackConfig, /languages: \['python'\]/);
+assert.match(sharedWebpackConfig, /EST_LOCALES_LOADER/);
+assert.match(sharedWebpackConfig, /openblock-l10n/);
+assert.match(sharedWebpackConfig, /editor-msgs\\\.js/);
+assert.match(sharedWebpackConfig, /EST_CODE_DRAWER_TOGGLE/);
+assert.match(sharedWebpackConfig, /est-code-drawer-toggle\$/);
+assert.match(sharedWebpackConfig, /EST_HARDWARE_STATUS_BUTTON/);
+assert.match(sharedWebpackConfig, /est-hardware-status-button\$/);
+assert.match(sharedWebpackConfig, /EST_MENU_BAR_LAYOUT/);
+assert.match(sharedWebpackConfig, /est-menu-bar-layout\$/);
+assert.match(sharedWebpackConfig, /EST_MENU_LOGO/);
+assert.match(sharedWebpackConfig, /est-menu-logo\$/);
+assert.match(sharedWebpackConfig, /svg\|png\|ico\|wav\|gif\|jpg\|ttf/);
 assert.ok(!sharedWebpackConfig.includes("languages: ['c', 'cpp', 'python', 'lua', 'javascript']"));
 assert.ok(!fs.existsSync(path.resolve(__dirname, 'fetchMediaLibraryAssets.js')));
 assert.ok(!fs.existsSync(path.resolve(__dirname, 'lib', 'libraries.js')));
@@ -1453,6 +2510,7 @@ const updaterSource = fs.readFileSync(path.resolve(
 ), 'utf8');
 assert.ok(!updaterSource.includes('_resourceServer'));
 assert.ok(!updaterSource.includes('resourceUpdating'));
+assert.ok(!updaterSource.includes('reqeustCheckUpdate'));
 assert.match(updaterSource, /autoUpdater\.checkForUpdates\(\)/);
 const programModeLoader = require('./est-program-mode-loader');
 const transformedProgramMode = programModeLoader(`const initialState = {
@@ -1681,11 +2739,101 @@ const writeUint32LE = (bytes, offset, value) => {
     bytes[offset + 3] = (value >>> 24) & 0xff;
 };
 
+assert.strictEqual(CAPABILITY_UNLIMITED_PYTHON_RUN, 1 << 18);
+assert.strictEqual(CAPABILITY_DISPLAY_FONT_STYLES, 1 << 19);
+assert.strictEqual(CAPABILITY_ZERO_SPEED_MOTOR_CONTROL, 1 << 20);
+assert.strictEqual(CAPABILITY_HOLD_POSITION_CONTROL, 1 << 21);
+assert.strictEqual(CAPABILITY_TEMPERATURE_SENSOR, 1 << 22);
+assert.strictEqual(CAPABILITY_COOPERATIVE_MULTITASK, 1 << 23);
+assert.strictEqual(CAPABILITY_RUNTIME_BASIC_EVENT_HATS, 1 << 24);
+const m114ADeviceStatusPayload = new Uint8Array(72);
+m114ADeviceStatusPayload[0] = 1;
+m114ADeviceStatusPayload[1] = 25;
+m114ADeviceStatusPayload.set(Buffer.from('M1.14A', 'ascii'), 2);
+writeUint32LE(
+    m114ADeviceStatusPayload,
+    16,
+    EST_TEMPERATURE_PROGRAM_REQUIRED_CAPABILITIES |
+        CAPABILITY_HOLD_POSITION_CONTROL |
+        CAPABILITY_COOPERATIVE_MULTITASK |
+        CAPABILITY_RUNTIME_BASIC_EVENT_HATS
+);
+const parsedM114ADeviceStatus = parseDeviceStatusResponse(
+    buildDeviceResponse(COMMAND_DEVICE_STATUS, m114ADeviceStatusPayload)
+);
+assert.strictEqual(parsedM114ADeviceStatus.firmwareVersion, 'M1.14A');
+assert.deepStrictEqual(
+    [parsedM114ADeviceStatus.protocolMajor, parsedM114ADeviceStatus.protocolMinor],
+    [1, 25]
+);
+assert.strictEqual(
+    parsedM114ADeviceStatus.capabilities & EST_TEMPERATURE_PROGRAM_REQUIRED_CAPABILITIES,
+    EST_TEMPERATURE_PROGRAM_REQUIRED_CAPABILITIES
+);
+assert.strictEqual(
+    parsedM114ADeviceStatus.capabilities & CAPABILITY_COOPERATIVE_MULTITASK,
+    CAPABILITY_COOPERATIVE_MULTITASK
+);
+assert.strictEqual(
+    parsedM114ADeviceStatus.capabilities & CAPABILITY_RUNTIME_BASIC_EVENT_HATS,
+    CAPABILITY_RUNTIME_BASIC_EVENT_HATS
+);
+assert.deepStrictEqual(
+    capabilityNamesFor(
+        CAPABILITY_FROZEN_EST_RUNTIME |
+            CAPABILITY_UNLIMITED_PYTHON_RUN |
+            CAPABILITY_DISPLAY_FONT_STYLES |
+            CAPABILITY_ZERO_SPEED_MOTOR_CONTROL |
+            CAPABILITY_HOLD_POSITION_CONTROL |
+            CAPABILITY_TEMPERATURE_SENSOR |
+            CAPABILITY_COOPERATIVE_MULTITASK |
+            CAPABILITY_RUNTIME_BASIC_EVENT_HATS
+    ),
+    [
+        'frozen-est-runtime',
+        'unlimited-python-run',
+        'display-font-styles',
+        'zero-speed-motor-control',
+        'hold-position-control',
+        'runtime-temperature',
+        'cooperative-multitask',
+        'runtime-basic-event-hats'
+    ]
+);
+assert.strictEqual(checkProgramFirmwareCompatibility(parsedM114ADeviceStatus).programCompatible, true);
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(parsedM114ADeviceStatus, CAPABILITY_TEMPERATURE_SENSOR).programCompatible,
+    true
+);
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(parsedM114ADeviceStatus, CAPABILITY_COOPERATIVE_MULTITASK).programCompatible,
+    true
+);
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(parsedM114ADeviceStatus, CAPABILITY_RUNTIME_BASIC_EVENT_HATS).programCompatible,
+    true
+);
+
 class ProgramTestTransport {
-    constructor () {
+    constructor ({
+        capabilities = EST_PROGRAM_REQUIRED_CAPABILITIES,
+        firmwareVersion = 'M1.12A',
+        protocolMinor = 21,
+        respondToDeviceStatus = true,
+        respondToPythonStatus = true,
+        writeError = null,
+        readError = null
+    } = {}) {
         this.actions = [];
+        this.capabilities = capabilities;
         this.closed = false;
         this.closeCount = 0;
+        this.firmwareVersion = firmwareVersion;
+        this.protocolMinor = protocolMinor;
+        this.readError = readError;
+        this.respondToDeviceStatus = respondToDeviceStatus;
+        this.respondToPythonStatus = respondToPythonStatus;
+        this.writeError = writeError;
         this.python = {
             actualCrc32: 0,
             error: 0,
@@ -1707,18 +2855,26 @@ class ProgramTestTransport {
     }
 
     write (report) {
+        if (this.writeError) {
+            throw this.writeError;
+        }
         const command = report[2];
-        const action = report[5];
+        const action = command === COMMAND_DEVICE_STATUS ? 0 : report[5];
         this.actions.push(`${command}:${action}`);
         if (command === COMMAND_PYTHON_PROGRAM) {
             this.handlePython(report, action);
         } else if (command === COMMAND_PERSISTENT_PROGRAM) {
             this.handlePersistent(report, action);
+        } else if (command === COMMAND_DEVICE_STATUS && this.respondToDeviceStatus) {
+            this.responses.push(this.buildDeviceStatusResponse());
         }
         return Promise.resolve();
     }
 
     read () {
+        if (this.readError) {
+            throw this.readError;
+        }
         return Promise.resolve(this.responses.shift() || new Uint8Array());
     }
 
@@ -1730,6 +2886,9 @@ class ProgramTestTransport {
 
     handlePython (report, action) {
         const payloadLength = report[3] | (report[4] << 8);
+        if (action === 0 && !this.respondToPythonStatus) {
+            return;
+        }
         if (action === 0 && this.python.stopPending) {
             this.python.flags &= ~0x08;
             this.python.runCount += 1;
@@ -1823,6 +2982,17 @@ class ProgramTestTransport {
         payload[72] = 2;
         payload[73] = 3;
         return buildDeviceResponse(COMMAND_PERSISTENT_PROGRAM, payload);
+    }
+
+    buildDeviceStatusResponse () {
+        const payload = new Uint8Array(72);
+        payload[0] = 1;
+        payload[1] = this.protocolMinor;
+        payload.set(Buffer.from(this.firmwareVersion, 'ascii').slice(0, 6), 2);
+        payload[8] = 4;
+        payload[9] = 4;
+        writeUint32LE(payload, 16, this.capabilities);
+        return buildDeviceResponse(COMMAND_DEVICE_STATUS, payload);
     }
 }
 
@@ -1931,6 +3101,7 @@ const testProgramDownloadRunAndStop = async () => {
     assert.strictEqual(parsePythonProgramResponse(transport.buildPythonResponse()).state, 2);
     assert.strictEqual(parsePersistentProgramResponse(transport.buildPersistentResponse(3)).programName, '巡线');
     assert.deepStrictEqual(transport.actions, [
+        '25:0',
         '36:0',
         '36:1',
         '36:2',
@@ -1938,12 +3109,33 @@ const testProgramDownloadRunAndStop = async () => {
         '37:1'
     ]);
 
+    const legacyDownloaded = await service.downloadProgram({
+        slot: 4,
+        source: 'import est_runtime as rt\n'
+    });
+    assert.strictEqual(legacyDownloaded.slot, 4);
+    assert.strictEqual(legacyDownloaded.programName, 'Program 4');
+    assert.strictEqual(legacyDownloaded.savedStatus.programName, 'Program 4');
+    assert.strictEqual(transport.slots[4].name, 'Program 4');
+
+    const actionsBeforeManualRefresh = transport.actions.length;
+    const fullIdleStatus = await service.getStatus({includeProgramStatus: true});
+    assert.strictEqual(fullIdleStatus.firmwareVersion, 'M1.12A');
+    assert.ok(fullIdleStatus.capabilityNames.includes('frozen-est-runtime'));
+    assert.ok(fullIdleStatus.capabilityNames.includes('unlimited-python-run'));
+    assert.strictEqual(fullIdleStatus.programStatus.state, 2);
+    assert.deepStrictEqual(transport.actions.slice(actionsBeforeManualRefresh), ['25:0', '36:0']);
+
     const runSource = 'import est\nest._program_result(7)\n';
     const running = await service.runProgram({source: runSource, slot: 5});
     assert.strictEqual(running.slot, 5);
+    assert.strictEqual(running.programName, 'Program 5');
+    assert.strictEqual(running.savedStatus.programName, 'Program 5');
     assert.strictEqual(running.savedStatus.programSlotId, 5);
     assert.strictEqual(running.run.loadedStatus.programSlotId, 5);
     assert.strictEqual(running.run.runStatus.state, 3);
+    assert.strictEqual(running.run.runStatus.timeoutMs, PYTHON_PROGRAM_NO_TIMEOUT_MS);
+    assert.strictEqual(transport.python.timeoutMs, PYTHON_PROGRAM_NO_TIMEOUT_MS);
     assert.strictEqual(transport.slots[5].source.toString('utf8'), runSource);
     assert.deepStrictEqual(transport.actions.slice(-6), [
         '36:0',
@@ -1953,6 +3145,132 @@ const testProgramDownloadRunAndStop = async () => {
         '37:2',
         '36:3'
     ]);
+    const actionsBeforeRunningPanelRefresh = transport.actions.length;
+    const runningPanelConnection = await service.autoConnect({includeProgramStatus: true});
+    assert.strictEqual(runningPanelConnection.state, 'connected');
+    assert.strictEqual(runningPanelConnection.status.statusPollingDeferred, true);
+    assert.strictEqual(runningPanelConnection.status.programStatus.state, 3);
+    assert.deepStrictEqual(transport.actions.slice(actionsBeforeRunningPanelRefresh), ['36:0']);
+
+    const temperatureSource = "import est_runtime as rt\nvalue = rt.temperature('3').celsius()\n";
+    const temperatureTransport = new ProgramTestTransport({
+        capabilities: EST_TEMPERATURE_PROGRAM_REQUIRED_CAPABILITIES,
+        firmwareVersion: 'M1.14A',
+        protocolMinor: 24
+    });
+    const temperatureService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    temperatureService.transport = temperatureTransport;
+    temperatureService.device = service.device;
+    await temperatureService.runProgram({source: temperatureSource, slot: 1});
+    assert.strictEqual(temperatureTransport.python.timeoutMs, PYTHON_PROGRAM_NO_TIMEOUT_MS);
+    assert.ok(temperatureTransport.actions.includes('36:3'));
+
+    const missingTemperatureTransport = new ProgramTestTransport();
+    const missingTemperatureService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    missingTemperatureService.transport = missingTemperatureTransport;
+    missingTemperatureService.device = service.device;
+    await assert.rejects(
+        missingTemperatureService.runProgram({source: temperatureSource, slot: 1}),
+        /runtime-temperature/
+    );
+    assert.ok(!missingTemperatureTransport.actions.includes('36:3'));
+
+    const cooperativeSource = [
+        'import est_runtime as rt',
+        '',
+        '@rt.on_start',
+        'async def stack_1():',
+        '  await rt.yield_once()',
+        '',
+        '@rt.on_start',
+        'async def stack_2():',
+        '  rt.stop_other_stacks()',
+        '',
+        'rt.run()',
+        ''
+    ].join('\n');
+    const cooperativeTransport = new ProgramTestTransport({
+        capabilities: EST_COOPERATIVE_PROGRAM_REQUIRED_CAPABILITIES,
+        firmwareVersion: 'M1.14A',
+        protocolMinor: 25
+    });
+    const cooperativeService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    cooperativeService.transport = cooperativeTransport;
+    cooperativeService.device = service.device;
+    await cooperativeService.runProgram({source: cooperativeSource, slot: 2});
+    assert.strictEqual(cooperativeTransport.python.timeoutMs, PYTHON_PROGRAM_NO_TIMEOUT_MS);
+    assert.ok(cooperativeTransport.actions.includes('36:3'));
+
+    const missingCooperativeTransport = new ProgramTestTransport();
+    const missingCooperativeService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    missingCooperativeService.transport = missingCooperativeTransport;
+    missingCooperativeService.device = service.device;
+    await assert.rejects(
+        missingCooperativeService.runProgram({source: cooperativeSource, slot: 2}),
+        /cooperative-multitask/
+    );
+    assert.ok(!missingCooperativeTransport.actions.includes('36:3'));
+
+    const basicEventHatsSource = [
+        'import est_runtime as rt',
+        '',
+        '@rt.on_brick_button("confirm", "pressed")',
+        'def stack_1():',
+        '  rt.stop("all")',
+        '',
+        'rt.run()',
+        ''
+    ].join('\n');
+    const basicEventHatsTransport = new ProgramTestTransport({
+        capabilities: EST_BASIC_EVENT_HATS_PROGRAM_REQUIRED_CAPABILITIES |
+            CAPABILITY_COOPERATIVE_MULTITASK,
+        firmwareVersion: 'M1.14A',
+        protocolMinor: 25
+    });
+    const basicEventHatsService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    basicEventHatsService.transport = basicEventHatsTransport;
+    basicEventHatsService.device = service.device;
+    await basicEventHatsService.runProgram({source: basicEventHatsSource, slot: 3});
+    assert.strictEqual(basicEventHatsTransport.python.timeoutMs, PYTHON_PROGRAM_NO_TIMEOUT_MS);
+    assert.ok(basicEventHatsTransport.actions.includes('36:3'));
+
+    const missingBasicEventHatsTransport = new ProgramTestTransport({
+        capabilities: EST_PROGRAM_REQUIRED_CAPABILITIES | CAPABILITY_COOPERATIVE_MULTITASK,
+        firmwareVersion: 'M1.14A',
+        protocolMinor: 25
+    });
+    const missingBasicEventHatsService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    missingBasicEventHatsService.transport = missingBasicEventHatsTransport;
+    missingBasicEventHatsService.device = service.device;
+    await assert.rejects(
+        missingBasicEventHatsService.runProgram({source: basicEventHatsSource, slot: 3}),
+        /runtime-basic-event-hats/
+    );
+    assert.ok(!missingBasicEventHatsTransport.actions.includes('36:3'));
 
     const stopped = await service.stopCurrentProgram();
     assert.strictEqual(stopped.state, 7);
@@ -1967,10 +3285,63 @@ const testProgramDownloadRunAndStop = async () => {
         service.downloadProgram({source: 'x = 1\n', slot: 8}),
         /0\.\.7/
     );
+
+    const oldTransport = new ProgramTestTransport({
+        capabilities: CAPABILITY_FROZEN_EST_RUNTIME,
+        firmwareVersion: 'M1.09A',
+        protocolMinor: 19
+    });
+    const oldDevice = {...service.device, path: 'old-est-device'};
+    const oldService = new EstDeviceService({
+        requestTimeoutMs: 100,
+        transportFactory: {
+            listDevices: () => Promise.resolve([oldDevice])
+        }
+    });
+    oldService.transport = oldTransport;
+    oldService.device = oldDevice;
+    oldService.firmwareVersion = 'M1.09A';
+    const oldConnection = await oldService.autoConnect();
+    assert.strictEqual(oldConnection.state, 'connected');
+    assert.strictEqual(oldConnection.compatible, true);
+    assert.strictEqual(oldConnection.status.compatibility.programCompatible, false);
+    assert.match(oldConnection.status.compatibility.programMessage, /1\.21/);
+    await assert.rejects(
+        oldService.runProgram({source: 'import est\n', slot: 0}),
+        /当前 EST 固件不支持这个程序.*1\.21.*unlimited-python-run.*display-font-styles.*zero-speed-motor-control/
+    );
+    assert.ok(!oldTransport.actions.includes('36:3'));
+
+    const unknownDevice = {...service.device, path: 'unknown-new-est'};
+    const unknownTransport = new ProgramTestTransport({
+        firmwareVersion: 'M1.11A',
+        protocolMinor: 21,
+        capabilities: 0,
+        respondToDeviceStatus: false
+    });
+    const unknownService = new EstDeviceService({
+        requestTimeoutMs: 100,
+        transportFactory: {
+            listDevices: () => Promise.resolve([unknownDevice])
+        }
+    });
+    unknownService.transport = unknownTransport;
+    unknownService.device = unknownDevice;
+    unknownService.firmwareVersion = 'M1.11A';
+    const unknownConnection = await unknownService.autoConnect();
+    assert.strictEqual(unknownConnection.state, 'connected');
+    assert.strictEqual(unknownConnection.compatible, true);
+    assert.strictEqual(unknownConnection.status, null);
+    assert.strictEqual(unknownTransport.closeCount, 0);
+    await assert.rejects(
+        unknownService.runProgram({source: 'import est\n', slot: 0}),
+        /当前 EST 固件不支持这个程序.*无法读取.*frozen-est-runtime.*unlimited-python-run.*display-font-styles.*zero-speed-motor-control/
+    );
+    assert.strictEqual(unknownTransport.closeCount, 0);
 };
 
 const testProgramStatusTimeoutPreservesStopTransport = async () => {
-    const transport = new ProgramTestTransport();
+    const transport = new ProgramTestTransport({respondToDeviceStatus: false});
     const device = {
         maxInputReportSize: 1024,
         path: 'test-est-device',
@@ -1981,6 +3352,7 @@ const testProgramStatusTimeoutPreservesStopTransport = async () => {
     const service = new EstDeviceService({
         fragmentWriteDelayMs: 0,
         programStatusPollIntervalMs: 0,
+        programStatusRequestTimeoutMs: 5,
         requestTimeoutMs: 5,
         transportFactory: {
             listDevices: () => Promise.resolve([device])
@@ -1988,26 +3360,48 @@ const testProgramStatusTimeoutPreservesStopTransport = async () => {
     });
     service.transport = transport;
     service.device = device;
+    const compatibleProgramStatus = {
+        capabilities: EST_PROGRAM_REQUIRED_CAPABILITIES,
+        firmwareVersion: 'M1.12A',
+        protocolMajor: 1,
+        protocolMinor: 21
+    };
     service.lastDeviceStatus = {
-        compatibility: {compatible: true},
-        firmwareVersion: 'M1.09A'
+        ...compatibleProgramStatus,
+        compatibility: checkProgramFirmwareCompatibility(compatibleProgramStatus)
     };
 
     await service.runProgram({source: 'while True:\n    pass\n', slot: 7});
     assert.strictEqual(service.pythonProgramActive, true);
 
+    const actionsAfterRun = transport.actions.length;
     const status = await service.getStatus();
     assert.strictEqual(status.statusPollingDeferred, true);
-    assert.match(status.statusPollingError, /0x19/);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(status, 'statusPollingError'), false);
+    assert.strictEqual(status.programStatus.state, 3);
+    assert.deepStrictEqual(transport.actions.slice(actionsAfterRun), ['36:0']);
     assert.strictEqual(transport.closeCount, 0);
     assert.strictEqual(service.transport, transport);
 
+    const actionsBeforeConnectionRefresh = transport.actions.length;
     const connection = await service.autoConnect();
     assert.strictEqual(connection.state, 'connected');
     assert.strictEqual(connection.status.statusPollingDeferred, true);
+    assert.strictEqual(connection.status.programStatus.state, 3);
+    assert.deepStrictEqual(transport.actions.slice(actionsBeforeConnectionRefresh), ['36:0']);
     assert.strictEqual(transport.closeCount, 0);
     assert.strictEqual(service.transport, transport);
 
+    transport.respondToPythonStatus = false;
+    const actionsBeforeProgramStatusTimeout = transport.actions.length;
+    const deferredStatus = await service.getStatus();
+    assert.strictEqual(deferredStatus.statusPollingDeferred, true);
+    assert.match(deferredStatus.statusPollingError, /0x24/);
+    assert.deepStrictEqual(transport.actions.slice(actionsBeforeProgramStatusTimeout), ['36:0']);
+    assert.strictEqual(transport.closeCount, 0);
+    assert.strictEqual(service.transport, transport);
+
+    transport.respondToPythonStatus = true;
     const stopped = await service.stopCurrentProgram();
     assert.strictEqual(stopped.state, 7);
     assert.strictEqual(service.pythonProgramActive, false);
@@ -2019,6 +3413,38 @@ const testProgramStatusTimeoutPreservesStopTransport = async () => {
     assert.strictEqual(connectionAfterStop.state, 'error');
     assert.strictEqual(transport.closeCount, 1);
     assert.strictEqual(service.transport, null);
+};
+
+const testUsbDisconnectClearsStaleTransport = async () => {
+    const transport = new ProgramTestTransport({
+        writeError: new TypeError('Cannot write to hid device')
+    });
+    const service = new EstDeviceService({requestTimeoutMs: 50});
+    service.transport = transport;
+    service.device = {
+        maxInputReportSize: 1024,
+        path: 'stale-est-device',
+        productId: 0x5750,
+        product: 'EST HID Device (HS Mode)',
+        vendorId: 0x0483
+    };
+    service.lastDeviceStatus = {
+        compatibility: {compatible: true},
+        firmwareVersion: 'M1.10C',
+        protocolMajor: 1,
+        protocolMinor: 20
+    };
+
+    await assert.rejects(
+        service.downloadProgram({source: 'import est\n', slot: 0}),
+        /EST USB 连接已断开/
+    );
+    assert.strictEqual(transport.closeCount, 1);
+    assert.strictEqual(service.transport, null);
+    assert.strictEqual(service.device, null);
+    assert.strictEqual(service.lastDeviceStatus, null);
+    assert.strictEqual(service.pythonProgramActive, false);
+    assert.ok(!transport.actions.includes('36:3'));
 };
 
 const testBuiltInMotorBlock = async () => {
@@ -2048,6 +3474,7 @@ const testBuiltInMotorBlock = async () => {
     assert.strictEqual(primitives[EST_DRIVE_PORT_PICKER_ID]({PORT: 'B'}), 'B');
     assert.strictEqual(primitives[EST_STEERING_PICKER_ID]({NUM: '39'}), 39);
     assert.strictEqual(primitives[EST_EVENT_SENSOR_PORT_PICKER_ID]({PORT: '3'}), '3');
+    assert.strictEqual(primitives[EST_SENSOR_PORT_PICKER_ID]({PORT: '4'}), '4');
     assert.strictEqual(await motorBlocks.motorDegrees({PORT: 'D'}), -40);
     assert.deepStrictEqual(invokedChannels, ['est-auto-connect']);
     assert.throws(
@@ -2086,9 +3513,10 @@ validateEstDefaultProject()
     .then(() => testCommandQueue())
     .then(() => testProgramDownloadRunAndStop())
     .then(() => testProgramStatusTimeoutPreservesStopTransport())
+    .then(() => testUsbDisconnectClearsStaleTransport())
     .then(() => testBuiltInMotorBlock())
     .then(() => console.log(
-        'EST protocol, queue, 90 EST blocks, and native operator/data/procedure tests passed'
+        'EST protocol, queue, 91 EST blocks, and native operator/data/procedure tests passed'
     ))
     .catch(error => {
         console.error(error);

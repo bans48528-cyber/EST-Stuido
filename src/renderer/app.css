@@ -10,3 +10,137 @@ body,
     min-width: 1024px;
     min-height: 640px; /* Min height to fit sprite/backdrop button */
 }
+
+/*
+ * OpenBlock temporarily sets this element to overflow: visible while a block
+ * is dragged. Its full-size drag SVG can then widen the Electron document and
+ * create a page-level scrollbar. EST has no cross-pane block drop target, so
+ * keep the drag surface clipped to the Blockly workspace.
+ */
+.app :global(.injectionDiv) {
+    overflow: hidden !important;
+}
+
+.app :global([class*="menu-bar_menu-bar_"]) {
+    position: relative;
+    background-color: #f1f3f5;
+    color: #1f2937;
+}
+
+.app :global([class*="gui_body-wrapper_"]) {
+    background-color: #f1f3f5;
+}
+
+.app :global([class*="menu-bar_menu-bar_"] [class*="menu-bar_menu-bar-item_"]) {
+    color: #1f2937;
+}
+
+.app :global([class*="menu-bar_menu-bar_"] img:not([class*="menu-bar_openblock-logo_"])) {
+    filter: brightness(0) invert(16%);
+}
+
+.app :global([class*="menu-bar_menu-bar-item_"][class*="menu-bar_hoverable_"]:hover),
+.app :global([class*="menu-bar_menu-bar-item_"][class*="menu-bar_active_"]) {
+    color: #ffffff;
+}
+
+.app :global([class*="menu-bar_menu-bar-item_"][class*="menu-bar_hoverable_"]:hover img:not([class*="menu-bar_openblock-logo_"])),
+.app :global([class*="menu-bar_menu-bar-item_"][class*="menu-bar_active_"] img:not([class*="menu-bar_openblock-logo_"])) {
+    filter: brightness(0) invert(100%);
+}
+
+.app :global([class*="menu-bar_main-menu_"]),
+.app :global([class*="menu-bar_tail-menu_"]) {
+    position: relative;
+    z-index: 2;
+}
+
+.app :global([class*="menu-bar_file-menu_"]) {
+    position: absolute;
+    z-index: 3;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    width: var(--est-centered-file-menu-width, 252px);
+    max-width: var(--est-centered-file-menu-width, 252px);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.app :global([class*="menu-bar_file-menu_"] [class*="menu-bar_growable_"]) {
+    flex: 1 1 auto;
+    max-width: none;
+    min-width: 0;
+}
+
+.app :global([class*="menu-bar_file-menu_"] [class*="menu-bar_title-field-growable_"]) {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.app :global([class*="menu-bar_file-menu_"] [class*="project-title-input_title-field_"]) {
+    border-color: rgba(31, 41, 55, 0.35);
+    background-color: rgba(255, 255, 255, 0.72);
+    color: #111827;
+}
+
+.app :global([class*="menu-bar_file-menu_"] [class*="project-title-input_title-field_"]::placeholder) {
+    color: #4b5563;
+}
+
+.app :global([class*="menu-bar_file-menu_"] [class*="project-title-input_title-field_"]:hover) {
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+.app :global([class*="menu-bar_file-menu_"] [class*="project-title-input_title-field_"]:focus) {
+    border-color: rgba(31, 41, 55, 0.5);
+    box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.12);
+    background-color: #ffffff;
+    color: #111827;
+}
+
+.app :global([class*="menu-bar_menu-bar-menu_"][class*="menu_menu_"]),
+.app :global([class*="menu-bar_menu-bar_"] [class*="menu_menu_"]) {
+    border-color: rgba(31, 41, 55, 0.18);
+    background-color: #f8fafc !important;
+    color: #1f2937 !important;
+    box-shadow: 0 8px 16px rgba(31, 41, 55, 0.14);
+}
+
+.app :global([class*="menu-bar_menu-bar-menu_"] [class*="menu_menu-item_"]),
+.app :global([class*="menu-bar_menu-bar_"] [class*="menu_menu-item_"]) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 20px;
+    background-color: #f8fafc !important;
+    color: #1f2937 !important;
+    text-align: left;
+}
+
+.app :global([class*="menu-bar_menu-bar-menu_"] [class*="menu_menu-item_"]:hover),
+.app :global([class*="menu-bar_menu-bar-menu_"] [class*="menu_menu-item_"][class*="menu_active_"]),
+.app :global([class*="menu-bar_menu-bar_"] [class*="menu_menu-item_"]:hover),
+.app :global([class*="menu-bar_menu-bar_"] [class*="menu_menu-item_"][class*="menu_active_"]) {
+    background-color: #e5e7eb !important;
+    color: #111827 !important;
+}
+
+.app :global([class*="menu-bar_menu-bar-menu_"] [class*="menu_menu-section_"]),
+.app :global([class*="menu-bar_menu-bar-menu_"] [class*="menu_menu-section-bottom-line_"]) {
+    border-color: rgba(31, 41, 55, 0.16);
+}
+
+.app :global([class*="gui_tab-list_"]) {
+    display: none !important;
+    flex-basis: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+}
+
+.app :global([class*="gui_tabs_"]),
+.app :global([class*="gui_tab-panel_"]) {
+    min-height: 0;
+}

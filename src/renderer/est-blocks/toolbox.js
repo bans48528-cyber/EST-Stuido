@@ -43,6 +43,13 @@ const eventSensorPortShadow = (name, value) => `
                 </shadow>
             </value>`;
 
+const sensorPortShadow = (name, value) => `
+            <value name="${name}">
+                <shadow type="est_sensor_port_picker">
+                    <field name="PORT">${value}</field>
+                </shadow>
+            </value>`;
+
 const textShadow = (name, value) => `
             <value name="${name}">
                 <shadow type="text">
@@ -95,19 +102,19 @@ const movementCategory = () => category('移动', 'movement', 'movement', [
     block('drive_set_pair', `${drivePortShadow('LEFT_PORT', 'B')}${drivePortShadow('RIGHT_PORT', 'C')}`),
     block('drive_set_stop_action', field('STOP_ACTION', 'hold')),
     separator,
-    block('drive_steer_for_speed', `${numberShadow('SPEED', 50)}${numberShadow('STEERING', 0)}${numberShadow('AMOUNT', 1)}${field('UNIT', 'rotations')}`),
+    block('drive_steer_for_speed', `${numberShadow('SPEED', 50)}${steeringShadow('STEERING', 0)}${numberShadow('AMOUNT', 1)}${field('UNIT', 'rotations')}`),
     block('drive_dual_speed_for', `${numberShadow('LEFT_SPEED', 50)}${numberShadow('RIGHT_SPEED', 50)}${numberShadow('AMOUNT', 1)}${field('UNIT', 'rotations')}`),
-    block('drive_start_steer_speed', `${numberShadow('SPEED', 50)}${numberShadow('STEERING', 0)}`),
+    block('drive_start_steer_speed', `${numberShadow('SPEED', 50)}${steeringShadow('STEERING', 0)}`),
     block('drive_start_dual_speed', `${numberShadow('LEFT_SPEED', 50)}${numberShadow('RIGHT_SPEED', 50)}`)
 ]);
 
 const displayCategory = () => category('显示', 'display', 'display', [
-    block('display_image_for', `${field('IMAGE', 'eyes_neutral')}${numberShadow('SECONDS', 2)}`),
-    block('display_image', field('IMAGE', 'eyes_neutral')),
+    block('display_image_for', `${field('IMAGE', 'Eyes/Neutral')}${numberShadow('SECONDS', 2)}`),
+    block('display_image', field('IMAGE', 'Eyes/Neutral')),
     block('display_text_line', `${numberShadow('LINE', 1)}${textShadow('TEXT', 'EST')}`),
     block('display_text_xy', `${field('FONT', 'regular_black')}${numberShadow('X', 1)}${numberShadow('Y', 1)}${textShadow('TEXT', 'EST')}`),
     block('display_clear'),
-    block('display_status_light', field('STATUS_MODE', 'green'))
+    block('display_status_light', field('STATUS_MODE', 'red'))
 ]);
 
 const soundCategory = () => category('声音', 'estSound', 'sound', [
@@ -121,17 +128,8 @@ const soundCategory = () => category('声音', 'estSound', 'sound', [
 
 const eventCategory = () => category('事件', 'estEvents', 'event', [
     block('event_program_start'),
-    block('event_color', `${eventSensorPortShadow('PORT', '3')}${field('COLOR_EVENT', 'red')}`),
-    block('event_touch', `${eventSensorPortShadow('PORT', '1')}${field('TOUCH_EVENT', 'pressed')}`),
-    block('event_ultrasonic', `${eventSensorPortShadow('PORT', '4')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 15)}${field('UNIT', 'centimeters')}`),
-    block('event_ir_proximity', `${eventSensorPortShadow('PORT', '4')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 15)}`),
-    block('event_ir_beacon_button', `${eventSensorPortShadow('PORT', '4')}${field('CHANNEL', '1')}${field('BEACON_EVENT', 'top_left_pressed')}`),
-    block('event_gyro_angle', `${eventSensorPortShadow('PORT', '2')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 45)}`),
-    block('event_brick_button', `${field('BUTTON', 'center')}${field('BUTTON_EVENT', 'pressed')}`),
+    block('event_brick_button', `${field('BUTTON', 'confirm')}${field('BUTTON_EVENT', 'pressed')}`),
     block('event_condition'),
-    block('event_broadcast_received', field('MESSAGE', 'message_1')),
-    block('event_broadcast', field('MESSAGE', 'message_1')),
-    block('event_broadcast_wait', field('MESSAGE', 'message_1')),
     block('event_timer', numberShadow('SECONDS', 10))
 ]);
 
@@ -144,47 +142,49 @@ const controlCategory = () => category('控制', 'estControl', 'control', [
     block('control_if'),
     block('control_if_else'),
     block('control_stop_other_stacks'),
-    block('control_stop', field('STOP_SCOPE', 'exit_program'))
+    block('control_stop', field('STOP_SCOPE', 'all'))
 ]);
 
 const sensorCategory = () => category('传感器', 'sensors', 'sensing', [
     block('sensor_brick_button_value'),
-    block('sensor_brick_button_pressed', field('BUTTON', 'center')),
-    block('sensor_wait_brick_button', `${field('BUTTON', 'center')}${field('BUTTON_EVENT', 'pressed')}`),
+    block('sensor_brick_button_pressed', field('BUTTON', 'confirm')),
+    block('sensor_wait_brick_button', `${field('BUTTON', 'confirm')}${field('BUTTON_EVENT', 'pressed')}`),
     separator,
     block('sensor_color_calibrate_reflection', `${field('CALIBRATION', 'minimum')}${numberShadow('VALUE', 0)}`),
     block('sensor_color_reset_calibration'),
-    block('sensor_color_reflection', field('PORT', '3')),
-    block('sensor_color_reflection_compare', `${field('PORT', '3')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 50)}`),
-    block('sensor_color_ambient', field('PORT', '3')),
-    block('sensor_color_ambient_compare', `${field('PORT', '3')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 50)}`),
-    block('sensor_color_value', field('PORT', '3')),
-    block('sensor_color_is', `${field('PORT', '3')}${field('COLOR', 'red')}`),
-    block('sensor_wait_color', `${field('PORT', '3')}${field('COLOR_EVENT', 'red')}`),
+    block('sensor_color_reflection', sensorPortShadow('PORT', '3')),
+    block('sensor_color_reflection_compare', `${sensorPortShadow('PORT', '3')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 50)}`),
+    block('sensor_color_ambient', sensorPortShadow('PORT', '3')),
+    block('sensor_color_ambient_compare', `${sensorPortShadow('PORT', '3')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 50)}`),
+    block('sensor_color_value', sensorPortShadow('PORT', '3')),
+    block('sensor_color_is', `${sensorPortShadow('PORT', '3')}${field('COLOR', 'red')}`),
+    block('sensor_wait_color', `${sensorPortShadow('PORT', '3')}${field('COLOR_EVENT', 'red')}`),
     separator,
-    block('sensor_touch_pressed', field('PORT', '1')),
-    block('sensor_wait_touch', `${field('PORT', '1')}${field('TOUCH_EVENT', 'pressed')}`),
+    block('sensor_temperature', `${sensorPortShadow('PORT', '3')}${field('UNIT', 'celsius')}`),
     separator,
-    block('sensor_ultrasonic_distance', `${field('PORT', '4')}${field('UNIT', 'centimeters')}`),
-    block('sensor_ultrasonic_compare', `${field('PORT', '4')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 15)}${field('UNIT', 'centimeters')}`),
-    block('sensor_wait_ultrasonic', `${field('PORT', '4')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 15)}${field('UNIT', 'centimeters')}`),
+    block('sensor_touch_pressed', sensorPortShadow('PORT', '1')),
+    block('sensor_wait_touch', `${sensorPortShadow('PORT', '1')}${field('TOUCH_EVENT', 'pressed')}`),
     separator,
-    block('sensor_ir_proximity', field('PORT', '4')),
-    block('sensor_ir_proximity_compare', `${field('PORT', '4')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 15)}`),
-    block('sensor_wait_ir_proximity', `${field('PORT', '4')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 15)}`),
-    block('sensor_ir_beacon_heading', `${field('PORT', '4')}${field('CHANNEL', '1')}`),
-    block('sensor_ir_beacon_proximity', `${field('PORT', '4')}${field('CHANNEL', '1')}`),
-    block('sensor_ir_beacon_buttons', `${field('PORT', '4')}${field('CHANNEL', '1')}`),
-    block('sensor_ir_beacon_button_pressed', `${field('PORT', '4')}${field('CHANNEL', '1')}${field('BEACON_BUTTON', 'top_left')}`),
-    block('sensor_wait_ir_beacon_button', `${field('PORT', '4')}${field('CHANNEL', '1')}${field('BEACON_EVENT', 'top_left_pressed')}`),
-    block('sensor_ir_beacon_active', `${field('PORT', '4')}${field('CHANNEL', '1')}`),
-    block('sensor_ir_beacon_active_compare', `${field('PORT', '4')}${field('CHANNEL', '1')}${field('PROPERTY', 'heading')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 0)}`),
+    block('sensor_ultrasonic_distance', `${sensorPortShadow('PORT', '4')}${field('UNIT', 'centimeters')}`),
+    block('sensor_ultrasonic_compare', `${sensorPortShadow('PORT', '4')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 15)}${field('UNIT', 'centimeters')}`),
+    block('sensor_wait_ultrasonic', `${sensorPortShadow('PORT', '4')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 15)}${field('UNIT', 'centimeters')}`),
     separator,
-    block('sensor_gyro_angle', field('PORT', '2')),
-    block('sensor_gyro_rate', field('PORT', '2')),
-    block('sensor_gyro_reset', field('PORT', '2')),
-    block('sensor_gyro_compare', `${field('PORT', '2')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 45)}`),
-    block('sensor_wait_gyro', `${field('PORT', '2')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 45)}`),
+    block('sensor_ir_proximity', sensorPortShadow('PORT', '4')),
+    block('sensor_ir_proximity_compare', `${sensorPortShadow('PORT', '4')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 15)}`),
+    block('sensor_wait_ir_proximity', `${sensorPortShadow('PORT', '4')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 15)}`),
+    block('sensor_ir_beacon_heading', `${sensorPortShadow('PORT', '4')}${field('CHANNEL', '1')}`),
+    block('sensor_ir_beacon_proximity', `${sensorPortShadow('PORT', '4')}${field('CHANNEL', '1')}`),
+    block('sensor_ir_beacon_buttons', `${sensorPortShadow('PORT', '4')}${field('CHANNEL', '1')}`),
+    block('sensor_ir_beacon_button_pressed', `${sensorPortShadow('PORT', '4')}${field('CHANNEL', '1')}${field('BEACON_BUTTON', 'top_left')}`),
+    block('sensor_wait_ir_beacon_button', `${sensorPortShadow('PORT', '4')}${field('CHANNEL', '1')}${field('BEACON_EVENT', 'top_left_pressed')}`),
+    block('sensor_ir_beacon_active', `${sensorPortShadow('PORT', '4')}${field('CHANNEL', '1')}`),
+    block('sensor_ir_beacon_active_compare', `${sensorPortShadow('PORT', '4')}${field('CHANNEL', '1')}${field('PROPERTY', 'heading')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 0)}`),
+    separator,
+    block('sensor_gyro_angle', sensorPortShadow('PORT', '2')),
+    block('sensor_gyro_rate', sensorPortShadow('PORT', '2')),
+    block('sensor_gyro_reset', sensorPortShadow('PORT', '2')),
+    block('sensor_gyro_compare', `${sensorPortShadow('PORT', '2')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 45)}`),
+    block('sensor_wait_gyro', `${sensorPortShadow('PORT', '2')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 45)}`),
     separator,
     block('sensor_timer'),
     block('sensor_timer_reset')

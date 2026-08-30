@@ -11,7 +11,7 @@
     height: 100%;
     min-width: 0;
     overflow: hidden;
-    background: $ui-primary;
+    background: #f1f3f5;
 }
 
 .drawer.collapsed {
@@ -25,7 +25,7 @@
     flex-grow: 1;
     min-width: 320px;
     min-height: 0;
-    padding: $stage-menu-height $space 0;
+    padding: 0 2px;
     opacity: 1;
     transition: opacity 100ms ease;
 }
@@ -105,39 +105,4 @@
 .lock-icon {
     width: 16px;
     height: 16px;
-}
-
-.toggle-button {
-    position: absolute;
-    z-index: $z-index-add-button;
-    top: $space;
-    right: $space;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    border-radius: $form-radius;
-    color: $text-primary;
-}
-
-.toggle-icon {
-    color: #855cd6;
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: -0.12rem;
-    line-height: 1;
-    transform: translateX(-0.06rem);
-}
-
-.toggle-button-collapsed {
-    top: $space;
-    right: $space;
-    width: 34px;
-    height: 34px;
-    border-width: 1px;
-    border-radius: $form-radius;
-    background: $ui-white;
 }

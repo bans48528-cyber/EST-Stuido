@@ -103,9 +103,6 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
         handleClickLicense () {
             ipcRenderer.send('open-license-window');
         }
-        handleClickCheckUpdate () {
-            ipcRenderer.send('reqeustCheckUpdate');
-        }
         handleClickUpdate () {
             ipcRenderer.send('reqeustUpdate');
         }
@@ -181,7 +178,6 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
                     }
                 ]}
                 onClickLogo={this.handleClickLogo}
-                onClickCheckUpdate={this.handleClickCheckUpdate}
                 onClickUpdate={this.handleClickUpdate}
                 onAbortUpdate={this.handleAbortUpdate}
                 onShowMessageBox={this.handleShowMessageBox}

@@ -156,6 +156,11 @@ module.exports = function (source) {
         / {20}onProjectTelemetryEvent=\{onProjectTelemetryEvent\}\r?\n/,
         'menu telemetry callback'
     );
+    transformedSource = removeRequired(
+        transformedSource,
+        / {8}onClickCheckUpdate,\r?\n/,
+        'GUI check-update menu callback'
+    );
 
     const obsoleteMenuProps = [
         'accountNavOpen',
@@ -171,6 +176,7 @@ module.exports = function (source) {
         'renderLogin',
         'showComingSoon',
         'onClickAccountNav',
+        'onClickCheckUpdate',
         'onCloseAccountNav',
         'onLogOut',
         'onOpenRegistration',
@@ -196,6 +202,7 @@ module.exports = function (source) {
         'costumeLibraryVisible: PropTypes.bool',
         'costumesTabVisible: PropTypes.bool',
         'isPlayerOnly: PropTypes.bool',
+        'onClickCheckUpdate: PropTypes.func',
         'onActivateCostumesTab: PropTypes.func',
         'onActivateSoundsTab: PropTypes.func',
         'onRequestCloseBackdropLibrary: PropTypes.func',

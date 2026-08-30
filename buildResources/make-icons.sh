@@ -1,5 +1,5 @@
 #!/bin/bash
-SRC=../src/icon/OpenBlockDesktop.svg
+SRC=../src/icon/OpenBlockDesktop.png
 OUT_ICONSET=OpenBlockDesktop.iconset
 OUT_ICNS=OpenBlockDesktop.icns
 OUT_ICO=OpenBlockDesktop.ico

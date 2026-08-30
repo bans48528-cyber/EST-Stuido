@@ -6,6 +6,11 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import {connect} from 'react-redux';
 
+import {
+    EST_CONNECTION_STATUS_EVENT,
+    EST_PROGRAM_ACTIVITY_EVENT
+} from './est-connection-status';
+import {buildEstProgramRequest} from './est-program-name';
 import styles from './EstProgramControls.css';
 
 const PROGRAM_SLOT_CHANGE_EVENT = 'est-program-slot-change';
@@ -28,6 +33,19 @@ const PROGRAM_ACTION_CHANNELS = {
     run: 'est-run-program',
     stop: 'est-stop-program'
 };
+const EST_USB_DISCONNECTED_MESSAGE = 'EST USB 连接已断开，请重新连接 EST 后重试。';
+
+const formatProgramOperationError = error => {
+    const rawMessage = error && error.message ? error.message : String(error);
+    const message = rawMessage.replace(
+        /^Error invoking remote method '[^']+': (?:Error|TypeError):\s*/,
+        ''
+    );
+    if (/cannot write to hid device|cannot read from hid device/i.test(message)) {
+        return EST_USB_DISCONNECTED_MESSAGE;
+    }
+    return message || '未知错误';
+};
 
 class EstProgramControls extends React.Component {
     constructor (props) {
@@ -36,10 +54,12 @@ class EstProgramControls extends React.Component {
             busyAction: null,
             isSlotMenuOpen: false,
             operationMessage: null,
+            programActionsAllowed: false,
             selectedSlot: readStoredSlot()
         };
         this.handleAction = this.handleAction.bind(this);
         this.handleContainerRef = this.handleContainerRef.bind(this);
+        this.handleConnectionStatus = this.handleConnectionStatus.bind(this);
         this.handleDocumentMouseDown = this.handleDocumentMouseDown.bind(this);
         this.handleNextSlot = this.handleNextSlot.bind(this);
         this.handlePreviousSlot = this.handlePreviousSlot.bind(this);
@@ -49,10 +69,12 @@ class EstProgramControls extends React.Component {
 
     componentDidMount () {
         document.addEventListener('mousedown', this.handleDocumentMouseDown);
+        window.addEventListener(EST_CONNECTION_STATUS_EVENT, this.handleConnectionStatus);
     }
 
     componentWillUnmount () {
         document.removeEventListener('mousedown', this.handleDocumentMouseDown);
+        window.removeEventListener(EST_CONNECTION_STATUS_EVENT, this.handleConnectionStatus);
         if (this.statusTimer) {
             window.clearTimeout(this.statusTimer);
         }
@@ -60,6 +82,13 @@ class EstProgramControls extends React.Component {
 
     handleContainerRef (element) {
         this.containerElement = element;
+    }
+
+    handleConnectionStatus (event) {
+        const status = event && event.detail;
+        this.setState({
+            programActionsAllowed: Boolean(status && status.isConnected && status.isCompatible)
+        });
     }
 
     handleDocumentMouseDown (event) {
@@ -87,7 +116,8 @@ class EstProgramControls extends React.Component {
 
     async handleAction (event) {
         const action = event.currentTarget.dataset.action;
-        if (this.state.busyAction || !PROGRAM_ACTION_CHANNELS[action]) {
+        if (this.state.busyAction || !PROGRAM_ACTION_CHANNELS[action] ||
+            (action !== 'stop' && !this.state.programActionsAllowed)) {
             return;
         }
         const slot = this.state.selectedSlot;
@@ -105,19 +135,26 @@ class EstProgramControls extends React.Component {
             if (action === 'stop') {
                 await ipcRenderer.invoke(PROGRAM_ACTION_CHANNELS[action]);
             } else {
-                await ipcRenderer.invoke(PROGRAM_ACTION_CHANNELS[action], {
+                await ipcRenderer.invoke(PROGRAM_ACTION_CHANNELS[action], buildEstProgramRequest({
                     source: this.props.codeEditorValue,
-                    slot
-                });
+                    slot,
+                    projectTitle: this.props.projectTitle
+                }));
+            }
+            if (action === 'run' || action === 'stop') {
+                window.dispatchEvent(new CustomEvent(EST_PROGRAM_ACTIVITY_EVENT, {
+                    detail: {isRunning: action === 'run'}
+                }));
             }
             this.showTemporaryStatus(operationMessages[action][1]);
         } catch (error) {
             this.showTemporaryStatus('操作失败');
+            const detail = formatProgramOperationError(error);
             await dialog.showMessageBox(remote.getCurrentWindow(), {
                 type: 'error',
                 title: 'EST 程序操作失败',
                 message: '无法完成程序操作。',
-                detail: error && error.message ? error.message : String(error)
+                detail
             });
         } finally {
             this.setState({busyAction: null});
@@ -154,7 +191,13 @@ class EstProgramControls extends React.Component {
     }
 
     render () {
-        const {busyAction, isSlotMenuOpen, operationMessage, selectedSlot} = this.state;
+        const {
+            busyAction,
+            isSlotMenuOpen,
+            operationMessage,
+            programActionsAllowed,
+            selectedSlot
+        } = this.state;
         const controlsBusy = Boolean(busyAction);
         return (
             <div
@@ -249,8 +292,8 @@ class EstProgramControls extends React.Component {
                         aria-busy={busyAction === 'run'}
                         className={`${styles.controlButton} ${styles.runButton}`}
                         data-action="run"
-                        disabled={controlsBusy}
-                        title="运行程序"
+                        disabled={controlsBusy || !programActionsAllowed}
+                        title={programActionsAllowed ? '运行程序' : '连接兼容固件后运行程序'}
                         type="button"
                         onClick={this.handleAction}
                     >
@@ -267,8 +310,8 @@ class EstProgramControls extends React.Component {
                         aria-busy={busyAction === 'download'}
                         className={`${styles.controlButton} ${styles.downloadButton}`}
                         data-action="download"
-                        disabled={controlsBusy}
-                        title="下载程序"
+                        disabled={controlsBusy || !programActionsAllowed}
+                        title={programActionsAllowed ? '下载程序' : '连接兼容固件后下载程序'}
                         type="button"
                         onClick={this.handleAction}
                     >
@@ -287,11 +330,13 @@ class EstProgramControls extends React.Component {
 }
 
 EstProgramControls.propTypes = {
-    codeEditorValue: PropTypes.string.isRequired
+    codeEditorValue: PropTypes.string.isRequired,
+    projectTitle: PropTypes.string
 };
 
 const mapStateToProps = state => ({
-    codeEditorValue: state.scratchGui.code.codeEditorValue
+    codeEditorValue: state.scratchGui.code.codeEditorValue,
+    projectTitle: state.scratchGui.projectTitle
 });
 
 export {
