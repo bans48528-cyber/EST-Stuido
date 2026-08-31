@@ -3,7 +3,7 @@
   "productName": "EST Studio",
   "description": "EST graphical programming desktop application based on OpenBlock",
   "author": "Openblock.cc Team <contact@openblock.cc> (http://www.openblock.cc/)",
-  "version": "2.6.3",
+  "version": "2.7.3",
   "license": "MIT",
   "scripts": {
     "postinstall": "electron-builder install-app-deps",

@@ -37,6 +37,16 @@ body,
     background-color: #f1f3f5;
 }
 
+.app :global([class*="loader_background_"]) {
+    background-color: #f1f3f5 !important;
+    color: #111827 !important;
+}
+
+.app :global([class*="loader_title_"]),
+.app :global([class*="loader_message_"]) {
+    color: #111827 !important;
+}
+
 .app :global(.blocklyToolboxDiv) {
     height: 100% !important;
 }
@@ -87,6 +97,76 @@ body,
 :global([class*="modal_full-screen_"] [class*="modal_header-image_"]),
 :global([class*="modal_full-screen_"] [class*="modal_back-button_"] img) {
     filter: brightness(0) invert(16%);
+}
+
+:global([class*="modal_modal-overlay_"]) {
+    background-color: rgba(31, 41, 55, 0.42) !important;
+}
+
+:global([class*="modal_modal-content_"]:not([class*="modal_full-screen_"])) {
+    border: 1px solid rgba(31, 41, 55, 0.16);
+    border-radius: 8px;
+    background-color: #ffffff;
+    box-shadow: 0 18px 42px rgba(31, 41, 55, 0.24);
+}
+
+:global([class*="modal_modal-content_"]:not([class*="modal_full-screen_"]) [class*="modal_header_"]) {
+    height: 3rem;
+    border-bottom: 1px solid rgba(31, 41, 55, 0.12);
+    background-color: #f1f3f5;
+    color: #111827;
+    font-weight: 600;
+}
+
+:global([class*="modal_modal-content_"]:not([class*="modal_full-screen_"]) [class*="modal_header-item_"]) {
+    color: #111827;
+}
+
+:global([class*="modal_modal-content_"]:not([class*="modal_full-screen_"]) [class*="modal_header-item-title_"]) {
+    letter-spacing: 0;
+}
+
+:global([class*="modal_modal-content_"]:not([class*="modal_full-screen_"]) [class*="close-button_close-button_"][class*="close-button_large_"]) {
+    background-color: rgba(31, 41, 55, 0.08);
+    box-shadow: 0 0 0 1px rgba(31, 41, 55, 0.12);
+}
+
+:global([class*="modal_modal-content_"]:not([class*="modal_full-screen_"]) [class*="close-button_close-button_"][class*="close-button_large_"]:hover) {
+    box-shadow: 0 0 0 4px rgba(31, 41, 55, 0.12);
+}
+
+:global([class*="modal_modal-content_"]:not([class*="modal_full-screen_"]) [class*="close-button_close-icon_"]) {
+    filter: brightness(0) invert(16%);
+}
+
+:global([class*="prompt_button-row_"]),
+:global([class*="custom-procedures_button-row_"]) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: center;
+}
+
+:global([class*="prompt_button-row_"] button),
+:global([class*="custom-procedures_button-row_"] button) {
+    min-width: 5.25rem;
+    border: 1px solid rgba(31, 41, 55, 0.18) !important;
+    border-radius: 6px;
+    background: #f8fafc !important;
+    color: #111827 !important;
+    box-shadow: none;
+}
+
+:global([class*="prompt_button-row_"] button:hover),
+:global([class*="custom-procedures_button-row_"] button:hover) {
+    background: #e5e7eb !important;
+}
+
+:global([class*="prompt_button-row_"] button + button),
+:global([class*="custom-procedures_button-row_"] button + button) {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
 }
 
 :global([class*="library_filter-bar_"]) {

@@ -2503,6 +2503,10 @@ assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar_"\][\s\S]*grid-
 assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar_"\][\s\S]*background-color: #f1f3f5;/);
 assert.match(estRendererAppStyles, /\[class\*="menu-bar_menu-bar_"\][\s\S]*color: #1f2937;/);
 assert.match(estRendererAppStyles, /\[class\*="gui_body-wrapper_"\][\s\S]*background-color: #f1f3f5;/);
+assert.match(estRendererAppStyles, /\[class\*="loader_background_"\][\s\S]*background-color: #f1f3f5 !important;/);
+assert.match(estRendererAppStyles, /\[class\*="loader_background_"\][\s\S]*color: #111827 !important;/);
+assert.match(estRendererAppStyles, /\[class\*="loader_title_"\][\s\S]*color: #111827 !important;/);
+assert.match(estRendererAppStyles, /\[class\*="loader_message_"\][\s\S]*color: #111827 !important;/);
 assert.match(estRendererAppStyles, /\.app :global\(\.blocklyToolboxDiv\) \{[\s\S]*height: 100% !important;/);
 assert.match(estRendererAppStyles, /\[class\*="gui_extension-button-container_"\]\) \{[\s\S]*width: 2\.625rem;/);
 assert.match(estRendererAppStyles, /\[class\*="gui_extension-button-container_"\]\) \{[\s\S]*height: 2\.275rem;/);
@@ -2682,6 +2686,19 @@ assert.match(electronBuilderSource, /fileAssociations:\r?\n {2}ext: ests/);
 assert.match(electronBuilderSource, /win:\r?\n {2}icon: buildResources\/OpenBlockDesktop\.ico/);
 assert.match(electronBuilderSource, /mac:[\s\S]*icon: buildResources\/OpenBlockDesktop\.icns/);
 assert.match(electronBuilderSource, /linux:[\s\S]*icon: buildResources\/linux/);
+const installerSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'buildResources',
+    'installer.nsh'
+), 'utf8');
+assert.match(installerSource, /InstallLocation "C:\\EST Studio"/);
+assert.ok(!installerSource.includes('C:\\OpenBlockDesktop'));
+assert.match(installerSource, /File "\/oname=ESTStudio-\$\{VERSION\}\.ico" "\$\{BUILD_RESOURCES_DIR\}\\OpenBlockDesktop\.ico"/);
+assert.match(installerSource, /File "\/oname=ESTStudioProject-\$\{VERSION\}\.ico" "\$\{BUILD_RESOURCES_DIR\}\\OpenBlockFile\.ico"/);
+assert.match(installerSource, /WriteRegStr SHELL_CONTEXT "Software\\Classes\\EST Studio project file\\DefaultIcon" "" "\$R3"/);
+assert.match(installerSource, /CreateShortCut "\$newDesktopLink" "\$appExe" "" "\$R2" 0/);
+assert.match(installerSource, /CreateShortCut "\$newStartMenuLink" "\$appExe" "" "\$R2" 0/);
 const alertsLoader = require('./est-alerts-loader');
 const openBlockAlertsSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -2864,14 +2881,26 @@ assert.ok(!fs.existsSync(path.resolve(
 assert.ok(fs.statSync(path.resolve(__dirname, '..', 'src', 'icon', 'OpenBlockDesktop.png')).size > 100000);
 assert.ok(fs.statSync(path.resolve(__dirname, '..', 'src', 'icon', 'OpenBlockDesktop.ico')).size > 100000);
 assert.ok(fs.statSync(path.resolve(__dirname, '..', 'buildResources', 'OpenBlockDesktop.ico')).size > 100000);
+assert.ok(fs.statSync(path.resolve(__dirname, '..', 'buildResources', 'OpenBlockFile.ico')).size > 50000);
+const fileIconPng = fs.readFileSync(path.resolve(__dirname, '..', 'buildResources', 'OpenBlockFile.png'));
+assert.deepStrictEqual([...fileIconPng.slice(0, 8)], [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+assert.strictEqual(fileIconPng.toString('ascii', 12, 16), 'IHDR');
+assert.strictEqual(fileIconPng[24], 8);
+assert.strictEqual(fileIconPng[25], 6);
 assert.ok(fs.statSync(path.resolve(__dirname, '..', 'buildResources', 'OpenBlockDesktop.icns')).size > 1000000);
 assert.ok(fs.statSync(path.resolve(__dirname, '..', 'buildResources', 'linux', '512x512.png')).size > 100000);
 assert.ok(!fs.existsSync(path.resolve(__dirname, '..', 'src', 'icon', 'OpenBlockDesktop.svg')));
 assert.ok(!fs.existsSync(path.resolve(__dirname, '..', 'src', 'icon', 'OpenBlockLoading.svg')));
 const aboutSource = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'renderer', 'about.jsx'), 'utf8');
 const loadingSource = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'renderer', 'loading.jsx'), 'utf8');
+const rendererIndexHtml = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'renderer', 'index.html'), 'utf8');
 assert.match(aboutSource, /import logo from '\.\.\/icon\/OpenBlockDesktop\.png';/);
 assert.match(loadingSource, /import logo from '\.\.\/icon\/OpenBlockDesktop\.png';/);
+assert.match(rendererIndexHtml, /background-color: #f1f3f5;/);
+assert.match(rendererIndexHtml, /color: #111827;/);
+assert.match(rendererIndexHtml, /EST Studio is loading\.\.\./);
+assert.ok(!rendererIndexHtml.includes('OpenBlock is loading'));
+assert.ok(!rendererIndexHtml.includes('#4D97FF'));
 const iconBuildScript = fs.readFileSync(path.resolve(__dirname, '..', 'buildResources', 'make-icons.sh'), 'utf8');
 assert.match(iconBuildScript, /SRC=\.\.\/src\/icon\/OpenBlockDesktop\.png/);
 const packageConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf8'));
