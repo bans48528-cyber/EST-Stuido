@@ -31,7 +31,10 @@ export const EST_PROGRAM_COMPATIBILITY_TABLE = Object.freeze({
     'M1.12A': Object.freeze({protocolMajor: 1, protocolMinor: 21}),
     'M1.13A': Object.freeze({protocolMajor: 1, protocolMinor: 22}),
     'M1.14A': Object.freeze({protocolMajor: 1, protocolMinor: 24}),
-    'M1.21A': Object.freeze({protocolMajor: 1, protocolMinor: 26})
+    'M1.21A': Object.freeze({protocolMajor: 1, protocolMinor: 26}),
+    'M1.22D': Object.freeze({protocolMajor: 1, protocolMinor: 26}),
+    'M1.22E': Object.freeze({protocolMajor: 1, protocolMinor: 26}),
+    'M1.22H': Object.freeze({protocolMajor: 1, protocolMinor: 26})
 });
 
 export const CAPABILITY_FIRMWARE_UPDATE = 1 << 0;

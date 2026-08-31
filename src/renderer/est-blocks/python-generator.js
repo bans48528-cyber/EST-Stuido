@@ -104,33 +104,6 @@ const doubleQuotedMotorPortLiteral = code => {
     return match ? doubleQuote(match[1]) : code;
 };
 
-const ensureSpeedHelpers = generator => {
-    ensureDictionary(generator, 'libraries_').estSpeedHelpers =
-`def _est_speed(value):
-  value = int(value)
-  if value > 100:
-    return 100
-  if value < -100:
-    return -100
-  return value
-
-def _est_speed_magnitude(value):
-  value = abs(int(value))
-  if value > 100:
-    return 100
-  return value`;
-};
-
-const speedValue = (generator, block, name, fallback = '0') => {
-    ensureSpeedHelpers(generator);
-    return `_est_speed(${valueOr(generator, block, name, fallback)})`;
-};
-
-const speedMagnitudeValue = (generator, block, name, fallback = '0') => {
-    ensureSpeedHelpers(generator);
-    return `_est_speed_magnitude(${valueOr(generator, block, name, fallback)})`;
-};
-
 const statementOrPass = (generator, block, name) => {
     const code = typeof generator.statementToCode === 'function' ?
         generator.statementToCode(block, name) :
@@ -278,7 +251,7 @@ const registerMotorGenerators = generator => {
     generator.motor_set_speed = block => {
         ensureRuntimeImport(generator);
         const port = valueOr(generator, block, 'PORT', quote(generator, 'A'));
-        const speed = speedMagnitudeValue(generator, block, 'SPEED');
+        const speed = valueOr(generator, block, 'SPEED', '0');
         return `rt.motor_set_speed(${port}, ${speed})\n`;
     };
     generator.motor_set_stop_action = block => {
@@ -290,7 +263,7 @@ const registerMotorGenerators = generator => {
     generator.motor_run_for_speed = block => {
         ensureRuntimeImport(generator);
         const port = valueOr(generator, block, 'PORT', quote(generator, 'A'));
-        const speed = speedValue(generator, block, 'SPEED');
+        const speed = valueOr(generator, block, 'SPEED', '0');
         const amount = valueOr(generator, block, 'AMOUNT', '0');
         const unit = quoteField(generator, block, 'UNIT', 'rotations');
         return `rt.motor_run_for(${port}, None, ${amount}, ${unit}, speed=${speed})\n`;
@@ -298,14 +271,14 @@ const registerMotorGenerators = generator => {
     generator.motor_start_speed = block => {
         ensureRuntimeImport(generator);
         const port = valueOr(generator, block, 'PORT', quote(generator, 'A'));
-        const speed = speedValue(generator, block, 'SPEED');
-        return `rt.motor(${port}).run_speed(${speed})\n`;
+        const speed = valueOr(generator, block, 'SPEED', '0');
+        return `rt.motor_start_speed(${port}, ${speed})\n`;
     };
     generator.motor_start_power = block => {
         ensureRuntimeImport(generator);
         const port = valueOr(generator, block, 'PORT', quote(generator, 'A'));
         const power = valueOr(generator, block, 'POWER', '0');
-        return `rt.motor(${port}).run_power(${power})\n`;
+        return `rt.motor_start_power(${port}, ${power})\n`;
     };
     generator.motor_reset_degrees = block => {
         ensureRuntimeImport(generator);
@@ -355,7 +328,7 @@ const registerMovementGenerators = generator => {
     };
     generator.drive_set_speed = block => {
         ensureRuntimeImport(generator);
-        const speed = speedMagnitudeValue(generator, block, 'SPEED');
+        const speed = valueOr(generator, block, 'SPEED', '0');
         return `rt.drive_set_speed(${speed})\n`;
     };
     generator.drive_set_pair = block => {
@@ -374,13 +347,13 @@ const registerMovementGenerators = generator => {
         const steering = valueOr(generator, block, 'STEERING', '0');
         const amount = valueOr(generator, block, 'AMOUNT', '0');
         const unit = quoteField(generator, block, 'UNIT', 'rotations');
-        const speed = speedMagnitudeValue(generator, block, 'SPEED');
+        const speed = valueOr(generator, block, 'SPEED', '0');
         return `rt.drive_steer_for(${steering}, ${amount}, ${unit}, speed=${speed})\n`;
     };
     generator.drive_dual_speed_for = block => {
         ensureRuntimeImport(generator);
-        const leftSpeed = speedValue(generator, block, 'LEFT_SPEED');
-        const rightSpeed = speedValue(generator, block, 'RIGHT_SPEED');
+        const leftSpeed = valueOr(generator, block, 'LEFT_SPEED', '0');
+        const rightSpeed = valueOr(generator, block, 'RIGHT_SPEED', '0');
         const amount = valueOr(generator, block, 'AMOUNT', '0');
         const unit = quoteField(generator, block, 'UNIT', 'rotations');
         return `rt.drive_dual_speed_for(${leftSpeed}, ${rightSpeed}, ${amount}, ${unit})\n`;
@@ -388,13 +361,13 @@ const registerMovementGenerators = generator => {
     generator.drive_start_steer_speed = block => {
         ensureRuntimeImport(generator);
         const steering = valueOr(generator, block, 'STEERING', '0');
-        const speed = speedValue(generator, block, 'SPEED');
+        const speed = valueOr(generator, block, 'SPEED', '0');
         return `rt.drive_start_steer(${steering}, speed=${speed})\n`;
     };
     generator.drive_start_dual_speed = block => {
         ensureRuntimeImport(generator);
-        const leftSpeed = speedValue(generator, block, 'LEFT_SPEED');
-        const rightSpeed = speedValue(generator, block, 'RIGHT_SPEED');
+        const leftSpeed = valueOr(generator, block, 'LEFT_SPEED', '0');
+        const rightSpeed = valueOr(generator, block, 'RIGHT_SPEED', '0');
         return `rt.drive_start_dual_speed(${leftSpeed}, ${rightSpeed})\n`;
     };
 };

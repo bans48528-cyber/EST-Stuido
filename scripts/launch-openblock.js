@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const {spawn} = require('child_process');
+const {ensureElectronNativeArch} = require('./ensure-electron-native-arch');
 
 const projectRoot = path.resolve(__dirname, '..');
 const distDirectory = path.join(projectRoot, 'dist');
@@ -32,6 +33,8 @@ try {
 } catch (error) {
     if (error.code !== 'ENOENT') throw error;
 }
+
+ensureElectronNativeArch();
 
 const logDescriptor = fs.openSync(logFile, 'w');
 const child = spawn(process.execPath, [path.join(__dirname, 'start-openblock.js')], {

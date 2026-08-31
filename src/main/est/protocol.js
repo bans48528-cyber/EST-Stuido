@@ -160,6 +160,7 @@ const EST_PROGRAM_TEMPERATURE_PROTOCOL_MINOR = EST_PROGRAM_COMPATIBILITY_TABLE['
 const EST_PROGRAM_COOPERATIVE_PROTOCOL_MINOR = 25;
 const EST_PROGRAM_BASIC_EVENT_HATS_PROTOCOL_MINOR = 25;
 const EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR = 26;
+export const EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION = 'M1.22E';
 const EST_PROGRAM_REQUIRED_CAPABILITIES = (
     CAPABILITY_FROZEN_EST_RUNTIME |
     CAPABILITY_UNLIMITED_PYTHON_RUN |
@@ -207,9 +208,53 @@ export const capabilityNamesFor = capabilities => EST_CAPABILITY_NAMES
 
 const protocolMinorForCapabilities = requiredProgramCapabilities => (
     EST_PROGRAM_CAPABILITY_PROTOCOL_MINOR_REQUIREMENTS.reduce((minimum, [capability, protocolMinor]) => (
-        (requiredProgramCapabilities & capability) !== 0 ? Math.max(minimum, protocolMinor) : minimum
+        (requiredProgramCapabilities & capability) === 0 ? minimum : Math.max(minimum, protocolMinor)
     ), EST_PROGRAM_REQUIRED_PROTOCOL_MINOR)
 );
+
+const firmwareSuffixRank = suffix => {
+    const normalized = String(suffix || '').toUpperCase();
+    let rank = 0;
+    for (const char of normalized) {
+        const code = char.charCodeAt(0);
+        if (code >= 65 && code <= 90) {
+            rank = (rank * 26) + (code - 64);
+        } else {
+            return null;
+        }
+    }
+    return rank;
+};
+
+export const parseEstFirmwareVersion = version => {
+    const match = String(version || '')
+        .trim()
+        .match(/^([A-Za-z]+)(\d+)\.(\d+)([A-Za-z]*)$/);
+    if (!match) return null;
+    const suffixRank = firmwareSuffixRank(match[4]);
+    if (suffixRank === null) return null;
+    return {
+        family: match[1].toUpperCase(),
+        major: Number(match[2]),
+        minor: Number(match[3]),
+        suffix: match[4].toUpperCase(),
+        suffixRank
+    };
+};
+
+export const compareEstFirmwareVersions = (left, right) => {
+    const leftVersion = parseEstFirmwareVersion(left);
+    const rightVersion = parseEstFirmwareVersion(right);
+    if (!leftVersion || !rightVersion || leftVersion.family !== rightVersion.family) return null;
+    if (leftVersion.major !== rightVersion.major) return leftVersion.major - rightVersion.major;
+    if (leftVersion.minor !== rightVersion.minor) return leftVersion.minor - rightVersion.minor;
+    return leftVersion.suffixRank - rightVersion.suffixRank;
+};
+
+export const isEstFirmwareVersionAtLeast = (version, minimumVersion) => {
+    const comparison = compareEstFirmwareVersions(version, minimumVersion);
+    return comparison !== null && comparison >= 0;
+};
 
 export const programRequiredCapabilitiesForSource = source => {
     const text = typeof source === 'string' ? source : Buffer.from(source || '').toString('utf8');
@@ -227,13 +272,25 @@ export const programRequiredCapabilitiesForSource = source => {
     if (
         startHandlerCount > 1 ||
         /\basync\s+def\s+stack_\d+\s*\(/.test(text) ||
-        /\bawait\s+rt\.(?:yield_once|sleep|wait_until|motor_run_for|drive_move_for|drive_steer_for|display_image_for|wait_[a-z_]+)\s*\(/.test(text) ||
+        /\bawait\s+rt\.(?:yield_once|sleep|wait_until|motor_run_for|drive_move_for|drive_steer_for)\s*\(/.test(text) ||
+        /\bawait\s+rt\.(?:display_image_for|wait_[a-z_]+)\s*\(/.test(text) ||
         /\brt\.stop\s*\(/.test(text) ||
         /\brt\.stop_other_stacks\s*\(/.test(text)
     ) {
         capabilities |= CAPABILITY_COOPERATIVE_MULTITASK;
     }
     return capabilities >>> 0;
+};
+
+export const programMinimumFirmwareVersionForSource = source => {
+    const text = typeof source === 'string' ? source : Buffer.from(source || '').toString('utf8');
+    if (
+        /\brt\.motor_start_(?:speed|power)\s*\(/.test(text) ||
+        /\best\.display\.text_line\s*\(/.test(text)
+    ) {
+        return EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION;
+    }
+    return null;
 };
 
 export const crc32 = bytes => {
@@ -547,7 +604,11 @@ export const checkDeviceCompatibility = (status, requiredCapabilities = 0) => {
     };
 };
 
-export const checkProgramFirmwareCompatibility = (status, additionalProgramCapabilities = 0) => {
+export const checkProgramFirmwareCompatibility = (
+    status,
+    additionalProgramCapabilities = 0,
+    minimumFirmwareVersion = null
+) => {
     const firmwareVersion = String((status && status.firmwareVersion) || '');
     const tableEntry = EST_PROGRAM_COMPATIBILITY_TABLE[firmwareVersion] || null;
     const protocolMajor = Number(status && status.protocolMajor);
@@ -566,6 +627,14 @@ export const checkProgramFirmwareCompatibility = (status, additionalProgramCapab
     const programProtocolCompatible = hasProtocolVersion &&
         protocolMajor === EST_PROTOCOL_MAJOR &&
         protocolMinor >= requiredProgramProtocolMinor;
+    const requiredProgramMinimumFirmwareVersion = minimumFirmwareVersion ?
+        String(minimumFirmwareVersion) :
+        null;
+    const firmwareVersionComparison = requiredProgramMinimumFirmwareVersion ?
+        compareEstFirmwareVersions(firmwareVersion, requiredProgramMinimumFirmwareVersion) :
+        null;
+    const programFirmwareVersionCompatible = !requiredProgramMinimumFirmwareVersion ||
+        (firmwareVersionComparison !== null && firmwareVersionComparison >= 0);
     const programIssues = [];
     const verified = Boolean(tableEntry) && protocolMatches;
     let message = '';
@@ -593,6 +662,20 @@ export const checkProgramFirmwareCompatibility = (status, additionalProgramCapab
     if (missingProgramCapabilities !== 0) {
         programIssues.push(`缺少能力: ${missingProgramCapabilityNames.join(', ')}`);
     }
+    if (!programFirmwareVersionCompatible) {
+        if (!firmwareVersion) {
+            programIssues.push(`无法读取 EST 固件版本；需要 ${requiredProgramMinimumFirmwareVersion} 或更新版本`);
+        } else if (firmwareVersionComparison === null) {
+            programIssues.push(
+                `当前固件 ${firmwareVersion} 无法与 ${requiredProgramMinimumFirmwareVersion} 做版本比较`
+            );
+        } else {
+            programIssues.push(
+                `当前固件 ${firmwareVersion} 不支持该程序使用的新运行时 API；需要 ` +
+                `${requiredProgramMinimumFirmwareVersion} 或更新版本`
+            );
+        }
+    }
 
     const programCompatible = programIssues.length === 0;
 
@@ -604,9 +687,12 @@ export const checkProgramFirmwareCompatibility = (status, additionalProgramCapab
         programCompatible,
         programMessage: programIssues.join('; '),
         programProtocolCompatible,
+        programFirmwareVersionCompatible,
         requiredProgramProtocolMajor: EST_PROTOCOL_MAJOR,
         requiredProgramProtocolMinor,
         requiredProgramCapabilities,
+        requiredProgramMinimumFirmwareVersion,
+        firmwareVersionComparison,
         missingProgramCapabilities,
         missingProgramCapabilityNames,
         verified,

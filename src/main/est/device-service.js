@@ -41,6 +41,7 @@ import {
     parseHeartbeatResponse,
     parsePersistentProgramResponse,
     parsePythonProgramResponse,
+    programMinimumFirmwareVersionForSource,
     programRequiredCapabilitiesForSource,
     splitReports
 } from './protocol';
@@ -410,7 +411,10 @@ export class EstDeviceService {
 
     async _uploadPythonNow (source) {
         const sourceBytes = this._normalizePythonSource(source);
-        await this._requireProgramCompatibilityNow(programRequiredCapabilitiesForSource(sourceBytes));
+        await this._requireProgramCompatibilityNow(
+            programRequiredCapabilitiesForSource(sourceBytes),
+            programMinimumFirmwareVersionForSource(sourceBytes)
+        );
         await this._stopCurrentProgramNow();
         const sourceCrc32 = crc32(sourceBytes);
         let status = await this._pythonProgramActionNow(
@@ -435,19 +439,28 @@ export class EstDeviceService {
         };
     }
 
-    async _requireProgramCompatibilityNow (additionalProgramCapabilities = 0) {
+    async _requireProgramCompatibilityNow (additionalProgramCapabilities = 0, minimumFirmwareVersion = null) {
         const additionalCapabilities = Number(additionalProgramCapabilities) >>> 0;
+        const requiredMinimumFirmwareVersion = minimumFirmwareVersion ? String(minimumFirmwareVersion) : null;
         let status = this.lastDeviceStatus;
         let compatibility = status && status.compatibility;
-        if (status && additionalCapabilities !== 0) {
-            compatibility = checkProgramFirmwareCompatibility(status, additionalCapabilities);
+        if (status && (additionalCapabilities !== 0 || requiredMinimumFirmwareVersion)) {
+            compatibility = checkProgramFirmwareCompatibility(
+                status,
+                additionalCapabilities,
+                requiredMinimumFirmwareVersion
+            );
         }
         if (!status || !compatibility || typeof compatibility.programCompatible !== 'boolean') {
             try {
                 status = await this._getStatusNow();
                 compatibility = status && status.compatibility;
-                if (status && additionalCapabilities !== 0) {
-                    compatibility = checkProgramFirmwareCompatibility(status, additionalCapabilities);
+                if (status && (additionalCapabilities !== 0 || requiredMinimumFirmwareVersion)) {
+                    compatibility = checkProgramFirmwareCompatibility(
+                        status,
+                        additionalCapabilities,
+                        requiredMinimumFirmwareVersion
+                    );
                 }
             } catch (error) {
                 if (!this.transport) {
@@ -455,7 +468,7 @@ export class EstDeviceService {
                 }
                 throw programFirmwareUpgradeError(checkProgramFirmwareCompatibility({
                     firmwareVersion: this.firmwareVersion
-                }, additionalCapabilities));
+                }, additionalCapabilities, requiredMinimumFirmwareVersion));
             }
         }
         if (!compatibility || !compatibility.programCompatible) {

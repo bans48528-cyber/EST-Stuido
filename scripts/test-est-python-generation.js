@@ -657,30 +657,59 @@ const zeroLeftDualSpeed = generator.drive_start_dual_speed({
     values: {LEFT_SPEED: '0', RIGHT_SPEED: '50'},
     getFieldValue: () => null
 });
-assert.strictEqual(zeroLeftDualSpeed, 'rt.drive_start_dual_speed(_est_speed(0), _est_speed(50))\n');
+assert.strictEqual(zeroLeftDualSpeed, 'rt.drive_start_dual_speed(0, 50)\n');
 const zeroRightDualSpeed = generator.drive_start_dual_speed({
     values: {LEFT_SPEED: '50', RIGHT_SPEED: '0'},
     getFieldValue: () => null
 });
-assert.strictEqual(zeroRightDualSpeed, 'rt.drive_start_dual_speed(_est_speed(50), _est_speed(0))\n');
+assert.strictEqual(zeroRightDualSpeed, 'rt.drive_start_dual_speed(50, 0)\n');
 const zeroBothDualSpeed = generator.drive_start_dual_speed({
     values: {LEFT_SPEED: '0', RIGHT_SPEED: '0'},
     getFieldValue: () => null
 });
-assert.strictEqual(zeroBothDualSpeed, 'rt.drive_start_dual_speed(_est_speed(0), _est_speed(0))\n');
-const speedRuntimeAssertions = `${dictionaryCode(generator.libraries_)}
-assert _est_speed(0) == 0
-assert _est_speed(1) == 1
-assert _est_speed(9) == 9
-assert _est_speed(-1) == -1
-assert _est_speed(-9) == -9
-assert _est_speed(101) == 100
-assert _est_speed(-101) == -100
-assert _est_speed_magnitude(0) == 0
-assert _est_speed_magnitude(1) == 1
-assert _est_speed_magnitude(9) == 9
-assert _est_speed_magnitude(101) == 100
-`;
+assert.strictEqual(zeroBothDualSpeed, 'rt.drive_start_dual_speed(0, 0)\n');
+assert.strictEqual(Object.prototype.hasOwnProperty.call(generator.libraries_, 'estSpeedHelpers'), false);
+
+resetGenerator();
+const directSpeedOutputs = [
+    generator.motor_set_speed({
+        values: {PORT: quotePython('A'), SPEED: 'speed + 1'},
+        getFieldValue: () => null
+    }),
+    generator.motor_run_for_speed({
+        values: {PORT: quotePython('A'), SPEED: 'speed - 1', AMOUNT: '2'},
+        getFieldValue: name => (name === 'UNIT' ? 'rotations' : null)
+    }),
+    generator.motor_start_speed({
+        values: {PORT: quotePython('A'), SPEED: 'speed'},
+        getFieldValue: () => null
+    }),
+    generator.motor_start_power({
+        values: {PORT: quotePython('A'), POWER: 'power'},
+        getFieldValue: () => null
+    }),
+    generator.drive_set_speed({
+        values: {SPEED: 'speed + 2'},
+        getFieldValue: () => null
+    }),
+    generator.drive_start_steer_speed({
+        values: {STEERING: 'turn', SPEED: 'speed - 3'},
+        getFieldValue: () => null
+    }),
+    generator.drive_dual_speed_for({
+        values: {LEFT_SPEED: 'left_speed', RIGHT_SPEED: 'right_speed', AMOUNT: '3'},
+        getFieldValue: name => (name === 'UNIT' ? 'seconds' : null)
+    })
+].join('');
+assert.match(directSpeedOutputs, /rt\.motor_set_speed\('A', speed \+ 1\)/);
+assert.match(directSpeedOutputs, /rt\.motor_run_for\('A', None, 2, 'rotations', speed=speed - 1\)/);
+assert.match(directSpeedOutputs, /rt\.motor_start_speed\('A', speed\)/);
+assert.match(directSpeedOutputs, /rt\.motor_start_power\('A', power\)/);
+assert.match(directSpeedOutputs, /rt\.drive_set_speed\(speed \+ 2\)/);
+assert.match(directSpeedOutputs, /rt\.drive_start_steer\(turn, speed=speed - 3\)/);
+assert.match(directSpeedOutputs, /rt\.drive_dual_speed_for\(left_speed, right_speed, 3, 'seconds'\)/);
+assert.doesNotMatch(directSpeedOutputs, /_est_speed/);
+assert.strictEqual(Object.prototype.hasOwnProperty.call(generator.libraries_, 'estSpeedHelpers'), false);
 
 [
     'regular_black',
@@ -801,26 +830,6 @@ const python = pythonCandidates.find(candidate => {
     return !result.error && result.status === 0;
 });
 assert.ok(python, 'Python 3 is required to run generated-code syntax tests.');
-
-const speedRuntimeResult = childProcess.spawnSync(
-    python.command,
-    python.args.concat(['-c', speedRuntimeAssertions]),
-    {
-        encoding: 'utf8',
-        env: {
-            ...process.env,
-            PYTHONIOENCODING: 'utf-8',
-            PYTHONUTF8: '1'
-        },
-        windowsHide: true
-    }
-);
-if (speedRuntimeResult.status !== 0) {
-    throw new Error(
-        `Generated EST speed helper runtime validation failed:\n` +
-        `${speedRuntimeResult.stdout}${speedRuntimeResult.stderr}`
-    );
-}
 
 const syntaxResult = childProcess.spawnSync(
     python.command,

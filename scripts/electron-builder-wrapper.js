@@ -8,6 +8,7 @@
 
 const {spawnSync} = require('child_process');
 const fs = require('fs');
+const {ensureElectronNativeArch} = require('./ensure-electron-native-arch');
 
 /**
  * Strip any code signing configuration (CSC) from a set of environment variables.
@@ -229,8 +230,12 @@ const main = function () {
     // TODO: allow user to specify targets? We could theoretically build NSIS on Mac, for example.
     wrapperConfig.targets = calculateTargets(wrapperConfig);
 
-    for (const target of wrapperConfig.targets) {
-        runBuilder(wrapperConfig, target);
+    try {
+        for (const target of wrapperConfig.targets) {
+            runBuilder(wrapperConfig, target);
+        }
+    } finally {
+        ensureElectronNativeArch();
     }
 };
 

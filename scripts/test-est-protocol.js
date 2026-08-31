@@ -48,14 +48,19 @@ const {
     capabilityNamesFor,
     checkDeviceCompatibility,
     checkProgramFirmwareCompatibility,
+    compareEstFirmwareVersions,
     checksum,
     crc32,
+    EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION,
+    isEstFirmwareVersionAtLeast,
     isEstDevice,
+    parseEstFirmwareVersion,
     parseDeviceStatusResponse,
     parseFrame,
     parseHeartbeatResponse,
     parsePersistentProgramResponse,
     parsePythonProgramResponse,
+    programMinimumFirmwareVersionForSource,
     programRequiredCapabilitiesForSource,
     splitReports
 } = require(path.join(estRoot, 'protocol.js'));
@@ -323,8 +328,41 @@ assert.deepStrictEqual(Object.keys(EST_PROGRAM_COMPATIBILITY_TABLE), [
     'M1.12A',
     'M1.13A',
     'M1.14A',
-    'M1.21A'
+    'M1.21A',
+    'M1.22D',
+    'M1.22E',
+    'M1.22H'
 ]);
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.22H'], {protocolMajor: 1, protocolMinor: 26});
+assert.deepStrictEqual(parseEstFirmwareVersion('M1.22E'), {
+    family: 'M',
+    major: 1,
+    minor: 22,
+    suffix: 'E',
+    suffixRank: 5
+});
+assert.deepStrictEqual(parseEstFirmwareVersion('M1.22D'), {
+    family: 'M',
+    major: 1,
+    minor: 22,
+    suffix: 'D',
+    suffixRank: 4
+});
+assert.deepStrictEqual(parseEstFirmwareVersion('M1.22H'), {
+    family: 'M',
+    major: 1,
+    minor: 22,
+    suffix: 'H',
+    suffixRank: 8
+});
+assert.strictEqual(compareEstFirmwareVersions('M1.22E', 'M1.22D') > 0, true);
+assert.strictEqual(compareEstFirmwareVersions('M1.22D', 'M1.22E') < 0, true);
+assert.strictEqual(compareEstFirmwareVersions('M1.22H', 'M1.22E') > 0, true);
+assert.strictEqual(compareEstFirmwareVersions('M1.23A', 'M1.22E') > 0, true);
+assert.strictEqual(compareEstFirmwareVersions('X1.22E', 'M1.22E'), null);
+assert.strictEqual(isEstFirmwareVersionAtLeast('M1.22E', 'M1.22E'), true);
+assert.strictEqual(isEstFirmwareVersionAtLeast('M1.22D', 'M1.22E'), false);
+assert.strictEqual(isEstFirmwareVersionAtLeast('M1.22H', 'M1.22E'), true);
 assert.deepStrictEqual(
     {
         compatible: checkProgramFirmwareCompatibility(m110AStatus).compatible,
@@ -380,6 +418,20 @@ assert.strictEqual(m112ACompatibility.programProtocolCompatible, true);
 assert.strictEqual(m112ACompatibility.missingProgramCapabilities, 0);
 assert.strictEqual(m112ACompatibility.requiredProgramCapabilities, EST_PROGRAM_REQUIRED_CAPABILITIES);
 assert.strictEqual(programRequiredCapabilitiesForSource('import est_runtime as rt\nvalue = 1\n'), 0);
+assert.strictEqual(EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION, 'M1.22E');
+assert.strictEqual(programMinimumFirmwareVersionForSource('import est_runtime as rt\nvalue = 1\n'), null);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource('import est_runtime as rt\nrt.motor_start_speed("A", speed)\n'),
+    'M1.22E'
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource('import est_runtime as rt\nrt.motor_start_power("A", power)\n'),
+    'M1.22E'
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource('import est\nest.display.text_line(1, "EST")\n'),
+    'M1.22E'
+);
 assert.strictEqual(
     programRequiredCapabilitiesForSource('import est_runtime as rt\nvalue = rt.temperature(port).celsius()\n'),
     CAPABILITY_TEMPERATURE_SENSOR
@@ -480,6 +532,49 @@ assert.strictEqual(
     checkProgramFirmwareCompatibility(m121AMotorStallStatus, CAPABILITY_MOTOR_STALL_DETECTION).programCompatible,
     true
 );
+const m122DStatus = {
+    ...m121AMotorStallStatus,
+    firmwareVersion: 'M1.22D'
+};
+const m122EStatus = {
+    ...m121AMotorStallStatus,
+    firmwareVersion: 'M1.22E'
+};
+const m122HStatus = {
+    ...m121AMotorStallStatus,
+    firmwareVersion: 'M1.22H'
+};
+const m122DNewRuntimeApiCompatibility = checkProgramFirmwareCompatibility(
+    m122DStatus,
+    0,
+    EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION
+);
+assert.strictEqual(m122DNewRuntimeApiCompatibility.programCompatible, false);
+assert.strictEqual(m122DNewRuntimeApiCompatibility.programProtocolCompatible, true);
+assert.strictEqual(m122DNewRuntimeApiCompatibility.programFirmwareVersionCompatible, false);
+assert.strictEqual(m122DNewRuntimeApiCompatibility.missingProgramCapabilities, 0);
+assert.strictEqual(
+    m122DNewRuntimeApiCompatibility.requiredProgramMinimumFirmwareVersion,
+    'M1.22E'
+);
+assert.match(m122DNewRuntimeApiCompatibility.programMessage, /M1\.22D.*M1\.22E/);
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(
+        m122EStatus,
+        0,
+        EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION
+    ).programCompatible,
+    true
+);
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(
+        m122HStatus,
+        0,
+        EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION
+    ).programCompatible,
+    true
+);
+assert.strictEqual(checkProgramFirmwareCompatibility(m122DStatus).programCompatible, true);
 const missingCooperativeCompatibility = checkProgramFirmwareCompatibility(
     m112AStatus,
     CAPABILITY_COOPERATIVE_MULTITASK
@@ -1626,30 +1721,38 @@ assert.strictEqual(
 fakePythonGenerator.init({getTopBlocks: () => []});
 assert.strictEqual(fakePythonGenerator.drive_set_speed(makeFakeBlock('drive_set_speed', {
     values: {SPEED: '8'}
-})), 'rt.drive_set_speed(_est_speed_magnitude(8))\n');
-assert.match(fakePythonGenerator.libraries_.estSpeedHelpers, /def _est_speed\(value\):/);
-assert.match(fakePythonGenerator.libraries_.estSpeedHelpers, /def _est_speed_magnitude\(value\):/);
-assert.doesNotMatch(fakePythonGenerator.libraries_.estSpeedHelpers, /^\s*return 10$/m);
-assert.doesNotMatch(fakePythonGenerator.libraries_.estSpeedHelpers, /^\s*return -10$/m);
+})), 'rt.drive_set_speed(8)\n');
+assert.strictEqual(Object.prototype.hasOwnProperty.call(fakePythonGenerator.libraries_, 'estSpeedHelpers'), false);
+assert.strictEqual(fakePythonGenerator.motor_set_speed(makeFakeBlock('motor_set_speed', {
+    values: {PORT: "'A'", SPEED: 'speed + 1'}
+})), "rt.motor_set_speed('A', speed + 1)\n");
+assert.strictEqual(fakePythonGenerator.motor_run_for_speed(makeFakeBlock('motor_run_for_speed', {
+    values: {PORT: "'A'", SPEED: 'speed - 1', AMOUNT: '2'},
+    fields: {UNIT: 'rotations'}
+})), "rt.motor_run_for('A', None, 2, 'rotations', speed=speed - 1)\n");
 assert.strictEqual(fakePythonGenerator.motor_start_speed(makeFakeBlock('motor_start_speed', {
     values: {PORT: "'A'", SPEED: 'speed'}
-})), "rt.motor('A').run_speed(_est_speed(speed))\n");
+})), "rt.motor_start_speed('A', speed)\n");
+assert.strictEqual(fakePythonGenerator.motor_start_power(makeFakeBlock('motor_start_power', {
+    values: {PORT: "'A'", POWER: 'power'}
+})), "rt.motor_start_power('A', power)\n");
 assert.strictEqual(fakePythonGenerator.drive_start_steer_speed(makeFakeBlock('drive_start_steer_speed', {
     values: {STEERING: 'speed + 2', SPEED: 'speed - 3'}
-})), 'rt.drive_start_steer(speed + 2, speed=_est_speed(speed - 3))\n');
+})), 'rt.drive_start_steer(speed + 2, speed=speed - 3)\n');
 assert.strictEqual(fakePythonGenerator.drive_dual_speed_for(makeFakeBlock('drive_dual_speed_for', {
     values: {LEFT_SPEED: '30', RIGHT_SPEED: '40', AMOUNT: '2'},
     fields: {UNIT: 'seconds'}
-})), "rt.drive_dual_speed_for(_est_speed(30), _est_speed(40), 2, 'seconds')\n");
+})), "rt.drive_dual_speed_for(30, 40, 2, 'seconds')\n");
 assert.strictEqual(fakePythonGenerator.drive_start_dual_speed(makeFakeBlock('drive_start_dual_speed', {
     values: {LEFT_SPEED: '0', RIGHT_SPEED: '50'}
-})), 'rt.drive_start_dual_speed(_est_speed(0), _est_speed(50))\n');
+})), 'rt.drive_start_dual_speed(0, 50)\n');
 assert.strictEqual(fakePythonGenerator.drive_start_dual_speed(makeFakeBlock('drive_start_dual_speed', {
     values: {LEFT_SPEED: '50', RIGHT_SPEED: '0'}
-})), 'rt.drive_start_dual_speed(_est_speed(50), _est_speed(0))\n');
+})), 'rt.drive_start_dual_speed(50, 0)\n');
 assert.strictEqual(fakePythonGenerator.drive_start_dual_speed(makeFakeBlock('drive_start_dual_speed', {
     values: {LEFT_SPEED: '0', RIGHT_SPEED: '0'}
-})), 'rt.drive_start_dual_speed(_est_speed(0), _est_speed(0))\n');
+})), 'rt.drive_start_dual_speed(0, 0)\n');
+assert.strictEqual(Object.prototype.hasOwnProperty.call(fakePythonGenerator.libraries_, 'estSpeedHelpers'), false);
 assert.strictEqual(fakePythonGenerator.display_image(makeFakeBlock('display_image', {
     fields: {IMAGE: 'Expressions/Big smile'}
 })), "est.display.image('Expressions/Big smile')\nest.display.refresh()\n");
@@ -2373,6 +2476,45 @@ assert.match(estProgramMainSource, /ipcMain\.handle\('est-run-program'/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-stop-program'/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-get-status', \(event, options\)/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-auto-connect', \(event, options\)/);
+const packageJson = require(path.resolve(__dirname, '..', 'package.json'));
+assert.match(packageJson.scripts.postinstall, /ensure-electron-native-arch\.js/);
+assert.match(packageJson.scripts.start, /launch-openblock\.js/);
+assert.match(packageJson.scripts['ensure:native'], /ensure-electron-native-arch\.js/);
+assert.match(packageJson.scripts['check:hid'], /check-est-hid\.js/);
+const launchOpenblockSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'scripts',
+    'launch-openblock.js'
+), 'utf8');
+assert.match(launchOpenblockSource, /ensureElectronNativeArch\(\);[\s\S]*spawn\(/);
+const electronBuilderWrapperSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'scripts',
+    'electron-builder-wrapper.js'
+), 'utf8');
+assert.match(electronBuilderWrapperSource, /finally\s*\{[\s\S]*ensureElectronNativeArch\(\);[\s\S]*\}/);
+const ensureElectronNativeArchSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'scripts',
+    'ensure-electron-native-arch.js'
+), 'utf8');
+assert.match(ensureElectronNativeArchSource, /readPeMachine/);
+assert.match(ensureElectronNativeArchSource, /HID\.node/);
+assert.match(ensureElectronNativeArchSource, /node-hid/);
+assert.match(ensureElectronNativeArchSource, /@electron\/rebuild\/lib\/cli\.js/);
+const checkEstHidSource = fs.readFileSync(path.resolve(
+    __dirname,
+    '..',
+    'scripts',
+    'check-est-hid.js'
+), 'utf8');
+assert.match(checkEstHidSource, /ELECTRON_RUN_AS_NODE/);
+assert.match(checkEstHidSource, /HID\.devices\(\)/);
+assert.match(checkEstHidSource, /EstDeviceService/);
+assert.match(checkEstHidSource, /autoConnect\(\{includeProgramStatus: true\}\)/);
 assert.ok(!transformedGui.includes('<CostumeTab'));
 assert.ok(!transformedGui.includes('<SoundTab'));
 assert.ok(!transformedGui.includes('<StageWrapper'));
@@ -3662,6 +3804,84 @@ const testProgramDownloadRunAndStop = async () => {
         /runtime-temperature/
     );
     assert.ok(!missingTemperatureTransport.actions.includes('36:3'));
+
+    const newRuntimeApiSource = [
+        'import est_runtime as rt',
+        'speed = 20',
+        "rt.motor_start_speed('A', speed)",
+        ''
+    ].join('\n');
+    const m122DTransport = new ProgramTestTransport({
+        firmwareVersion: 'M1.22D',
+        protocolMinor: 26
+    });
+    const m122DService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    m122DService.transport = m122DTransport;
+    m122DService.device = service.device;
+    await assert.rejects(
+        m122DService.downloadProgram({source: newRuntimeApiSource, slot: 1}),
+        /M1\.22D.*M1\.22E/
+    );
+    await assert.rejects(
+        m122DService.runProgram({source: newRuntimeApiSource, slot: 1}),
+        /M1\.22D.*M1\.22E/
+    );
+    assert.ok(!m122DTransport.actions.includes('36:1'));
+    assert.ok(!m122DTransport.actions.includes('36:3'));
+    assert.ok(!m122DTransport.actions.includes('37:1'));
+
+    const m122ETransport = new ProgramTestTransport({
+        firmwareVersion: 'M1.22E',
+        protocolMinor: 26
+    });
+    const m122EService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    m122EService.transport = m122ETransport;
+    m122EService.device = service.device;
+    await m122EService.downloadProgram({source: newRuntimeApiSource, slot: 1});
+    assert.ok(m122ETransport.actions.includes('36:1'));
+    assert.ok(m122ETransport.actions.includes('37:1'));
+
+    const m122HTransport = new ProgramTestTransport({
+        firmwareVersion: 'M1.22H',
+        protocolMinor: 26
+    });
+    const m122HService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    m122HService.transport = m122HTransport;
+    m122HService.device = service.device;
+    await m122HService.runProgram({source: newRuntimeApiSource, slot: 1});
+    assert.ok(m122HTransport.actions.includes('36:1'));
+    assert.ok(m122HTransport.actions.includes('37:1'));
+    assert.ok(m122HTransport.actions.includes('36:3'));
+
+    const oldRuntimeApiOnM122DTransport = new ProgramTestTransport({
+        firmwareVersion: 'M1.22D',
+        protocolMinor: 26
+    });
+    const oldRuntimeApiOnM122DService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    oldRuntimeApiOnM122DService.transport = oldRuntimeApiOnM122DTransport;
+    oldRuntimeApiOnM122DService.device = service.device;
+    await oldRuntimeApiOnM122DService.downloadProgram({
+        source: "import est_runtime as rt\nrt.motor_start('A', 'clockwise')\n",
+        slot: 2
+    });
+    assert.ok(oldRuntimeApiOnM122DTransport.actions.includes('36:1'));
+    assert.ok(oldRuntimeApiOnM122DTransport.actions.includes('37:1'));
 
     const cooperativeSource = [
         'import est_runtime as rt',
