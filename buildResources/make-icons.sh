@@ -1,5 +1,6 @@
 #!/bin/bash
 SRC=../src/icon/OpenBlockDesktop.png
+WINDOW_ICON_SRC=../src/renderer/est-menu-logo.png
 OUT_ICONSET=OpenBlockDesktop.iconset
 OUT_ICNS=OpenBlockDesktop.icns
 OUT_ICO=OpenBlockDesktop.ico
@@ -7,6 +8,7 @@ TMP_ICO=tmp
 
 ICO_BASIC_SIZES="16 24 32 48 256"
 ICO_EXTRA_SIZES="20 30 36 40 60 64 72 80 96 512"
+ICO_TITLEBAR_SIZES="16 20 24 30"
 
 if command -v pngcrush >/dev/null 2>&1; then
     function optimize () {
@@ -30,6 +32,17 @@ function resize () {
     optimize "${DST}"
 }
 
+# The full square app artwork becomes unreadable in a 16px Windows title bar.
+# Keep the larger app frames square, but use a cropped EST wordmark for the
+# small title-bar frames.
+function resize_titlebar_icon () {
+    WIDTH=$1
+    HEIGHT=$2
+    DST=$3
+    convert -background none "${WINDOW_ICON_SRC}" -crop 560x245+0+0 +repage -resize "${WIDTH}x${HEIGHT}!" "${DST}"
+    optimize "${DST}"
+}
+
 if command -v convert >/dev/null 2>&1; then
     # Mac
     if command -v iconutil >/dev/null 2>&1; then
@@ -47,7 +60,11 @@ if command -v convert >/dev/null 2>&1; then
     # Windows ICO
     mkdir -p "${TMP_ICO}"
     for SIZE in ${ICO_BASIC_SIZES} ${ICO_EXTRA_SIZES}; do
-        resize "${SIZE}" "${SIZE}" "${SRC}" "${TMP_ICO}/icon_${SIZE}x${SIZE}.png"
+        if [[ " ${ICO_TITLEBAR_SIZES} " == *" ${SIZE} "* ]]; then
+            resize_titlebar_icon "${SIZE}" "${SIZE}" "${TMP_ICO}/icon_${SIZE}x${SIZE}.png"
+        else
+            resize "${SIZE}" "${SIZE}" "${SRC}" "${TMP_ICO}/icon_${SIZE}x${SIZE}.png"
+        fi
     done
     # Asking for "Zip" compression actually results in PNG compression
     convert "${TMP_ICO}"/icon_*.png -colorspace sRGB -compress Zip "${OUT_ICO}"

@@ -2,7 +2,6 @@ const {ipcRenderer} = require('electron');
 const {
     ALL_EST_BLOCK_IDS,
     EST_DRIVE_PORT_PICKER_ID,
-    EST_EVENT_SENSOR_PORT_PICKER_ID,
     EST_MOTOR_PORT_PICKER_ID,
     EST_SENSOR_PORT_PICKER_ID,
     EST_STEERING_PICKER_ID
@@ -30,7 +29,6 @@ class EstBlocks {
         primitives[EST_MOTOR_PORT_PICKER_ID] = this.portMenu;
         primitives[EST_DRIVE_PORT_PICKER_ID] = this.portMenu;
         primitives[EST_STEERING_PICKER_ID] = this.steeringMenu;
-        primitives[EST_EVENT_SENSOR_PORT_PICKER_ID] = this.sensorPortMenu;
         primitives[EST_SENSOR_PORT_PICKER_ID] = this.sensorPortMenu;
         return primitives;
     }

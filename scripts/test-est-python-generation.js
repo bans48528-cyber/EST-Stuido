@@ -498,6 +498,13 @@ nativeOperatorIds.forEach(blockId => {
     addSyntaxCase(blockId, `${programPreamble()}\nresult = ${output[0]}`);
 });
 
+resetGenerator();
+assert.deepStrictEqual(generator.operator_random({
+    values: {FROM: 'lower_value', TO: 'upper_value'}
+}), ['rt.random_int(lower_value, upper_value)', generator.ORDER_FUNCTION_CALL]);
+assert.strictEqual(generator.imports_.estRuntime, 'import est_runtime as rt');
+assert.doesNotMatch(generator.operator_random.toString(), /random\.randint/);
+
 nativeDataIds.forEach(blockId => {
     resetGenerator();
     const output = generator[blockId]({
@@ -616,6 +623,34 @@ addSyntaxCase('cooperative_single_start_wait_and_loop', [
     dictionaryCode(generator.setups_)
 ].filter(Boolean).join('\n'));
 
+const sensorWaitAsyncStart = {
+    type: 'event_program_start',
+    id: 'sensor-wait-async-start',
+    nextCode:
+        "  rt.wait_brick_button('confirm', 'pressed')\n" +
+        "  rt.wait_color(3, 'red')\n" +
+        "  rt.wait_touch(1, 'pressed')\n" +
+        "  rt.wait_ultrasonic(4, 'less', 15, 'centimeters')\n" +
+        "  rt.wait_ir_proximity(4, 'greater', 50)\n" +
+        "  rt.wait_ir_beacon_button(4, 1, 'active')\n" +
+        "  rt.wait_gyro(2, 'greater', 45)\n",
+    getFieldValue: () => null,
+    nextConnection: {targetBlock: () => ({type: 'sensor_wait_brick_button'})}
+};
+resetGenerator([sensorWaitAsyncStart]);
+assert.strictEqual(generator.event_program_start(sensorWaitAsyncStart), null);
+[
+    'wait_brick_button', 'wait_color', 'wait_touch', 'wait_ultrasonic',
+    'wait_ir_proximity', 'wait_ir_beacon_button', 'wait_gyro'
+].forEach(name => {
+    assert.match(generator.libraries_.est_stack_1, new RegExp(`await rt\\.${name}\\(`));
+});
+addSyntaxCase('cooperative_sensor_waits', [
+    programPreamble(),
+    dictionaryCode(generator.libraries_),
+    dictionaryCode(generator.setups_)
+].filter(Boolean).join('\n'));
+
 const cooperativeStartA = {
     type: 'event_program_start',
     id: 'cooperative-start-a',
@@ -726,9 +761,27 @@ assert.strictEqual(Object.prototype.hasOwnProperty.call(generator.libraries_, 'e
     });
     assert.strictEqual(
         displayTextXY,
-        `est.display.text(10, 20, 'EST', font='${font}')\nest.display.refresh()\n`
+        `rt.display_text(10, 20, 'EST', font='${font}')\n`
     );
 });
+
+resetGenerator();
+assert.strictEqual(generator.display_text_xy({
+    values: {X: 'x_value', Y: 'y_value', TEXT: 'sensor_value'},
+    getFieldValue: name => (name === 'FONT' ? 'regular_black' : null)
+}), "rt.display_text(x_value, y_value, sensor_value, font='regular_black')\n");
+assert.strictEqual(generator.imports_.estRuntime, 'import est_runtime as rt');
+assert.strictEqual(generator.imports_.estHardware, undefined);
+assert.deepStrictEqual(Object.keys(generator.libraries_), []);
+
+resetGenerator();
+assert.strictEqual(generator.display_text_line({
+    values: {LINE: 'line_number', TEXT: 'sensor_value'},
+    getFieldValue: () => null
+}), 'rt.display_text_line(line_number, sensor_value)\n');
+assert.strictEqual(generator.imports_.estRuntime, 'import est_runtime as rt');
+assert.strictEqual(generator.imports_.estHardware, undefined);
+assert.deepStrictEqual(Object.keys(generator.libraries_), []);
 
 const sensorPortBlock = ({values = {}, fields = {}} = {}) => ({
     values: {PORT: 'port_var', ...values},
@@ -752,11 +805,11 @@ const sensorPortBlock = ({values = {}, fields = {}} = {}) => ({
     }, "rt.ultrasonic(port_var).distance('centimeters')"],
     ['sensor_ir_proximity', {}, 'rt.infrared(port_var).proximity()'],
     ['sensor_ir_beacon_heading', {
-        fields: {CHANNEL: '1'}
+        fields: {CHANNEL: '4'}
     }, 'rt.infrared(port_var).beacon_heading(1)'],
     ['sensor_ir_beacon_active_compare', {
         values: {VALUE: '0'},
-        fields: {CHANNEL: '1', PROPERTY: 'heading', COMPARATOR: 'less'}
+        fields: {CHANNEL: '3', PROPERTY: 'heading', COMPARATOR: 'less'}
     }, "rt.ir_beacon_compare(port_var, 1, 'heading', 'less', 0)"],
     ['sensor_gyro_angle', {}, 'rt.gyro(port_var).angle()'],
     ['sensor_gyro_reset', {}, 'rt.gyro(port_var).reset_angle()\n']

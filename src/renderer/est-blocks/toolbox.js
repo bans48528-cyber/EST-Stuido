@@ -128,6 +128,8 @@ const eventCategory = locale => category(getEstText('category.event', locale), '
     block('event_program_start'),
     block('event_brick_button', `${field('BUTTON', 'confirm')}${field('BUTTON_EVENT', 'pressed')}`),
     block('event_condition'),
+    block('event_broadcast', field('MESSAGE', 'message_1')),
+    block('event_broadcast_wait', field('MESSAGE', 'message_1')),
     block('event_timer', numberShadow('SECONDS', 10))
 ]);
 

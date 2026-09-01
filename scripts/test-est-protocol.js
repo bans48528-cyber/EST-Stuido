@@ -51,7 +51,10 @@ const {
     compareEstFirmwareVersions,
     checksum,
     crc32,
+    EST_PROGRAM_DUAL_SPEED_API_MIN_FIRMWARE_VERSION,
+    EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION,
+    EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION,
     isEstFirmwareVersionAtLeast,
     isEstDevice,
     parseEstFirmwareVersion,
@@ -62,6 +65,7 @@ const {
     parsePythonProgramResponse,
     programMinimumFirmwareVersionForSource,
     programRequiredCapabilitiesForSource,
+    programUnsupportedRuntimeFeaturesForSource,
     splitReports
 } = require(path.join(estRoot, 'protocol.js'));
 const {
@@ -94,11 +98,12 @@ const {
     EST_STEERING_LIMIT,
     EST_STEERING_PICKER_ID,
     EST_DRIVE_PORT_PICKER_ID,
-    EST_EVENT_SENSOR_PORT_PICKER_ID,
+    EST_IR_FIXED_CHANNEL_EXTENSION,
     EST_MOTOR_PORT_PICKER_ID,
     EST_REPLACED_OPENBLOCK_BLOCK_IDS,
     EST_SENSOR_PORT_PICKER_ID,
     EST_SUPPORT_BLOCK_IDS,
+    FIXED_IR_REMOTE_CHANNEL,
     MOTOR_COLOURS,
     configureEstWorkspaceControls,
     formatSteeringDisplayText,
@@ -331,9 +336,15 @@ assert.deepStrictEqual(Object.keys(EST_PROGRAM_COMPATIBILITY_TABLE), [
     'M1.21A',
     'M1.22D',
     'M1.22E',
-    'M1.22H'
+    'M1.22H',
+    'M1.22I',
+    'M1.22J',
+    'M1.22K',
+    'M1.22L',
+    'M1.22M'
 ]);
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.22H'], {protocolMajor: 1, protocolMinor: 26});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.22I'], {protocolMajor: 1, protocolMinor: 26});
 assert.deepStrictEqual(parseEstFirmwareVersion('M1.22E'), {
     family: 'M',
     major: 1,
@@ -358,6 +369,7 @@ assert.deepStrictEqual(parseEstFirmwareVersion('M1.22H'), {
 assert.strictEqual(compareEstFirmwareVersions('M1.22E', 'M1.22D') > 0, true);
 assert.strictEqual(compareEstFirmwareVersions('M1.22D', 'M1.22E') < 0, true);
 assert.strictEqual(compareEstFirmwareVersions('M1.22H', 'M1.22E') > 0, true);
+assert.strictEqual(compareEstFirmwareVersions('M1.22I', 'M1.22H') > 0, true);
 assert.strictEqual(compareEstFirmwareVersions('M1.23A', 'M1.22E') > 0, true);
 assert.strictEqual(compareEstFirmwareVersions('X1.22E', 'M1.22E'), null);
 assert.strictEqual(isEstFirmwareVersionAtLeast('M1.22E', 'M1.22E'), true);
@@ -419,6 +431,9 @@ assert.strictEqual(m112ACompatibility.missingProgramCapabilities, 0);
 assert.strictEqual(m112ACompatibility.requiredProgramCapabilities, EST_PROGRAM_REQUIRED_CAPABILITIES);
 assert.strictEqual(programRequiredCapabilitiesForSource('import est_runtime as rt\nvalue = 1\n'), 0);
 assert.strictEqual(EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION, 'M1.22E');
+assert.strictEqual(EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION, 'M1.22I');
+assert.strictEqual(EST_PROGRAM_DUAL_SPEED_API_MIN_FIRMWARE_VERSION, 'M1.22L');
+assert.strictEqual(EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION, 'M1.22M');
 assert.strictEqual(programMinimumFirmwareVersionForSource('import est_runtime as rt\nvalue = 1\n'), null);
 assert.strictEqual(
     programMinimumFirmwareVersionForSource('import est_runtime as rt\nrt.motor_start_speed("A", speed)\n'),
@@ -430,7 +445,40 @@ assert.strictEqual(
 );
 assert.strictEqual(
     programMinimumFirmwareVersionForSource('import est\nest.display.text_line(1, "EST")\n'),
-    'M1.22E'
+    null
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource('import est_runtime as rt\nrt.display_text(1, 2, value)\n'),
+    'M1.22I'
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource('import est_runtime as rt\nrt.display_text_line(1, value)\n'),
+    'M1.22I'
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource('import est_runtime as rt\nrt.drive_start_dual_speed(0, 50)\n'),
+    'M1.22L'
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource('import est_runtime as rt\nrt.drive_dual_speed_for(50, 25, 2, "rotations")\n'),
+    'M1.22L'
+);
+[
+    "await rt.wait_brick_button('confirm', 'pressed')",
+    "await rt.wait_color(3, 'red')",
+    "await rt.wait_touch(1, 'pressed')",
+    "await rt.wait_ultrasonic(4, 'less', 15, 'centimeters')",
+    "await rt.wait_ir_proximity(4, 'less', 15)",
+    "await rt.wait_ir_beacon_button(4, 1, 'active')",
+    "await rt.wait_gyro(2, 'greater', 45)"
+].forEach(source => {
+    assert.strictEqual(programMinimumFirmwareVersionForSource(source), 'M1.22M');
+});
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource(
+        'import est_runtime as rt\nrt.motor_start_speed("A", speed)\nrt.display_text_line(1, value)\n'
+    ),
+    'M1.22I'
 );
 assert.strictEqual(
     programRequiredCapabilitiesForSource('import est_runtime as rt\nvalue = rt.temperature(port).celsius()\n'),
@@ -479,6 +527,59 @@ assert.strictEqual(
         '@rt.on_start\ndef stack_1():\n  pass\n@rt.on_start\ndef stack_2():\n  pass\nrt.run()\n'
     ),
     CAPABILITY_COOPERATIVE_MULTITASK
+);
+assert.deepStrictEqual(
+    programUnsupportedRuntimeFeaturesForSource('import est_runtime as rt\nrt.drive_start_dual_speed(0, 50)\n')
+        .map(feature => feature.id),
+    []
+);
+assert.deepStrictEqual(
+    programUnsupportedRuntimeFeaturesForSource(
+        "import est_runtime as rt\nrt.drive_dual_speed_for(left_speed, right_speed, 3, 'seconds')\n"
+    ).map(feature => feature.id),
+    []
+);
+assert.deepStrictEqual(
+    programUnsupportedRuntimeFeaturesForSource(
+        "import est_runtime as rt\n@rt.on_ir_beacon_button('4', 1, 'active')\ndef stack_1():\n  pass\n"
+    ).map(feature => feature.id),
+    ['on_ir_beacon_button']
+);
+assert.deepStrictEqual(
+    programUnsupportedRuntimeFeaturesForSource(
+        "import est_runtime as rt\nvalue = rt.infrared('4').beacon_heading(1)\n"
+    ).map(feature => feature.id),
+    ['infrared_beacon_heading']
+);
+assert.deepStrictEqual(
+    programUnsupportedRuntimeFeaturesForSource(
+        "import est_runtime as rt\nvalue = rt.ir_beacon_compare('4', 1, 'heading', 'less', 0)\n"
+    ).map(feature => feature.id),
+    ['ir_beacon_compare']
+);
+assert.deepStrictEqual(
+    programUnsupportedRuntimeFeaturesForSource(
+        "import est_runtime as rt\nok = rt.compare(rt.color('3').reflection(), 'changed', 1)\n"
+    ).map(feature => feature.id),
+    ['compare_changed']
+);
+assert.deepStrictEqual(
+    programUnsupportedRuntimeFeaturesForSource(
+        "import est_runtime as rt\nrt.broadcast('message_1', wait=False)\nrt.wait_color('3', 'red')\n"
+    ).map(feature => feature.id),
+    ['broadcast']
+);
+assert.deepStrictEqual(
+    programUnsupportedRuntimeFeaturesForSource(
+        "import est_runtime as rt\nrt.wait_touch(1, 'pressed')\nrt.wait_gyro(2, 'greater', 45)\n"
+    ),
+    []
+);
+assert.deepStrictEqual(
+    programUnsupportedRuntimeFeaturesForSource(
+        "import est_runtime as rt\nrt.drive_start_steer(0)\nrt.wait_until(lambda: ready)\n"
+    ),
+    []
 );
 const missingTemperatureCompatibility = checkProgramFirmwareCompatibility(
     m112AStatus,
@@ -544,6 +645,18 @@ const m122HStatus = {
     ...m121AMotorStallStatus,
     firmwareVersion: 'M1.22H'
 };
+const m122IStatus = {
+    ...m121AMotorStallStatus,
+    firmwareVersion: 'M1.22I'
+};
+const m122LStatus = {
+    ...m121AMotorStallStatus,
+    firmwareVersion: 'M1.22L'
+};
+const m122MStatus = {
+    ...m121AMotorStallStatus,
+    firmwareVersion: 'M1.22M'
+};
 const m122DNewRuntimeApiCompatibility = checkProgramFirmwareCompatibility(
     m122DStatus,
     0,
@@ -571,6 +684,38 @@ assert.strictEqual(
         m122HStatus,
         0,
         EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION
+    ).programCompatible,
+    true
+);
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(
+        m122HStatus,
+        0,
+        EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION
+    ).programCompatible,
+    false
+);
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(
+        m122IStatus,
+        0,
+        EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION
+    ).programCompatible,
+    true
+);
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(
+        m122LStatus,
+        0,
+        EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION
+    ).programCompatible,
+    false
+);
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(
+        m122MStatus,
+        0,
+        EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION
     ).programCompatible,
     true
 );
@@ -680,6 +825,7 @@ assert.throws(() => buildPersistentProgramSaveFrame(0, 'x'.repeat(32)), /1\.\.31
 
 const registeredBlockDefinitions = [];
 const definitionsPresentBeforeEstRegistration = [];
+const registeredExtensions = {};
 const registeredFields = {};
 const FakeFieldTextInput = function () {};
 FakeFieldTextInput.htmlInput_ = null;
@@ -704,6 +850,12 @@ const fakeScratchBlocks = {
             registeredFields[type] = fieldClass;
         }
     },
+    Extensions: {
+        ALL_: registeredExtensions,
+        register: (type, extension) => {
+            registeredExtensions[type] = extension;
+        }
+    },
     FieldAngle: FakeFieldAngle,
     FieldTextInput: FakeFieldTextInput,
     OUTPUT_SHAPE_HEXAGONAL: 1,
@@ -720,6 +872,20 @@ const fakeScratchBlocks = {
 };
 registerEstBlocks(fakeScratchBlocks);
 registerEstBlocks(fakeScratchBlocks);
+assert.strictEqual(typeof registeredExtensions[EST_IR_FIXED_CHANNEL_EXTENSION], 'function');
+const legacyInfraredChannelBlock = {
+    type: 'sensor_ir_beacon_heading',
+    channel: '4',
+    getFieldValue: name => (name === 'CHANNEL' ? legacyInfraredChannelBlock.channel : null),
+    setFieldValue: (value, name) => {
+        if (name === 'CHANNEL') {
+            legacyInfraredChannelBlock.channel = value;
+        }
+    }
+};
+registeredExtensions[EST_IR_FIXED_CHANNEL_EXTENSION].call(legacyInfraredChannelBlock);
+legacyInfraredChannelBlock.onchange({});
+assert.strictEqual(legacyInfraredChannelBlock.channel, FIXED_IR_REMOTE_CHANNEL);
 let openBlockZoomPositionCalls = 0;
 let openBlockZoomCreateDomCalls = 0;
 let touchIdentifierClearCalls = 0;
@@ -813,7 +979,7 @@ const expectedCategoryCounts = {
     movement: 11,
     display: 6,
     sound: 6,
-    event: 13,
+    event: 6,
     control: 9,
     sensing: 35
 };
@@ -824,8 +990,8 @@ assert.deepStrictEqual(
     ])),
     expectedCategoryCounts
 );
-assert.strictEqual(registeredBlockDefinitions.length, 97);
-assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 92);
+assert.strictEqual(registeredBlockDefinitions.length, 89);
+assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 85);
 assert.deepStrictEqual(EST_REPLACED_OPENBLOCK_BLOCK_IDS, [
     'sound_play',
     'event_broadcast',
@@ -857,7 +1023,6 @@ assert.deepStrictEqual(EST_SUPPORT_BLOCK_IDS, [
     EST_STEERING_PICKER_ID,
     EST_MOTOR_PORT_PICKER_ID,
     EST_DRIVE_PORT_PICKER_ID,
-    EST_EVENT_SENSOR_PORT_PICKER_ID,
     EST_SENSOR_PORT_PICKER_ID
 ]);
 const motorPortPickerDefinition = registeredBlockDefinitions.find(
@@ -871,16 +1036,6 @@ assert.strictEqual(drivePortPickerDefinition.colour, DRIVE_COLOURS.secondary);
 assert.deepStrictEqual(
     motorPortPickerDefinition.args0[0].options.map(option => option[1]),
     ['A', 'B', 'C', 'D']
-);
-const eventSensorPortPickerDefinition = registeredBlockDefinitions.find(
-    definition => definition.type === EST_EVENT_SENSOR_PORT_PICKER_ID
-);
-assert.strictEqual(eventSensorPortPickerDefinition.colour, CATEGORY_COLOURS.event.secondary);
-assert.strictEqual(eventSensorPortPickerDefinition.colourSecondary, CATEGORY_COLOURS.event.secondary);
-assert.strictEqual(eventSensorPortPickerDefinition.colourTertiary, CATEGORY_COLOURS.event.tertiary);
-assert.deepStrictEqual(
-    eventSensorPortPickerDefinition.args0[0].options.map(option => option[1]),
-    ['1', '2', '3', '4']
 );
 const sensorPortPickerDefinition = registeredBlockDefinitions.find(
     definition => definition.type === EST_SENSOR_PORT_PICKER_ID
@@ -1016,15 +1171,8 @@ CATEGORY_BLOCK_IDS.sound.forEach(blockId => {
 });
 [
     'event_program_start',
-    'event_color',
-    'event_touch',
-    'event_ultrasonic',
-    'event_ir_proximity',
-    'event_ir_beacon_button',
-    'event_gyro_angle',
     'event_brick_button',
     'event_condition',
-    'event_broadcast_received',
     'event_timer'
 ].forEach(blockId => {
     assertLeadingBlockIcon(blockDefinitionFor(blockId), 'EST_EVENT_HAT_ICON', /est-event-hat-icon\.svg$/);
@@ -1208,38 +1356,18 @@ assert.deepStrictEqual(
     sensorTemperatureUnit.options,
     [['摄氏', 'celsius'], ['华氏', 'fahrenheit']]
 );
-[
-    'event_color',
-    'event_touch',
-    'event_ultrasonic',
-    'event_ir_proximity',
-    'event_ir_beacon_button',
-    'event_gyro_angle'
-].forEach(blockId => {
-    const definition = registeredBlockDefinitions.find(item => item.type === blockId);
-    const port = definition.args0.find(argument => argument.name === 'PORT');
-    assert.strictEqual(port.type, 'input_value');
+const comparatorDefinitions = registeredBlockDefinitions.flatMap(definition => (
+    definitionArguments(definition)
+        .filter(argument => argument.name === 'COMPARATOR')
+        .map(argument => [definition.type, argument])
+));
+comparatorDefinitions.forEach(([blockId, argument]) => {
+    assert.deepStrictEqual(
+        argument.options.map(option => option[1]),
+        ['less', 'greater', 'equal'],
+        `${blockId}.COMPARATOR`
+    );
 });
-const eventColorDefinition = registeredBlockDefinitions.find(item => item.type === 'event_color');
-assert.strictEqual(
-    eventColorDefinition.args0.find(argument => argument.name === 'COLOR_EVENT').type,
-    'field_dropdown'
-);
-const eventUltrasonicDefinition = registeredBlockDefinitions.find(
-    item => item.type === 'event_ultrasonic'
-);
-assert.strictEqual(
-    eventUltrasonicDefinition.args0.find(argument => argument.name === 'COMPARATOR').type,
-    'field_dropdown'
-);
-assert.strictEqual(
-    eventUltrasonicDefinition.args0.find(argument => argument.name === 'VALUE').type,
-    'input_value'
-);
-assert.strictEqual(
-    eventUltrasonicDefinition.args0.find(argument => argument.name === 'UNIT').type,
-    'field_dropdown'
-);
 const eventBrickButtonDefinition = registeredBlockDefinitions.find(
     item => item.type === 'event_brick_button'
 );
@@ -1257,9 +1385,32 @@ assert.deepStrictEqual(eventBrickButtonField.options.map(option => option[1]), [
     'down'
 ]);
 assert.ok(!eventBrickButtonField.options.some(option => option[1] === 'center'));
-['event_broadcast_received', 'event_broadcast', 'event_broadcast_wait'].forEach(blockId => {
+const waitBrickButtonDefinition = registeredBlockDefinitions.find(
+    item => item.type === 'sensor_wait_brick_button'
+);
+assert.deepStrictEqual(
+    waitBrickButtonDefinition.args0.find(argument => argument.name === 'BUTTON')
+        .options.map(option => option[1]),
+    ['left', 'confirm', 'right', 'up', 'down']
+);
+['event_broadcast', 'event_broadcast_wait'].forEach(blockId => {
     const definition = registeredBlockDefinitions.find(item => item.type === blockId);
     assert.strictEqual(definition.args0.find(argument => argument.name === 'MESSAGE').type, 'field_dropdown');
+});
+[
+    'sensor_ir_beacon_heading',
+    'sensor_ir_beacon_proximity',
+    'sensor_ir_beacon_buttons',
+    'sensor_ir_beacon_button_pressed',
+    'sensor_wait_ir_beacon_button',
+    'sensor_ir_beacon_active',
+    'sensor_ir_beacon_active_compare'
+].forEach(blockId => {
+    const definition = registeredBlockDefinitions.find(item => item.type === blockId);
+    const channel = definitionArguments(definition).find(argument => argument.name === 'CHANNEL');
+    assert.ok(channel, `${blockId}.CHANNEL`);
+    assert.deepStrictEqual(channel.options, [[FIXED_IR_REMOTE_CHANNEL, FIXED_IR_REMOTE_CHANNEL]]);
+    assert.ok(definition.extensions.includes(EST_IR_FIXED_CHANNEL_EXTENSION), `${blockId} migration extension`);
 });
 const sensorPortDefaults = {
     sensor_color_reflection: '3',
@@ -1328,9 +1479,6 @@ const relaxedNumericInputs = {
     sound_beep_for: ['NOTE', 'SECONDS'],
     sound_beep: ['NOTE'],
     sound_set_volume: ['VOLUME'],
-    event_ultrasonic: ['VALUE'],
-    event_ir_proximity: ['VALUE'],
-    event_gyro_angle: ['VALUE'],
     event_timer: ['SECONDS'],
     control_wait_seconds: ['SECONDS'],
     control_repeat: ['TIMES'],
@@ -1379,27 +1527,24 @@ const estToolboxCategories = getEstToolboxCategories();
 assert.ok(!estToolboxCategories.includes('name="声音"'));
 assert.match(estToolboxCategories, /<category[^>]*name="%\{BKY_CATEGORY_OPERATORS\}"/s);
 assert.strictEqual((estToolboxCategories.match(/<category/g) || []).length, 8);
-const hiddenUnsupportedEventBlockIds = [
-    'event_color',
-    'event_touch',
-    'event_ultrasonic',
-    'event_ir_proximity',
-    'event_ir_beacon_button',
-    'event_gyro_angle',
-    'event_broadcast_received',
-    'event_broadcast',
-    'event_broadcast_wait'
-];
-ALL_EST_BLOCK_IDS.filter(blockId => !hiddenUnsupportedEventBlockIds.includes(blockId)).forEach(blockId => {
+ALL_EST_BLOCK_IDS.forEach(blockId => {
     assert.ok(estToolboxCategories.includes(`<block type="${blockId}"`));
-});
-hiddenUnsupportedEventBlockIds.forEach(blockId => {
-    assert.ok(!estToolboxCategories.includes(`<block type="${blockId}"`), `${blockId} should stay hidden`);
 });
 const toolboxBlockXml = blockId => {
     const match = estToolboxCategories.match(new RegExp(`<block type="${blockId}">([\\s\\S]*?)</block>`));
     return match ? match[1] : '';
 };
+[
+    'sensor_ir_beacon_heading',
+    'sensor_ir_beacon_proximity',
+    'sensor_ir_beacon_buttons',
+    'sensor_ir_beacon_button_pressed',
+    'sensor_wait_ir_beacon_button',
+    'sensor_ir_beacon_active',
+    'sensor_ir_beacon_active_compare'
+].forEach(blockId => {
+    assert.match(toolboxBlockXml(blockId), /<field name="CHANNEL">1<\/field>/, `${blockId}.CHANNEL toolbox`);
+});
 const steeringShadowInputs = new Set([
     'drive_steer_for.STEERING',
     'drive_start_steer.STEERING',
@@ -1407,7 +1552,6 @@ const steeringShadowInputs = new Set([
     'drive_start_steer_speed.STEERING'
 ]);
 Object.entries(relaxedNumericInputs).forEach(([blockId, inputNames]) => {
-    if (hiddenUnsupportedEventBlockIds.includes(blockId)) return;
     const xml = toolboxBlockXml(blockId);
     assert.ok(xml, blockId);
     inputNames.forEach(inputName => {
@@ -1496,7 +1640,6 @@ assert.match(
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_steering_picker">/g) || []).length, 4);
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_motor_port_picker">/g) || []).length, 12);
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_drive_port_picker">/g) || []).length, 2);
-assert.strictEqual((estToolboxCategories.match(/<shadow type="est_event_sensor_port_picker">/g) || []).length, 0);
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_sensor_port_picker">/g) || []).length, 28);
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_event_/g) || []).length, 0);
 assert.ok(!estToolboxCategories.includes('data_variable'));
@@ -1545,9 +1688,14 @@ registerEstPythonGenerator(fakeGeneratorScratchBlocks);
 assert.strictEqual(fakePythonGenerator.data_variable, nativeDataVariableGenerator);
 assert.strictEqual(fakePythonGenerator.data_listcontents, nativeListGenerator);
 assert.strictEqual(fakePythonGenerator.procedures_call, nativeProcedureGenerator);
-OPENBLOCK_NATIVE_OPERATOR_IDS.forEach(blockId => {
+OPENBLOCK_NATIVE_OPERATOR_IDS.filter(blockId => blockId !== 'operator_random').forEach(blockId => {
     assert.strictEqual(fakePythonGenerator[blockId], nativeOperatorGenerators[blockId], blockId);
 });
+assert.notStrictEqual(
+    fakePythonGenerator.operator_random,
+    nativeOperatorGenerators.operator_random,
+    'operator_random must use the EST runtime instead of Python random'
+);
 
 const makeFakeBlock = (type, options = {}) => ({
     type,
@@ -1770,7 +1918,10 @@ assert.strictEqual(fakePythonGenerator.display_image_for(makeFakeBlock('display_
 })), "rt.display_image_for('Eyes/Neutral', 2)\n");
 assert.strictEqual(fakePythonGenerator.display_text_line(makeFakeBlock('display_text_line', {
     values: {LINE: '2', TEXT: "'EST'"}
-})), "est.display.text_line(2, 'EST')\n");
+})), "rt.display_text_line(2, 'EST')\n");
+assert.strictEqual(fakePythonGenerator.display_text_line(makeFakeBlock('display_text_line', {
+    values: {LINE: 'line_number', TEXT: 'sensor_value'}
+})), 'rt.display_text_line(line_number, sensor_value)\n');
 [
     'regular_black',
     'bold_black',
@@ -1782,8 +1933,12 @@ assert.strictEqual(fakePythonGenerator.display_text_line(makeFakeBlock('display_
     assert.strictEqual(fakePythonGenerator.display_text_xy(makeFakeBlock('display_text_xy', {
         values: {X: '10', Y: '20', TEXT: "'EST'"},
         fields: {FONT: font}
-    })), `est.display.text(10, 20, 'EST', font='${font}')\nest.display.refresh()\n`);
+    })), `rt.display_text(10, 20, 'EST', font='${font}')\n`);
 });
+assert.strictEqual(fakePythonGenerator.display_text_xy(makeFakeBlock('display_text_xy', {
+    values: {X: 'x_value', Y: 'y_value', TEXT: 'sensor_value'},
+    fields: {FONT: 'regular_black'}
+})), "rt.display_text(x_value, y_value, sensor_value, font='regular_black')\n");
 assert.strictEqual(
     fakePythonGenerator.display_clear(makeFakeBlock('display_clear')),
     'est.display.clear()\nest.display.refresh()\n'
@@ -2999,11 +3154,19 @@ assert.match(desktopGuiSource, /onStorageInit=\{ignoreStorageInit\}/);
 const rendererAppSource = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'renderer', 'app.jsx'), 'utf8');
 assert.ok(!rendererAppSource.includes('ScratchDesktopAppStateHOC'));
 const mainProcessSource = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'main', 'index.js'), 'utf8');
+assert.match(mainProcessSource, /nativeImage/);
 assert.match(mainProcessSource, /import appIconIco from '\.\.\/icon\/OpenBlockDesktop\.ico';/);
 assert.match(mainProcessSource, /import appIconPng from '\.\.\/icon\/OpenBlockDesktop\.png';/);
 assert.match(mainProcessSource, /app\.setAppUserModelId\(estStudioAppId\)/);
+assert.match(mainProcessSource, /const resolveBundledAssetPath = assetPath =>/);
+assert.match(mainProcessSource, /path\.resolve\(process\.cwd\(\), 'dist', 'main', assetPath\)/);
+assert.match(mainProcessSource, /candidates\.find\(candidate => fs\.existsSync\(candidate\)\) \|\| null/);
+assert.match(mainProcessSource, /nativeImage\.createFromPath\(iconPath\)/);
+assert.match(mainProcessSource, /return undefined/);
 assert.match(mainProcessSource, /process\.platform === 'win32' \? appIconIco : appIconPng/);
-assert.match(mainProcessSource, /icon: getWindowIcon\(\)/);
+assert.match(mainProcessSource, /const windowIcon = getWindowIcon\(\)/);
+assert.match(mainProcessSource, /icon: windowIcon/);
+assert.match(mainProcessSource, /window\.setIcon\(windowIcon\)/);
 assert.ok(!mainProcessSource.includes('OpenblockDesktopTelemetry'));
 assert.ok(!mainProcessSource.includes("send('setUserId'"));
 assert.ok(!mainProcessSource.includes("ipcMain.on('clearCache'"));
@@ -3045,6 +3208,10 @@ assert.ok(!rendererIndexHtml.includes('OpenBlock is loading'));
 assert.ok(!rendererIndexHtml.includes('#4D97FF'));
 const iconBuildScript = fs.readFileSync(path.resolve(__dirname, '..', 'buildResources', 'make-icons.sh'), 'utf8');
 assert.match(iconBuildScript, /SRC=\.\.\/src\/icon\/OpenBlockDesktop\.png/);
+assert.match(iconBuildScript, /WINDOW_ICON_SRC=\.\.\/src\/renderer\/est-menu-logo\.png/);
+assert.match(iconBuildScript, /ICO_TITLEBAR_SIZES="16 20 24 30"/);
+assert.match(iconBuildScript, /resize_titlebar_icon/);
+assert.match(iconBuildScript, /-crop 560x245\+0\+0/);
 const packageConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf8'));
 assert.strictEqual(typeof packageConfig.dependencies['openblock-link'], 'undefined');
 assert.strictEqual(typeof packageConfig.scripts['fetch:firmwares'], 'undefined');
@@ -3865,6 +4032,52 @@ const testProgramDownloadRunAndStop = async () => {
     assert.ok(m122HTransport.actions.includes('37:1'));
     assert.ok(m122HTransport.actions.includes('36:3'));
 
+    const displayTextRuntimeApiSource = [
+        'import est_runtime as rt',
+        'sensor_value = 42',
+        "rt.display_text(1, 2, sensor_value, font='regular_black')",
+        'rt.display_text_line(1, sensor_value)',
+        ''
+    ].join('\n');
+    const m122HDisplayTextTransport = new ProgramTestTransport({
+        firmwareVersion: 'M1.22H',
+        protocolMinor: 26
+    });
+    const m122HDisplayTextService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    m122HDisplayTextService.transport = m122HDisplayTextTransport;
+    m122HDisplayTextService.device = service.device;
+    await assert.rejects(
+        m122HDisplayTextService.downloadProgram({source: displayTextRuntimeApiSource, slot: 1}),
+        /M1\.22H.*M1\.22I/
+    );
+    await assert.rejects(
+        m122HDisplayTextService.runProgram({source: displayTextRuntimeApiSource, slot: 1}),
+        /M1\.22H.*M1\.22I/
+    );
+    assert.ok(!m122HDisplayTextTransport.actions.includes('36:1'));
+    assert.ok(!m122HDisplayTextTransport.actions.includes('36:3'));
+    assert.ok(!m122HDisplayTextTransport.actions.includes('37:1'));
+
+    const m122IDisplayTextTransport = new ProgramTestTransport({
+        firmwareVersion: 'M1.22I',
+        protocolMinor: 26
+    });
+    const m122IDisplayTextService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    m122IDisplayTextService.transport = m122IDisplayTextTransport;
+    m122IDisplayTextService.device = service.device;
+    await m122IDisplayTextService.runProgram({source: displayTextRuntimeApiSource, slot: 1});
+    assert.ok(m122IDisplayTextTransport.actions.includes('36:1'));
+    assert.ok(m122IDisplayTextTransport.actions.includes('37:1'));
+    assert.ok(m122IDisplayTextTransport.actions.includes('36:3'));
+
     const oldRuntimeApiOnM122DTransport = new ProgramTestTransport({
         firmwareVersion: 'M1.22D',
         protocolMinor: 26
@@ -3971,6 +4184,33 @@ const testProgramDownloadRunAndStop = async () => {
         /runtime-basic-event-hats/
     );
     assert.ok(!missingBasicEventHatsTransport.actions.includes('36:3'));
+
+    const unsupportedRuntimeTransport = new ProgramTestTransport({
+        firmwareVersion: 'M1.22H',
+        protocolMinor: 26
+    });
+    const unsupportedRuntimeService = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    unsupportedRuntimeService.transport = unsupportedRuntimeTransport;
+    unsupportedRuntimeService.device = service.device;
+    await assert.rejects(
+        unsupportedRuntimeService.downloadProgram({
+            source: "import est_runtime as rt\nrt.drive_start_dual_speed(0, 50)\n",
+            slot: 1
+        }),
+        /M1\.22H.*M1\.22L/
+    );
+    await assert.rejects(
+        unsupportedRuntimeService.runProgram({
+            source: "import est_runtime as rt\n@rt.on_color('3', 'red')\ndef stack_1():\n  pass\n",
+            slot: 1
+        }),
+        /尚未实现.*颜色传感器事件帽.*on_color/
+    );
+    assert.deepStrictEqual(unsupportedRuntimeTransport.actions, ['25:0']);
 
     const stopped = await service.stopCurrentProgram();
     assert.strictEqual(stopped.state, 7);
@@ -4173,7 +4413,6 @@ const testBuiltInMotorBlock = async () => {
     assert.strictEqual(primitives[EST_MOTOR_PORT_PICKER_ID]({PORT: 'c'}), 'C');
     assert.strictEqual(primitives[EST_DRIVE_PORT_PICKER_ID]({PORT: 'B'}), 'B');
     assert.strictEqual(primitives[EST_STEERING_PICKER_ID]({NUM: '39'}), 39);
-    assert.strictEqual(primitives[EST_EVENT_SENSOR_PORT_PICKER_ID]({PORT: '3'}), '3');
     assert.strictEqual(primitives[EST_SENSOR_PORT_PICKER_ID]({PORT: '4'}), '4');
     assert.strictEqual(await motorBlocks.motorDegrees({PORT: 'D'}), -40);
     assert.deepStrictEqual(invokedChannels, ['est-auto-connect']);
@@ -4216,7 +4455,7 @@ validateEstDefaultProject()
     .then(() => testUsbDisconnectClearsStaleTransport())
     .then(() => testBuiltInMotorBlock())
     .then(() => console.log(
-        'EST protocol, queue, 92 EST blocks, and native operator/data/procedure tests passed'
+        'EST protocol, queue, 85 EST blocks, and native operator/data/procedure tests passed'
     ))
     .catch(error => {
         console.error(error);

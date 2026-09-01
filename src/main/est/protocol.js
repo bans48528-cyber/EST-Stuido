@@ -161,6 +161,11 @@ const EST_PROGRAM_COOPERATIVE_PROTOCOL_MINOR = 25;
 const EST_PROGRAM_BASIC_EVENT_HATS_PROTOCOL_MINOR = 25;
 const EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR = 26;
 export const EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION = 'M1.22E';
+export const EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION = 'M1.22I';
+export const EST_PROGRAM_DUAL_SPEED_API_MIN_FIRMWARE_VERSION = 'M1.22L';
+export const EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION = 'M1.22M';
+const EST_PROGRAM_SENSOR_WAIT_RUNTIME_PATTERN =
+    /\brt\.wait_(?:brick_button|color|touch|ultrasonic|ir_proximity|ir_beacon_button|gyro)\s*\(/;
 const EST_PROGRAM_REQUIRED_CAPABILITIES = (
     CAPABILITY_FROZEN_EST_RUNTIME |
     CAPABILITY_UNLIMITED_PYTHON_RUN |
@@ -284,13 +289,114 @@ export const programRequiredCapabilitiesForSource = source => {
 
 export const programMinimumFirmwareVersionForSource = source => {
     const text = typeof source === 'string' ? source : Buffer.from(source || '').toString('utf8');
-    if (
-        /\brt\.motor_start_(?:speed|power)\s*\(/.test(text) ||
-        /\best\.display\.text_line\s*\(/.test(text)
-    ) {
+    if (EST_PROGRAM_SENSOR_WAIT_RUNTIME_PATTERN.test(text)) {
+        return EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION;
+    }
+    if (/\brt\.drive_(?:start_)?dual_speed(?:_for)?\s*\(/.test(text)) {
+        return EST_PROGRAM_DUAL_SPEED_API_MIN_FIRMWARE_VERSION;
+    }
+    if (/\brt\.display_text(?:_line)?\s*\(/.test(text)) {
+        return EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION;
+    }
+    if (/\brt\.motor_start_(?:speed|power)\s*\(/.test(text)) {
         return EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION;
     }
     return null;
+};
+
+export const EST_PROGRAM_UNSUPPORTED_RUNTIME_FEATURES = Object.freeze([
+    {
+        id: 'broadcast',
+        label: '广播消息',
+        pattern: /\brt\.broadcast\s*\(/
+    },
+    {
+        id: 'on_broadcast',
+        label: '接收广播事件帽',
+        pattern: /^@rt\.on_broadcast\s*\(/m
+    },
+    {
+        id: 'on_color',
+        label: '颜色传感器事件帽',
+        pattern: /^@rt\.on_color\s*\(/m
+    },
+    {
+        id: 'on_touch',
+        label: '触碰传感器事件帽',
+        pattern: /^@rt\.on_touch\s*\(/m
+    },
+    {
+        id: 'on_ultrasonic',
+        label: '超声波传感器事件帽',
+        pattern: /^@rt\.on_ultrasonic\s*\(/m
+    },
+    {
+        id: 'on_ir_proximity',
+        label: '红外近程事件帽',
+        pattern: /^@rt\.on_ir_proximity\s*\(/m
+    },
+    {
+        id: 'on_ir_beacon_button',
+        label: '红外信标按钮事件帽',
+        pattern: /^@rt\.on_ir_beacon_button\s*\(/m
+    },
+    {
+        id: 'on_gyro_angle',
+        label: '陀螺仪角度事件帽',
+        pattern: /^@rt\.on_gyro_angle\s*\(/m
+    },
+    {
+        id: 'color_calibrate',
+        label: '颜色反射校准',
+        pattern: /\brt\.color_calibrate\s*\(/
+    },
+    {
+        id: 'color_reset_calibration',
+        label: '重置颜色反射校准',
+        pattern: /\brt\.color_reset_calibration\s*\(/
+    },
+    {
+        id: 'infrared_beacon_heading',
+        label: '红外信标方向',
+        pattern: /\.beacon_heading\s*\(/
+    },
+    {
+        id: 'infrared_beacon_proximity',
+        label: '红外信标近程',
+        pattern: /\.beacon_proximity\s*\(/
+    },
+    {
+        id: 'infrared_beacon_buttons',
+        label: '红外信标按钮列表',
+        pattern: /\.beacon_buttons\s*\(/
+    },
+    {
+        id: 'infrared_beacon_button_pressed',
+        label: '红外信标按钮是否按下',
+        pattern: /\.beacon_button_pressed\s*\(/
+    },
+    {
+        id: 'infrared_beacon_active',
+        label: '红外信标活动状态',
+        pattern: /\.beacon_active\s*\(/
+    },
+    {
+        id: 'ir_beacon_compare',
+        label: '红外信标比较',
+        pattern: /\brt\.ir_beacon_compare\s*\(/
+    },
+    {
+        id: 'compare_changed',
+        label: '传感器数值变化比较',
+        pattern: /\brt\.compare\s*\([^\n]*,\s*['"]changed['"]\s*,/
+    }
+]);
+
+export const programUnsupportedRuntimeFeaturesForSource = source => {
+    const text = typeof source === 'string' ? source : Buffer.from(source || '').toString('utf8');
+    return EST_PROGRAM_UNSUPPORTED_RUNTIME_FEATURES
+        .filter(feature => feature.pattern.test(text))
+        .map(({id, label}) => ({id, label}));
 };
 
 export const crc32 = bytes => {

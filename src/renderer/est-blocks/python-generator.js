@@ -4,15 +4,8 @@ const registeredGenerators = new WeakSet();
 
 const EVENT_HAT_IDS = new Set([
     'event_program_start',
-    'event_color',
-    'event_touch',
-    'event_ultrasonic',
-    'event_ir_proximity',
-    'event_ir_beacon_button',
-    'event_gyro_angle',
     'event_brick_button',
     'event_condition',
-    'event_broadcast_received',
     'event_timer'
 ]);
 
@@ -94,6 +87,7 @@ const normalizeStopScope = value => {
 };
 
 const numberField = (block, name, fallback = '0') => String(fieldValue(block, name, fallback));
+const infraredRemoteChannel = () => '1';
 
 const valueOr = (generator, block, name, fallback) => (
     generator.valueToCode(block, name, orderOf(generator, 'ORDER_NONE')) || fallback
@@ -211,6 +205,12 @@ const registerLifecycle = (ScratchBlocks, generator) => {
 };
 
 const registerSupportGenerators = generator => {
+    generator.operator_random = block => {
+        ensureRuntimeImport(generator);
+        const first = valueOr(generator, block, 'FROM', '0');
+        const last = valueOr(generator, block, 'TO', '0');
+        return functionCall(generator, `rt.random_int(${first}, ${last})`);
+    };
     generator.est_steering_picker = block => [
         numberField(block, 'NUM'),
         orderOf(generator, 'ORDER_ATOMIC', 0)
@@ -221,11 +221,10 @@ const registerSupportGenerators = generator => {
     ];
     generator.est_motor_port_picker = portPicker;
     generator.est_drive_port_picker = portPicker;
-    generator.est_event_sensor_port_picker = block => [
+    generator.est_sensor_port_picker = block => [
         quoteField(generator, block, 'PORT', '1'),
         orderOf(generator, 'ORDER_ATOMIC', 0)
     ];
-    generator.est_sensor_port_picker = generator.est_event_sensor_port_picker;
 };
 
 const registerMotorGenerators = generator => {
@@ -385,18 +384,18 @@ const registerDisplayGenerators = generator => {
             'est.display.refresh()\n';
     };
     generator.display_text_line = block => {
-        ensureHardwareImport(generator);
+        ensureRuntimeImport(generator);
         const line = valueOr(generator, block, 'LINE', '1');
         const content = valueOr(generator, block, 'TEXT', quote(generator, ''));
-        return `est.display.text_line(${line}, ${content})\n`;
+        return `rt.display_text_line(${line}, ${content})\n`;
     };
     generator.display_text_xy = block => {
-        ensureHardwareImport(generator);
+        ensureRuntimeImport(generator);
         const x = valueOr(generator, block, 'X', '0');
         const y = valueOr(generator, block, 'Y', '0');
         const content = valueOr(generator, block, 'TEXT', quote(generator, ''));
         const font = quoteField(generator, block, 'FONT', 'large_white');
-        return `est.display.text(${x}, ${y}, ${content}, font=${font})\nest.display.refresh()\n`;
+        return `rt.display_text(${x}, ${y}, ${content}, font=${font})\n`;
     };
     generator.display_clear = () => {
         ensureHardwareImport(generator);
@@ -446,49 +445,6 @@ const registerSoundGenerators = generator => {
 
 const registerEventGenerators = generator => {
     generator.event_program_start = block => registerEventHat(generator, block, '@rt.on_start');
-    generator.event_color = block => {
-        const port = valueOr(generator, block, 'PORT', quote(generator, '3'));
-        const event = quoteField(generator, block, 'COLOR_EVENT', 'red');
-        return registerEventHat(generator, block, `@rt.on_color(${port}, ${event})`);
-    };
-    generator.event_touch = block => {
-        const port = valueOr(generator, block, 'PORT', quote(generator, '1'));
-        const event = quoteField(generator, block, 'TOUCH_EVENT', 'pressed');
-        return registerEventHat(generator, block, `@rt.on_touch(${port}, ${event})`);
-    };
-    generator.event_ultrasonic = block => {
-        const port = valueOr(generator, block, 'PORT', quote(generator, '4'));
-        const event = quoteField(generator, block, 'COMPARATOR', 'less');
-        const value = valueOr(generator, block, 'VALUE', '15');
-        const unit = quoteField(generator, block, 'UNIT', 'centimeters');
-        return registerEventHat(
-            generator,
-            block,
-            `@rt.on_ultrasonic(${port}, ${event}, ${value}, ${unit})`
-        );
-    };
-    generator.event_ir_proximity = block => {
-        const port = valueOr(generator, block, 'PORT', quote(generator, '4'));
-        const event = quoteField(generator, block, 'COMPARATOR', 'less');
-        const value = valueOr(generator, block, 'VALUE', '15');
-        return registerEventHat(generator, block, `@rt.on_ir_proximity(${port}, ${event}, ${value})`);
-    };
-    generator.event_ir_beacon_button = block => {
-        const port = valueOr(generator, block, 'PORT', quote(generator, '4'));
-        const channel = numberField(block, 'CHANNEL', '1');
-        const event = quoteField(generator, block, 'BEACON_EVENT', 'top_left_pressed');
-        return registerEventHat(
-            generator,
-            block,
-            `@rt.on_ir_beacon_button(${port}, ${channel}, ${event})`
-        );
-    };
-    generator.event_gyro_angle = block => {
-        const port = valueOr(generator, block, 'PORT', quote(generator, '2'));
-        const event = quoteField(generator, block, 'COMPARATOR', 'less');
-        const value = valueOr(generator, block, 'VALUE', '45');
-        return registerEventHat(generator, block, `@rt.on_gyro_angle(${port}, ${event}, ${value})`);
-    };
     generator.event_brick_button = block => {
         const button = quoteBrickButtonField(generator, block, 'BUTTON');
         const event = quoteField(generator, block, 'BUTTON_EVENT', 'pressed');
@@ -497,10 +453,6 @@ const registerEventGenerators = generator => {
     generator.event_condition = block => {
         const condition = valueOr(generator, block, 'CONDITION', 'False');
         return registerEventHat(generator, block, `@rt.on_condition(lambda: ${condition})`);
-    };
-    generator.event_broadcast_received = block => {
-        const message = quoteField(generator, block, 'MESSAGE', 'message_1');
-        return registerEventHat(generator, block, `@rt.on_broadcast(${message})`);
     };
     generator.event_broadcast = block => {
         ensureRuntimeImport(generator);
@@ -688,7 +640,7 @@ const registerSensorGenerators = generator => {
     };
     generator.sensor_ir_beacon_heading = block => {
         ensureRuntimeImport(generator);
-        const channel = numberField(block, 'CHANNEL', '1');
+        const channel = infraredRemoteChannel();
         return functionCall(
             generator,
             `rt.infrared(${sensorPort(block, '4')}).beacon_heading(${channel})`
@@ -696,7 +648,7 @@ const registerSensorGenerators = generator => {
     };
     generator.sensor_ir_beacon_proximity = block => {
         ensureRuntimeImport(generator);
-        const channel = numberField(block, 'CHANNEL', '1');
+        const channel = infraredRemoteChannel();
         return functionCall(
             generator,
             `rt.infrared(${sensorPort(block, '4')}).beacon_proximity(${channel})`
@@ -704,7 +656,7 @@ const registerSensorGenerators = generator => {
     };
     generator.sensor_ir_beacon_buttons = block => {
         ensureRuntimeImport(generator);
-        const channel = numberField(block, 'CHANNEL', '1');
+        const channel = infraredRemoteChannel();
         return functionCall(
             generator,
             `rt.infrared(${sensorPort(block, '4')}).beacon_buttons(${channel})`
@@ -712,7 +664,7 @@ const registerSensorGenerators = generator => {
     };
     generator.sensor_ir_beacon_button_pressed = block => {
         ensureRuntimeImport(generator);
-        const channel = numberField(block, 'CHANNEL', '1');
+        const channel = infraredRemoteChannel();
         const button = quoteField(generator, block, 'BEACON_BUTTON', 'none');
         return functionCall(
             generator,
@@ -721,13 +673,13 @@ const registerSensorGenerators = generator => {
     };
     generator.sensor_wait_ir_beacon_button = block => {
         ensureRuntimeImport(generator);
-        const channel = numberField(block, 'CHANNEL', '1');
+        const channel = infraredRemoteChannel();
         const event = quoteField(generator, block, 'BEACON_EVENT', 'top_left_pressed');
         return `rt.wait_ir_beacon_button(${sensorPort(block, '4')}, ${channel}, ${event})\n`;
     };
     generator.sensor_ir_beacon_active = block => {
         ensureRuntimeImport(generator);
-        const channel = numberField(block, 'CHANNEL', '1');
+        const channel = infraredRemoteChannel();
         return functionCall(
             generator,
             `rt.infrared(${sensorPort(block, '4')}).beacon_active(${channel})`
@@ -735,7 +687,7 @@ const registerSensorGenerators = generator => {
     };
     generator.sensor_ir_beacon_active_compare = block => {
         ensureRuntimeImport(generator);
-        const channel = numberField(block, 'CHANNEL', '1');
+        const channel = infraredRemoteChannel();
         const property = quoteField(generator, block, 'PROPERTY', 'heading');
         const code = `rt.ir_beacon_compare(${sensorPort(block, '4')}, ${channel}, ` +
             `${property}, ${comparator(block)}, ${compareValue(block)})`;

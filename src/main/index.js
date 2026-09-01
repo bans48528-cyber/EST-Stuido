@@ -1,4 +1,4 @@
-import {BrowserWindow, Menu, app, dialog, ipcMain, shell, systemPreferences} from 'electron';
+import {BrowserWindow, Menu, app, dialog, ipcMain, nativeImage, shell, systemPreferences} from 'electron';
 import * as remote from '@electron/remote/main';
 import fs from 'fs-extra';
 import path from 'path';
@@ -44,7 +44,53 @@ const defaultSize = {width: 1620, height: 900};
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
-const getWindowIcon = () => (process.platform === 'win32' ? appIconIco : appIconPng);
+const resolveBundledAssetPath = assetPath => {
+    if (typeof assetPath !== 'string' || !assetPath || assetPath.startsWith('data:')) {
+        return assetPath;
+    }
+    if (path.isAbsolute(assetPath)) {
+        return fs.existsSync(assetPath) ? assetPath : null;
+    }
+
+    const candidates = [
+        path.resolve(__dirname, assetPath),
+        path.resolve(process.cwd(), assetPath),
+        path.resolve(process.cwd(), 'dist', 'main', assetPath)
+    ];
+    if (typeof app.getAppPath === 'function') {
+        const appPath = app.getAppPath();
+        candidates.push(
+            path.resolve(appPath, assetPath),
+            path.resolve(appPath, 'dist', 'main', assetPath)
+        );
+    }
+    if (process.resourcesPath) {
+        candidates.push(
+            path.resolve(process.resourcesPath, 'app.asar', assetPath),
+            path.resolve(process.resourcesPath, 'app.asar', 'dist', 'main', assetPath),
+            path.resolve(process.resourcesPath, 'app', assetPath),
+            path.resolve(process.resourcesPath, 'app', 'dist', 'main', assetPath)
+        );
+    }
+    return candidates.find(candidate => fs.existsSync(candidate)) || null;
+};
+
+const createWindowIcon = assetPath => {
+    const iconPath = resolveBundledAssetPath(assetPath);
+    if (typeof iconPath !== 'string') {
+        return undefined;
+    }
+    const icon = iconPath.startsWith('data:') ?
+        nativeImage.createFromDataURL(iconPath) :
+        nativeImage.createFromPath(iconPath);
+    if (icon.isEmpty()) {
+        log.warn(`Unable to load EST Studio window icon from ${iconPath}`);
+        return undefined;
+    }
+    return icon;
+};
+
+const getWindowIcon = () => createWindowIcon(process.platform === 'win32' ? appIconIco : appIconPng);
 
 const devToolKey = ((process.platform === 'darwin') ?
     { // macOS: command+option+i
@@ -220,8 +266,9 @@ const handlePermissionRequest = async (webContents, permission, callback, detail
 };
 
 const createWindow = ({search = null, url = 'index.html', ...browserWindowOptions}) => {
+    const windowIcon = getWindowIcon();
     const window = new BrowserWindow({
-        icon: getWindowIcon(),
+        icon: windowIcon,
         useContentSize: true,
         show: false,
         webPreferences: {
@@ -230,6 +277,9 @@ const createWindow = ({search = null, url = 'index.html', ...browserWindowOption
         },
         ...browserWindowOptions
     });
+    if (windowIcon && typeof window.setIcon === 'function') {
+        window.setIcon(windowIcon);
+    }
     const webContents = window.webContents;
 
     // Keep renderer failures visible in the development terminal. This is
