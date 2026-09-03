@@ -1,4 +1,5 @@
 import displayBlockIcon from './est-display-icon.svg';
+import displayImageThumbnails from './display-image-thumbnails';
 import driveBlockIcon from './est-drive-icon.svg';
 import eventHatBlockIcon from './est-event-hat-icon.svg';
 import eventHostBlockIcon from './est-event-host-icon.svg';
@@ -29,6 +30,7 @@ import {
     getCurrentEstLocale,
     getEstImageOptions,
     getEstLocalizedOptions,
+    getEstSoundOptions,
     getEstText
 } from '../est-i18n';
 
@@ -68,7 +70,9 @@ const CATEGORY_BLOCK_IDS = {
         'drive_steer_for_speed',
         'drive_dual_speed_for',
         'drive_start_steer_speed',
-        'drive_start_dual_speed'
+        'drive_start_dual_speed',
+        'drive_line_follow_init',
+        'drive_line_follow_dual_step'
     ],
     display: [
         'display_image_for',
@@ -192,7 +196,18 @@ const FONT_VALUES = [
     'large_white'
 ];
 const STATUS_LIGHT_VALUES = ['off', 'red', 'blue'];
-const SOUND_VALUES = ['communication_hello'];
+const SOUND_VALUES = [
+    'Piano/C4', 'Piano/Cs4', 'Piano/D4', 'Piano/Ds4',
+    'Piano/E4', 'Piano/F4', 'Piano/Fs4', 'Piano/G4',
+    'Piano/Gs4', 'Piano/A4', 'Piano/As4', 'Piano/B4',
+    'Piano/C5', 'Piano/Cs5', 'Piano/D5', 'Piano/Ds5',
+    'Piano/E5', 'Piano/F5', 'Piano/Fs5', 'Piano/G5',
+    'Piano/Gs5', 'Piano/A5', 'Piano/As5', 'Piano/B5',
+    'Piano/C6', 'Piano/Cs6', 'Piano/D6', 'Piano/Ds6',
+    'Piano/E6', 'Piano/F6', 'Piano/Fs6', 'Piano/G6',
+    'Piano/Gs6', 'Piano/A6', 'Piano/As6', 'Piano/B6',
+    'Piano/C7'
+];
 const TOUCH_EVENT_VALUES = ['pressed', 'released'];
 const COMPARATOR_VALUES = ['less', 'greater', 'equal'];
 const COLOR_VALUES = ['none', 'black', 'blue', 'green', 'yellow', 'red', 'white', 'brown'];
@@ -273,9 +288,11 @@ const DISPLAY_IMAGE_IDS = [
     'Eyes/Winking'
 ];
 const IMAGE_OPTIONS = getEstImageOptions(DISPLAY_IMAGE_IDS);
+const DISPLAY_IMAGE_OPTION_IDS_BY_LABEL = new Map(IMAGE_OPTIONS.map(([label, value]) => [label, value]));
+const DISPLAY_IMAGE_DROPDOWN_BLOCK_IDS = new Set(['display_image_for', 'display_image']);
 const FONT_OPTIONS = optionsFor('font', FONT_VALUES, EST_DEFAULT_LOCALE);
 const STATUS_LIGHT_OPTIONS = optionsFor('statusLight', STATUS_LIGHT_VALUES, EST_DEFAULT_LOCALE);
-const SOUND_OPTIONS = optionsFor('sound', SOUND_VALUES, EST_DEFAULT_LOCALE);
+const SOUND_OPTIONS = getEstSoundOptions(SOUND_VALUES, EST_DEFAULT_LOCALE);
 const TOUCH_EVENT_OPTIONS = optionsFor('touchEvent', TOUCH_EVENT_VALUES, EST_DEFAULT_LOCALE);
 const COMPARATOR_OPTIONS = optionsFor('comparator', COMPARATOR_VALUES, EST_DEFAULT_LOCALE);
 const COLOR_OPTIONS = optionsFor('color', COLOR_VALUES, EST_DEFAULT_LOCALE);
@@ -812,6 +829,26 @@ const makeMovementDefinitions = (locale = getCurrentEstLocale()) => {
                 valueInput('LEFT_SPEED', 'Number'),
                 valueInput('RIGHT_SPEED', 'Number')
             ]
+        ),
+        commandWithIcon(
+            'movement',
+            'drive_line_follow_init',
+            driveIcon,
+            getEstText('block.movement.lineFollowInit', locale)
+        ),
+        commandWithIcon(
+            'movement',
+            'drive_line_follow_dual_step',
+            driveIcon,
+            getEstText('block.movement.lineFollowDualStep', locale),
+            [
+                valueInput('LEFT_INPUT', 'Number'),
+                valueInput('RIGHT_INPUT', 'Number'),
+                valueInput('LEFT_BASE_POWER', 'Number'),
+                valueInput('RIGHT_BASE_POWER', 'Number'),
+                valueInput('KP', 'Number'),
+                valueInput('KD', 'Number')
+            ]
         )
     ];
 };
@@ -845,7 +882,7 @@ const makeDisplayDefinitions = (locale = getCurrentEstLocale()) => {
 };
 
 const makeSoundDefinitions = (locale = getCurrentEstLocale()) => {
-    const soundOptions = optionsFor('sound', SOUND_VALUES, locale);
+    const soundOptions = getEstSoundOptions(SOUND_VALUES, locale);
     return [
         commandWithIcon('sound', 'sound_play_wait', musicIcon, getEstText('block.sound.playWait', locale), [
             dropdown('SOUND', soundOptions)
@@ -1176,8 +1213,71 @@ const makeEstBlockDefinitions = (ScratchBlocks, locale = getCurrentEstLocale()) 
 const registeredTargets = new WeakSet();
 const registeredLocaleListeners = new WeakSet();
 const configuredZoomControlTypes = new WeakSet();
+const configuredDisplayImageDropdownTypes = new WeakSet();
 const EST_HISTORY_CONTROL_COUNT = 2;
 const XLINK_NAMESPACE = 'http://www.w3.org/1999/xlink';
+
+const isDisplayImageDropdownField = field => (
+    field &&
+    field.name === 'IMAGE' &&
+    field.sourceBlock_ &&
+    DISPLAY_IMAGE_DROPDOWN_BLOCK_IDS.has(field.sourceBlock_.type)
+);
+
+const decorateDisplayImageDropdownItems = () => {
+    if (typeof document === 'undefined') {
+        return;
+    }
+    const menu = document.querySelector('.blocklyDropDownDiv .blocklyDropdownMenu');
+    if (!menu) {
+        return;
+    }
+    menu.classList.add('est-display-image-dropdown-menu');
+    const items = menu.querySelectorAll('.goog-menuitem');
+    Array.prototype.forEach.call(items, item => {
+        if (item.getAttribute('data-est-display-image-thumbnail') === 'true') {
+            return;
+        }
+        const content = item.querySelector('.goog-menuitem-content') || item;
+        const label = String(content.textContent || '').trim();
+        const imageId = DISPLAY_IMAGE_OPTION_IDS_BY_LABEL.get(label);
+        const thumbnail = displayImageThumbnails[imageId];
+        if (!thumbnail) {
+            return;
+        }
+        const labelElement = document.createElement('span');
+        labelElement.className = 'est-display-image-dropdown-label';
+        while (content.firstChild) {
+            labelElement.appendChild(content.firstChild);
+        }
+        const thumbnailElement = document.createElement('img');
+        thumbnailElement.className = 'est-display-image-dropdown-thumbnail';
+        thumbnailElement.src = thumbnail;
+        thumbnailElement.alt = imageId;
+        content.appendChild(labelElement);
+        content.appendChild(thumbnailElement);
+        item.setAttribute('data-est-display-image-thumbnail', 'true');
+        item.setAttribute('data-est-display-image-id', imageId);
+    });
+};
+
+const configureDisplayImageDropdownThumbnails = ScratchBlocks => {
+    const FieldDropdown = ScratchBlocks && ScratchBlocks.FieldDropdown;
+    if (!FieldDropdown || !FieldDropdown.prototype ||
+        typeof FieldDropdown.prototype.showEditor_ !== 'function' ||
+        configuredDisplayImageDropdownTypes.has(FieldDropdown)) {
+        return;
+    }
+    const openEditor = FieldDropdown.prototype.showEditor_;
+    FieldDropdown.prototype.showEditor_ = function estDisplayImageDropdownShowEditor () {
+        const result = openEditor.apply(this, arguments);
+        if (isDisplayImageDropdownField(this) && typeof window !== 'undefined') {
+            window.setTimeout(decorateDisplayImageDropdownItems, 0);
+        }
+        return result;
+    };
+    configuredDisplayImageDropdownTypes.add(FieldDropdown);
+};
 
 const createEstHistoryControl = (ScratchBlocks, zoomControls, icon, index, redo, label) => {
     const workspace = zoomControls.workspace_;
@@ -1298,6 +1398,7 @@ const registerEstLocaleListener = ScratchBlocks => {
 
 export const registerEstBlocks = ScratchBlocks => {
     configureEstWorkspaceControls(ScratchBlocks);
+    configureDisplayImageDropdownThumbnails(ScratchBlocks);
     if (registeredTargets.has(ScratchBlocks)) return;
     registerEstSteeringField(ScratchBlocks);
     registerEstInfraredChannelMigrationExtension(ScratchBlocks);
@@ -1320,6 +1421,7 @@ export {
     DRIVE_COLOURS,
     DRIVE_DIRECTION_OPTIONS,
     EST_STEERING_FIELD_TYPE,
+    displayImageThumbnails as DISPLAY_IMAGE_THUMBNAILS,
     EST_STEERING_DIAL_COLOURS,
     EST_STEERING_LIMIT,
     EST_STEERING_PICKER_ID,

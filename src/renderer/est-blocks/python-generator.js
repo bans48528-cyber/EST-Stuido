@@ -110,6 +110,26 @@ const functionCall = (generator, code) => [
     orderOf(generator, 'ORDER_FUNCTION_CALL', orderOf(generator, 'ORDER_ATOMIC', 0))
 ];
 
+const fixedSensorPort = code => {
+    const match = String(code).match(/^['"]([1-4])['"]$/);
+    return match ? match[1] : null;
+};
+
+const sensorDevice = (generator, type, portCode, warmupCall = null) => {
+    const port = fixedSensorPort(portCode);
+    if (!port) return `rt.${type}(${portCode})`;
+
+    const name = `_est_device_${type}_${port}`;
+    const key = `estDevice_${type}_${port}`;
+    const libraries = ensureDictionary(generator, 'libraries_');
+    if (!Object.prototype.hasOwnProperty.call(libraries, key)) {
+        libraries[key] = `${name} = rt.${type}(${port})\n${
+            warmupCall ? `${name}.${warmupCall}\n` : ''
+        }`;
+    }
+    return name;
+};
+
 const initialiseStackNumbers = (generator, workspace) => {
     generator.estStackNumbers_ = Object.create(null);
     generator.estNextStackNumber_ = 1;
@@ -369,6 +389,21 @@ const registerMovementGenerators = generator => {
         const rightSpeed = valueOr(generator, block, 'RIGHT_SPEED', '0');
         return `rt.drive_start_dual_speed(${leftSpeed}, ${rightSpeed})\n`;
     };
+    generator.drive_line_follow_init = () => {
+        ensureRuntimeImport(generator);
+        return 'rt.line_follow_init()\n';
+    };
+    generator.drive_line_follow_dual_step = block => {
+        ensureRuntimeImport(generator);
+        const leftInput = valueOr(generator, block, 'LEFT_INPUT', '0');
+        const rightInput = valueOr(generator, block, 'RIGHT_INPUT', '0');
+        const leftBasePower = valueOr(generator, block, 'LEFT_BASE_POWER', '0');
+        const rightBasePower = valueOr(generator, block, 'RIGHT_BASE_POWER', '0');
+        const kp = valueOr(generator, block, 'KP', '0');
+        const kd = valueOr(generator, block, 'KD', '0');
+        return `rt.line_follow_dual_power_step(${leftInput}, ${rightInput}, ` +
+            `${leftBasePower}, ${rightBasePower}, ${kp}, ${kd})\n`;
+    };
 };
 
 const registerDisplayGenerators = generator => {
@@ -412,12 +447,12 @@ const registerDisplayGenerators = generator => {
 const registerSoundGenerators = generator => {
     generator.sound_play_wait = block => {
         ensureHardwareImport(generator);
-        const sound = quoteField(generator, block, 'SOUND', 'communication_hello');
+        const sound = quoteField(generator, block, 'SOUND', 'Piano/C4');
         return `est.audio.play(${sound}, wait=True)\n`;
     };
     generator.sound_play = block => {
         ensureHardwareImport(generator);
-        const sound = quoteField(generator, block, 'SOUND', 'communication_hello');
+        const sound = quoteField(generator, block, 'SOUND', 'Piano/C4');
         return `est.audio.play(${sound}, wait=False)\n`;
     };
     generator.sound_beep_for = block => {
@@ -527,6 +562,13 @@ const registerSensorGenerators = generator => {
     const sensorPort = (block, fallback) => valueOr(generator, block, 'PORT', quote(generator, fallback));
     const compareValue = block => valueOr(generator, block, 'VALUE', '0');
     const comparator = block => quoteField(generator, block, 'COMPARATOR', 'less');
+    const device = (block, fallback, type, warmupCall = null) => {
+        const port = sensorPort(block, fallback);
+        return {
+            object: sensorDevice(generator, type, port, warmupCall),
+            port
+        };
+    };
 
     generator.sensor_brick_button_value = () => {
         ensureHardwareImport(generator);
@@ -561,81 +603,97 @@ const registerSensorGenerators = generator => {
     };
     generator.sensor_color_reflection = block => {
         ensureRuntimeImport(generator);
-        return functionCall(generator, `rt.color(${sensorPort(block, '3')}).reflection()`);
+        const sensor = device(block, '1', 'color', 'reflection()');
+        return functionCall(generator, `${sensor.object}.reflection()`);
     };
     generator.sensor_color_reflection_compare = block => {
         ensureRuntimeImport(generator);
-        const reading = `rt.color(${sensorPort(block, '3')}).reflection()`;
+        const sensor = device(block, '1', 'color', 'reflection()');
+        const reading = `${sensor.object}.reflection()`;
         return functionCall(generator, `rt.compare(${reading}, ${comparator(block)}, ${compareValue(block)})`);
     };
     generator.sensor_color_ambient = block => {
         ensureRuntimeImport(generator);
-        return functionCall(generator, `rt.color(${sensorPort(block, '3')}).ambient()`);
+        const sensor = device(block, '1', 'color', 'ambient()');
+        return functionCall(generator, `${sensor.object}.ambient()`);
     };
     generator.sensor_color_ambient_compare = block => {
         ensureRuntimeImport(generator);
-        const reading = `rt.color(${sensorPort(block, '3')}).ambient()`;
+        const sensor = device(block, '1', 'color', 'ambient()');
+        const reading = `${sensor.object}.ambient()`;
         return functionCall(generator, `rt.compare(${reading}, ${comparator(block)}, ${compareValue(block)})`);
     };
     generator.sensor_color_value = block => {
         ensureRuntimeImport(generator);
-        return functionCall(generator, `rt.color(${sensorPort(block, '3')}).color()`);
+        const sensor = device(block, '1', 'color', 'color()');
+        return functionCall(generator, `${sensor.object}.color()`);
     };
     generator.sensor_color_is = block => {
         ensureRuntimeImport(generator);
         const color = fieldValue(block, 'COLOR', 'red');
         const colorId = Object.prototype.hasOwnProperty.call(COLOR_IDS, color) ? COLOR_IDS[color] : 0;
-        const code = `rt.color(${sensorPort(block, '3')}).color() == ${colorId}`;
+        const sensor = device(block, '1', 'color', 'color()');
+        const code = `${sensor.object}.color() == ${colorId}`;
         return [code, orderOf(generator, 'ORDER_RELATIONAL', 11)];
     };
     generator.sensor_wait_color = block => {
         ensureRuntimeImport(generator);
         const event = quoteField(generator, block, 'COLOR_EVENT', 'red');
-        return `rt.wait_color(${sensorPort(block, '3')}, ${event})\n`;
+        const sensor = device(block, '1', 'color', 'color()');
+        return `rt.wait_color(${sensor.port}, ${event})\n`;
     };
     generator.sensor_temperature = block => {
         ensureRuntimeImport(generator);
         const unit = fieldValue(block, 'UNIT', 'celsius') === 'fahrenheit' ? 'fahrenheit' : 'celsius';
-        return functionCall(generator, `rt.temperature(${sensorPort(block, '3')}).${unit}()`);
+        const sensor = device(block, '1', 'temperature', `${unit}()`);
+        return functionCall(generator, `${sensor.object}.${unit}()`);
     };
     generator.sensor_touch_pressed = block => {
         ensureRuntimeImport(generator);
-        return functionCall(generator, `rt.touch(${sensorPort(block, '1')}).pressed()`);
+        const sensor = device(block, '1', 'touch', 'pressed()');
+        return functionCall(generator, `${sensor.object}.pressed()`);
     };
     generator.sensor_wait_touch = block => {
         ensureRuntimeImport(generator);
         const event = quoteField(generator, block, 'TOUCH_EVENT', 'pressed');
-        return `rt.wait_touch(${sensorPort(block, '1')}, ${event})\n`;
+        const sensor = device(block, '1', 'touch', 'pressed()');
+        return `rt.wait_touch(${sensor.port}, ${event})\n`;
     };
     generator.sensor_ultrasonic_distance = block => {
         ensureRuntimeImport(generator);
         const unit = quoteField(generator, block, 'UNIT', 'centimeters');
-        return functionCall(generator, `rt.ultrasonic(${sensorPort(block, '4')}).distance(${unit})`);
+        const sensor = device(block, '1', 'ultrasonic', `distance(${unit})`);
+        return functionCall(generator, `${sensor.object}.distance(${unit})`);
     };
     generator.sensor_ultrasonic_compare = block => {
         ensureRuntimeImport(generator);
         const unit = quoteField(generator, block, 'UNIT', 'centimeters');
-        const reading = `rt.ultrasonic(${sensorPort(block, '4')}).distance(${unit})`;
+        const sensor = device(block, '1', 'ultrasonic', `distance(${unit})`);
+        const reading = `${sensor.object}.distance(${unit})`;
         return functionCall(generator, `rt.compare(${reading}, ${comparator(block)}, ${compareValue(block)})`);
     };
     generator.sensor_wait_ultrasonic = block => {
         ensureRuntimeImport(generator);
         const unit = quoteField(generator, block, 'UNIT', 'centimeters');
-        return `rt.wait_ultrasonic(${sensorPort(block, '4')}, ${comparator(block)}, ` +
+        const sensor = device(block, '1', 'ultrasonic', `distance(${unit})`);
+        return `rt.wait_ultrasonic(${sensor.port}, ${comparator(block)}, ` +
             `${compareValue(block)}, ${unit})\n`;
     };
     generator.sensor_ir_proximity = block => {
         ensureRuntimeImport(generator);
-        return functionCall(generator, `rt.infrared(${sensorPort(block, '4')}).proximity()`);
+        const sensor = device(block, '1', 'infrared', 'proximity()');
+        return functionCall(generator, `${sensor.object}.proximity()`);
     };
     generator.sensor_ir_proximity_compare = block => {
         ensureRuntimeImport(generator);
-        const reading = `rt.infrared(${sensorPort(block, '4')}).proximity()`;
+        const sensor = device(block, '1', 'infrared', 'proximity()');
+        const reading = `${sensor.object}.proximity()`;
         return functionCall(generator, `rt.compare(${reading}, ${comparator(block)}, ${compareValue(block)})`);
     };
     generator.sensor_wait_ir_proximity = block => {
         ensureRuntimeImport(generator);
-        return `rt.wait_ir_proximity(${sensorPort(block, '4')}, ${comparator(block)}, ` +
+        const sensor = device(block, '1', 'infrared', 'proximity()');
+        return `rt.wait_ir_proximity(${sensor.port}, ${comparator(block)}, ` +
             `${compareValue(block)})\n`;
     };
     generator.sensor_ir_beacon_heading = block => {
@@ -643,7 +701,7 @@ const registerSensorGenerators = generator => {
         const channel = infraredRemoteChannel();
         return functionCall(
             generator,
-            `rt.infrared(${sensorPort(block, '4')}).beacon_heading(${channel})`
+            `rt.infrared(${sensorPort(block, '1')}).beacon_heading(${channel})`
         );
     };
     generator.sensor_ir_beacon_proximity = block => {
@@ -651,7 +709,7 @@ const registerSensorGenerators = generator => {
         const channel = infraredRemoteChannel();
         return functionCall(
             generator,
-            `rt.infrared(${sensorPort(block, '4')}).beacon_proximity(${channel})`
+            `rt.infrared(${sensorPort(block, '1')}).beacon_proximity(${channel})`
         );
     };
     generator.sensor_ir_beacon_buttons = block => {
@@ -659,7 +717,7 @@ const registerSensorGenerators = generator => {
         const channel = infraredRemoteChannel();
         return functionCall(
             generator,
-            `rt.infrared(${sensorPort(block, '4')}).beacon_buttons(${channel})`
+            `rt.infrared(${sensorPort(block, '1')}).beacon_buttons(${channel})`
         );
     };
     generator.sensor_ir_beacon_button_pressed = block => {
@@ -668,51 +726,56 @@ const registerSensorGenerators = generator => {
         const button = quoteField(generator, block, 'BEACON_BUTTON', 'none');
         return functionCall(
             generator,
-            `rt.infrared(${sensorPort(block, '4')}).beacon_button_pressed(${channel}, ${button})`
+            `rt.infrared(${sensorPort(block, '1')}).beacon_button_pressed(${channel}, ${button})`
         );
     };
     generator.sensor_wait_ir_beacon_button = block => {
         ensureRuntimeImport(generator);
         const channel = infraredRemoteChannel();
         const event = quoteField(generator, block, 'BEACON_EVENT', 'top_left_pressed');
-        return `rt.wait_ir_beacon_button(${sensorPort(block, '4')}, ${channel}, ${event})\n`;
+        return `rt.wait_ir_beacon_button(${sensorPort(block, '1')}, ${channel}, ${event})\n`;
     };
     generator.sensor_ir_beacon_active = block => {
         ensureRuntimeImport(generator);
         const channel = infraredRemoteChannel();
         return functionCall(
             generator,
-            `rt.infrared(${sensorPort(block, '4')}).beacon_active(${channel})`
+            `rt.infrared(${sensorPort(block, '1')}).beacon_active(${channel})`
         );
     };
     generator.sensor_ir_beacon_active_compare = block => {
         ensureRuntimeImport(generator);
         const channel = infraredRemoteChannel();
         const property = quoteField(generator, block, 'PROPERTY', 'heading');
-        const code = `rt.ir_beacon_compare(${sensorPort(block, '4')}, ${channel}, ` +
+        const code = `rt.ir_beacon_compare(${sensorPort(block, '1')}, ${channel}, ` +
             `${property}, ${comparator(block)}, ${compareValue(block)})`;
         return functionCall(generator, code);
     };
     generator.sensor_gyro_angle = block => {
         ensureRuntimeImport(generator);
-        return functionCall(generator, `rt.gyro(${sensorPort(block, '2')}).angle()`);
+        const sensor = device(block, '1', 'gyro', 'angle()');
+        return functionCall(generator, `${sensor.object}.angle()`);
     };
     generator.sensor_gyro_rate = block => {
         ensureRuntimeImport(generator);
-        return functionCall(generator, `rt.gyro(${sensorPort(block, '2')}).speed()`);
+        const sensor = device(block, '1', 'gyro', 'speed()');
+        return functionCall(generator, `${sensor.object}.speed()`);
     };
     generator.sensor_gyro_reset = block => {
         ensureRuntimeImport(generator);
-        return `rt.gyro(${sensorPort(block, '2')}).reset_angle()\n`;
+        const sensor = device(block, '1', 'gyro');
+        return `${sensor.object}.reset_angle()\n`;
     };
     generator.sensor_gyro_compare = block => {
         ensureRuntimeImport(generator);
-        const reading = `rt.gyro(${sensorPort(block, '2')}).angle()`;
+        const sensor = device(block, '1', 'gyro', 'angle()');
+        const reading = `${sensor.object}.angle()`;
         return functionCall(generator, `rt.compare(${reading}, ${comparator(block)}, ${compareValue(block)})`);
     };
     generator.sensor_wait_gyro = block => {
         ensureRuntimeImport(generator);
-        return `rt.wait_gyro(${sensorPort(block, '2')}, ${comparator(block)}, ${compareValue(block)})\n`;
+        const sensor = device(block, '1', 'gyro', 'angle()');
+        return `rt.wait_gyro(${sensor.port}, ${comparator(block)}, ${compareValue(block)})\n`;
     };
     generator.sensor_timer = () => {
         ensureRuntimeImport(generator);

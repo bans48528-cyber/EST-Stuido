@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const Module = require('module');
+const os = require('os');
 const path = require('path');
 const babel = require('@babel/core');
 const validateProject = require('scratch-parser');
@@ -38,6 +39,7 @@ const {
     buildPersistentProgramLoadFrame,
     buildPersistentProgramSaveFrame,
     buildPersistentProgramStatusFrame,
+    batteryPercentFromSampleMv,
     buildPythonProgramBeginFrame,
     buildPythonProgramChunkFrame,
     buildPythonProgramClearFrame,
@@ -51,8 +53,10 @@ const {
     compareEstFirmwareVersions,
     checksum,
     crc32,
+    EST_PROGRAM_AUDIO_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_DUAL_SPEED_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION,
+    EST_PROGRAM_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION,
     isEstFirmwareVersionAtLeast,
@@ -69,6 +73,15 @@ const {
     splitReports
 } = require(path.join(estRoot, 'protocol.js'));
 const {
+    buildFlashCommandArgs,
+    EST_FIRMWARE_UPDATE_TARGETS,
+    resolveFirmwareUpdatePackage,
+    resolveLatestEstOsPackage,
+    resolveLegacyEstPackage
+} = require(path.join(estRoot, 'firmware-update-service.js'));
+const {
+    CAPABILITY_AUDIO_RESOURCE_FLASH,
+    CAPABILITY_AUDIO_PLAYBACK,
     CAPABILITY_COOPERATIVE_MULTITASK,
     CAPABILITY_DISPLAY_FONT_STYLES,
     CAPABILITY_FROZEN_EST_RUNTIME,
@@ -92,6 +105,7 @@ const {
     ALL_EST_BLOCK_IDS,
     CATEGORY_BLOCK_IDS,
     CATEGORY_COLOURS,
+    DISPLAY_IMAGE_THUMBNAILS,
     DRIVE_COLOURS,
     EST_STEERING_DIAL_COLOURS,
     EST_STEERING_FIELD_TYPE,
@@ -257,6 +271,12 @@ const DISPLAY_IMAGE_IDS = [
     'Eyes/Up',
     'Eyes/Winking'
 ];
+assert.deepStrictEqual(
+    Object.keys(DISPLAY_IMAGE_THUMBNAILS).sort(),
+    DISPLAY_IMAGE_IDS.slice().sort()
+);
+assert.ok(DISPLAY_IMAGE_THUMBNAILS['Eyes/Neutral'].startsWith('data:image/bmp;base64,'));
+assert.ok(DISPLAY_IMAGE_THUMBNAILS['Expressions/Big smile'].startsWith('data:image/bmp;base64,'));
 
 const heartbeatRequest = buildFrame(0x01);
 assert.deepStrictEqual(Array.from(heartbeatRequest), [0x68, 0x11, 0x01, 0x00, 0x00, 0x7a, 0x16]);
@@ -290,6 +310,11 @@ assert.deepStrictEqual(
     [deviceStatus.batteryLevel, deviceStatus.batteryAdcRaw, deviceStatus.batterySampleMv],
     [4, 2800, 1708]
 );
+assert.strictEqual(deviceStatus.batteryPercent, 7);
+assert.strictEqual(batteryPercentFromSampleMv(0), 0);
+assert.strictEqual(batteryPercentFromSampleMv(1500), 0);
+assert.strictEqual(batteryPercentFromSampleMv(2047), 87);
+assert.strictEqual(batteryPercentFromSampleMv(2100), 100);
 assert.strictEqual(deviceStatus.capabilities, 0x3f);
 assert.strictEqual(deviceStatus.uptimeMs, 123456);
 assert.deepStrictEqual(deviceStatus.motors[1], {outputState: 1, powerPercent: 40, tachoCount: 345});
@@ -341,10 +366,24 @@ assert.deepStrictEqual(Object.keys(EST_PROGRAM_COMPATIBILITY_TABLE), [
     'M1.22J',
     'M1.22K',
     'M1.22L',
-    'M1.22M'
+    'M1.22M',
+    'M1.22U',
+    'M1.22V',
+    'M1.23D',
+    'M1.23E',
+    'M1.23F',
+    'M1.23G',
+    'M1.23H',
+    'M1.23I',
+    'M1.23J',
+    'M1.23K',
+    'M1.23L',
+    'M1.23M',
+    'M1.24A'
 ]);
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.22H'], {protocolMajor: 1, protocolMinor: 26});
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.22I'], {protocolMajor: 1, protocolMinor: 26});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.24A'], {protocolMajor: 1, protocolMinor: 27});
 assert.deepStrictEqual(parseEstFirmwareVersion('M1.22E'), {
     family: 'M',
     major: 1,
@@ -375,6 +414,71 @@ assert.strictEqual(compareEstFirmwareVersions('X1.22E', 'M1.22E'), null);
 assert.strictEqual(isEstFirmwareVersionAtLeast('M1.22E', 'M1.22E'), true);
 assert.strictEqual(isEstFirmwareVersionAtLeast('M1.22D', 'M1.22E'), false);
 assert.strictEqual(isEstFirmwareVersionAtLeast('M1.22H', 'M1.22E'), true);
+
+const firmwareFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'est-firmware-packages-'));
+try {
+    const releasePackageDir = path.join(firmwareFixtureRoot, 'firmware', 'releases', 'M1.22A');
+    const buildPackageDir = path.join(
+        firmwareFixtureRoot,
+        'firmware',
+        'minimal_upgrade_app',
+        'build',
+        'm122y_pair_pi_candidate'
+    );
+    const legacyPackageDir = path.join(firmwareFixtureRoot, 'firmware', 'official_est3_app', 'build');
+    fs.mkdirSync(releasePackageDir, {recursive: true});
+    fs.mkdirSync(buildPackageDir, {recursive: true});
+    fs.mkdirSync(legacyPackageDir, {recursive: true});
+    fs.writeFileSync(path.join(releasePackageDir, 'est_minimal_upgrade_app_m122a.manifest.json'), JSON.stringify({
+        sha256: 'release-sha',
+        version: 'M1.22A'
+    }));
+    fs.writeFileSync(path.join(releasePackageDir, 'est_minimal_upgrade_app_m122a.upgrade.bin'), 'release');
+    fs.writeFileSync(path.join(buildPackageDir, 'est_minimal_upgrade_app.manifest.json'), JSON.stringify({
+        sha256: 'latest-sha',
+        version: 'M1.22Y'
+    }));
+    fs.writeFileSync(path.join(buildPackageDir, 'est_minimal_upgrade_app.upgrade.bin'), 'latest');
+    fs.writeFileSync(path.join(legacyPackageDir, 'EST_Main_V3_official.manifest.json'), JSON.stringify({
+        sha256: 'legacy-sha',
+        version: '03.02A'
+    }));
+    fs.writeFileSync(path.join(legacyPackageDir, 'EST_Main_V3_official.upgrade.bin'), 'legacy');
+
+    const latestPackage = resolveLatestEstOsPackage([firmwareFixtureRoot]);
+    assert.strictEqual(latestPackage.targetVersion, 'M1.22Y');
+    assert.strictEqual(latestPackage.sha256, 'latest-sha');
+    assert.ok(latestPackage.packagePath.endsWith('est_minimal_upgrade_app.upgrade.bin'));
+    const legacyPackage = resolveLegacyEstPackage([firmwareFixtureRoot]);
+    assert.strictEqual(legacyPackage.targetVersion, '03.02A');
+    assert.strictEqual(legacyPackage.sha256, 'legacy-sha');
+    assert.strictEqual(
+        resolveFirmwareUpdatePackage(EST_FIRMWARE_UPDATE_TARGETS.LATEST_OS, {
+            firmwareRoot: firmwareFixtureRoot
+        }).targetVersion,
+        'M1.22Y'
+    );
+    assert.strictEqual(
+        resolveFirmwareUpdatePackage(EST_FIRMWARE_UPDATE_TARGETS.LEGACY_EST, {
+            firmwareRoot: firmwareFixtureRoot
+        }).targetVersion,
+        '03.02A'
+    );
+    const upgradeArgs = buildFlashCommandArgs(
+        {args: []},
+        latestPackage,
+        EST_FIRMWARE_UPDATE_TARGETS.LATEST_OS
+    );
+    assert.ok(upgradeArgs.includes('--force'));
+    const downgradeArgs = buildFlashCommandArgs(
+        {args: ['-3']},
+        legacyPackage,
+        EST_FIRMWARE_UPDATE_TARGETS.LEGACY_EST
+    );
+    assert.ok(downgradeArgs.includes('--force'));
+} finally {
+    fs.rmSync(firmwareFixtureRoot, {recursive: true, force: true});
+}
 assert.deepStrictEqual(
     {
         compatible: checkProgramFirmwareCompatibility(m110AStatus).compatible,
@@ -434,6 +538,8 @@ assert.strictEqual(EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION, 'M1.22E');
 assert.strictEqual(EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION, 'M1.22I');
 assert.strictEqual(EST_PROGRAM_DUAL_SPEED_API_MIN_FIRMWARE_VERSION, 'M1.22L');
 assert.strictEqual(EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION, 'M1.22M');
+assert.strictEqual(EST_PROGRAM_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION, 'M1.22V');
+assert.strictEqual(EST_PROGRAM_AUDIO_API_MIN_FIRMWARE_VERSION, 'M1.23D');
 assert.strictEqual(programMinimumFirmwareVersionForSource('import est_runtime as rt\nvalue = 1\n'), null);
 assert.strictEqual(
     programMinimumFirmwareVersionForSource('import est_runtime as rt\nrt.motor_start_speed("A", speed)\n'),
@@ -463,6 +569,36 @@ assert.strictEqual(
     programMinimumFirmwareVersionForSource('import est_runtime as rt\nrt.drive_dual_speed_for(50, 25, 2, "rotations")\n'),
     'M1.22L'
 );
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource(
+        'import est_runtime as rt\nrt.line_follow_init()\n' +
+        'rt.line_follow_dual_power_step(a, b, 30, 30, 1, 0.01)\n'
+    ),
+    'M1.22V'
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource(
+        'import est_runtime as rt\nrt.drive_start_dual_power(left, right)\n'
+    ),
+    'M1.22V'
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource('import est\nest.audio.play("Piano/C4", wait=True)\n'),
+    'M1.23D'
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource(
+        'import est\nimport est_runtime as rt\nest.audio.play("Piano/C4")\n' +
+        'rt.line_follow_dual_power_step(a, b, 30, 30, 1, 0.01)\n'
+    ),
+    'M1.23D'
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource(
+        'import est_runtime as rt\nrt.line_follow_dual_step(a, b, 30, 30, 1, 0.01)\n'
+    ),
+    'M1.22U'
+);
 [
     "await rt.wait_brick_button('confirm', 'pressed')",
     "await rt.wait_color(3, 'red')",
@@ -491,6 +627,10 @@ assert.strictEqual(
 assert.strictEqual(
     programRequiredCapabilitiesForSource('import est_runtime as rt\nblocked = rt.motor_stalled("A")\n'),
     CAPABILITY_MOTOR_STALL_DETECTION
+);
+assert.strictEqual(
+    programRequiredCapabilitiesForSource('import est\nest.audio.play("Piano/C4")\n'),
+    CAPABILITY_AUDIO_PLAYBACK
 );
 assert.strictEqual(
     programRequiredCapabilitiesForSource(
@@ -657,6 +797,11 @@ const m122MStatus = {
     ...m121AMotorStallStatus,
     firmwareVersion: 'M1.22M'
 };
+const m123DStatus = {
+    ...m121AMotorStallStatus,
+    firmwareVersion: 'M1.23D',
+    capabilities: (m121AMotorStallStatus.capabilities | CAPABILITY_AUDIO_PLAYBACK) >>> 0
+};
 const m122DNewRuntimeApiCompatibility = checkProgramFirmwareCompatibility(
     m122DStatus,
     0,
@@ -716,6 +861,22 @@ assert.strictEqual(
         m122MStatus,
         0,
         EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION
+    ).programCompatible,
+    true
+);
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(
+        m122MStatus,
+        CAPABILITY_AUDIO_PLAYBACK,
+        EST_PROGRAM_AUDIO_API_MIN_FIRMWARE_VERSION
+    ).programCompatible,
+    false
+);
+assert.strictEqual(
+    checkProgramFirmwareCompatibility(
+        m123DStatus,
+        CAPABILITY_AUDIO_PLAYBACK,
+        EST_PROGRAM_AUDIO_API_MIN_FIRMWARE_VERSION
     ).programCompatible,
     true
 );
@@ -837,6 +998,12 @@ FakeFieldAngle.OFFSET = 90;
 FakeFieldAngle.RADIUS = 47;
 FakeFieldAngle.CLOCKWISE = true;
 FakeFieldAngle.prototype = {};
+let fakeDropdownShowCalls = 0;
+const FakeFieldDropdown = function () {};
+FakeFieldDropdown.prototype.showEditor_ = function () {
+    fakeDropdownShowCalls += 1;
+    return 'opened';
+};
 const fakeScratchBlocks = {
     Blocks: Object.fromEntries(EST_REPLACED_OPENBLOCK_BLOCK_IDS.map(blockId => [
         blockId,
@@ -857,6 +1024,7 @@ const fakeScratchBlocks = {
         }
     },
     FieldAngle: FakeFieldAngle,
+    FieldDropdown: FakeFieldDropdown,
     FieldTextInput: FakeFieldTextInput,
     OUTPUT_SHAPE_HEXAGONAL: 1,
     OUTPUT_SHAPE_ROUND: 2,
@@ -872,6 +1040,11 @@ const fakeScratchBlocks = {
 };
 registerEstBlocks(fakeScratchBlocks);
 registerEstBlocks(fakeScratchBlocks);
+assert.strictEqual(FakeFieldDropdown.prototype.showEditor_.call({
+    name: 'IMAGE',
+    sourceBlock_: {type: 'display_image'}
+}), 'opened');
+assert.strictEqual(fakeDropdownShowCalls, 1);
 assert.strictEqual(typeof registeredExtensions[EST_IR_FIXED_CHANNEL_EXTENSION], 'function');
 const legacyInfraredChannelBlock = {
     type: 'sensor_ir_beacon_heading',
@@ -976,7 +1149,7 @@ assert.strictEqual(fakeZoomControls.top_, 214);
 assert.strictEqual(zoomTransform, 'translate(800,214)');
 const expectedCategoryCounts = {
     motor: 12,
-    movement: 11,
+    movement: 13,
     display: 6,
     sound: 6,
     event: 6,
@@ -990,8 +1163,8 @@ assert.deepStrictEqual(
     ])),
     expectedCategoryCounts
 );
-assert.strictEqual(registeredBlockDefinitions.length, 89);
-assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 85);
+assert.strictEqual(registeredBlockDefinitions.length, 91);
+assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 87);
 assert.deepStrictEqual(EST_REPLACED_OPENBLOCK_BLOCK_IDS, [
     'sound_play',
     'event_broadcast',
@@ -1078,9 +1251,20 @@ assert.strictEqual(steeringField.classValidator('not-a-number'), null);
 steeringField.getText = () => '-40';
 assert.strictEqual(steeringField.getDisplayText_(), '左:-40');
 const blockDefinitionFor = blockId => registeredBlockDefinitions.find(definition => definition.type === blockId);
+const soundOptions = definitionArguments(blockDefinitionFor('sound_play'))
+    .find(argument => argument.name === 'SOUND').options;
+assert.strictEqual(soundOptions.length, 37);
+assert.deepStrictEqual(soundOptions[0], ['钢琴 C4', 'Piano/C4']);
+assert.deepStrictEqual(soundOptions[1], ['钢琴 C#4', 'Piano/Cs4']);
+assert.deepStrictEqual(soundOptions[soundOptions.length - 1], ['钢琴 C7', 'Piano/C7']);
+assert.ok(!soundOptions.some(option => option[1] === 'communication_hello'));
 assert.strictEqual(EST_LOCALE_NAMES['pt-br'], 'Português (Brasil)');
 assert.strictEqual(normalizeEstLocale('pt_BR'), 'pt-br');
 assert.strictEqual(getEstText('menu.hardwareStatus', 'pt-br'), 'Status do hardware');
+assert.strictEqual(getEstText('firmware.updateButton'), '固件更新');
+assert.strictEqual(getEstText('firmware.upgradeEstOs'), '升级EST OS');
+assert.strictEqual(getEstText('firmware.downgradeLegacyEst'), '降级旧EST系统');
+assert.strictEqual(getEstText('firmware.updateButton', 'pt-br'), 'Atualizar firmware');
 assert.deepStrictEqual(getEstLocaleOptions({
     en: {},
     'zh-cn': {},
@@ -1100,6 +1284,9 @@ assert.deepStrictEqual(getEstLocalizedOptions('motorDirection', [
 ]);
 const ptBlockDefinitions = makeEstBlockDefinitions(fakeScratchBlocks, 'pt-br');
 const ptBlockDefinitionFor = blockId => ptBlockDefinitions.find(definition => definition.type === blockId);
+const ptSoundOptions = definitionArguments(ptBlockDefinitionFor('sound_play'))
+    .find(argument => argument.name === 'SOUND').options;
+assert.deepStrictEqual(ptSoundOptions[1], ['Piano C#4', 'Piano/Cs4']);
 const ptMotorStalledDefinition = ptBlockDefinitionFor('motor_stalled');
 assert.strictEqual(ptMotorStalledDefinition.message0, '%1 %2 motor %3 esta travado?');
 const ptMotorRunForDirection = definitionArguments(ptBlockDefinitionFor('motor_run_for'))
@@ -1413,34 +1600,34 @@ assert.deepStrictEqual(
     assert.ok(definition.extensions.includes(EST_IR_FIXED_CHANNEL_EXTENSION), `${blockId} migration extension`);
 });
 const sensorPortDefaults = {
-    sensor_color_reflection: '3',
-    sensor_color_reflection_compare: '3',
-    sensor_color_ambient: '3',
-    sensor_color_ambient_compare: '3',
-    sensor_color_value: '3',
-    sensor_color_is: '3',
-    sensor_wait_color: '3',
-    sensor_temperature: '3',
+    sensor_color_reflection: '1',
+    sensor_color_reflection_compare: '1',
+    sensor_color_ambient: '1',
+    sensor_color_ambient_compare: '1',
+    sensor_color_value: '1',
+    sensor_color_is: '1',
+    sensor_wait_color: '1',
+    sensor_temperature: '1',
     sensor_touch_pressed: '1',
     sensor_wait_touch: '1',
-    sensor_ultrasonic_distance: '4',
-    sensor_ultrasonic_compare: '4',
-    sensor_wait_ultrasonic: '4',
-    sensor_ir_proximity: '4',
-    sensor_ir_proximity_compare: '4',
-    sensor_wait_ir_proximity: '4',
-    sensor_ir_beacon_heading: '4',
-    sensor_ir_beacon_proximity: '4',
-    sensor_ir_beacon_buttons: '4',
-    sensor_ir_beacon_button_pressed: '4',
-    sensor_wait_ir_beacon_button: '4',
-    sensor_ir_beacon_active: '4',
-    sensor_ir_beacon_active_compare: '4',
-    sensor_gyro_angle: '2',
-    sensor_gyro_rate: '2',
-    sensor_gyro_reset: '2',
-    sensor_gyro_compare: '2',
-    sensor_wait_gyro: '2'
+    sensor_ultrasonic_distance: '1',
+    sensor_ultrasonic_compare: '1',
+    sensor_wait_ultrasonic: '1',
+    sensor_ir_proximity: '1',
+    sensor_ir_proximity_compare: '1',
+    sensor_wait_ir_proximity: '1',
+    sensor_ir_beacon_heading: '1',
+    sensor_ir_beacon_proximity: '1',
+    sensor_ir_beacon_buttons: '1',
+    sensor_ir_beacon_button_pressed: '1',
+    sensor_wait_ir_beacon_button: '1',
+    sensor_ir_beacon_active: '1',
+    sensor_ir_beacon_active_compare: '1',
+    sensor_gyro_angle: '1',
+    sensor_gyro_rate: '1',
+    sensor_gyro_reset: '1',
+    sensor_gyro_compare: '1',
+    sensor_wait_gyro: '1'
 };
 assert.strictEqual(Object.keys(sensorPortDefaults).length, 28);
 Object.keys(sensorPortDefaults).forEach(blockId => {
@@ -1609,7 +1796,7 @@ assert.match(estToolboxCategories, /<field name="NUM">100<\/field>/);
 assert.match(estToolboxCategories, /<field name="NUM">50<\/field>/);
 assert.match(toolboxBlockXml('display_image'), /<field name="IMAGE">Eyes\/Neutral<\/field>/);
 assert.match(toolboxBlockXml('display_image_for'), /<field name="IMAGE">Eyes\/Neutral<\/field>/);
-assert.match(toolboxBlockXml('sensor_temperature'), /<field name="PORT">3<\/field>/);
+assert.match(toolboxBlockXml('sensor_temperature'), /<field name="PORT">1<\/field>/);
 assert.match(toolboxBlockXml('motor_stalled'), /<field name="PORT">A<\/field>/);
 assert.match(toolboxBlockXml('sensor_temperature'), /<field name="UNIT">celsius<\/field>/);
 assert.match(toolboxBlockXml('event_brick_button'), /<field name="BUTTON">confirm<\/field>/);
@@ -1618,8 +1805,9 @@ assert.match(toolboxBlockXml('sensor_wait_brick_button'), /<field name="BUTTON">
 assert.match(toolboxBlockXml('control_stop'), /<field name="STOP_SCOPE">all<\/field>/);
 assert.match(estToolboxCategories, /<value name="LEFT_PORT">[\s\S]*?<field name="PORT">B<\/field>/);
 assert.match(estToolboxCategories, /<value name="RIGHT_PORT">[\s\S]*?<field name="PORT">C<\/field>/);
-assert.match(estToolboxCategories, /<field name="PORT">3<\/field>/);
-assert.match(estToolboxCategories, /<field name="PORT">4<\/field>/);
+assert.ok(!estToolboxCategories.includes('<field name="PORT">2</field>'));
+assert.ok(!estToolboxCategories.includes('<field name="PORT">3</field>'));
+assert.ok(!estToolboxCategories.includes('<field name="PORT">4</field>'));
 assert.match(estToolboxCategories, /<field name="TEXT">EST<\/field>/);
 assert.match(
     estToolboxCategories,
@@ -2043,9 +2231,14 @@ assert.strictEqual(fakePythonGenerator.control_if(makeFakeBlock('control_if', {
 assert.deepStrictEqual(fakePythonGenerator.sensor_ultrasonic_compare(
     makeFakeBlock('sensor_ultrasonic_compare', {
         values: {VALUE: '15'},
-        fields: {PORT: '4', COMPARATOR: 'less', UNIT: 'centimeters'}
+        fields: {COMPARATOR: 'less', UNIT: 'centimeters'}
     })
-), ["rt.compare(rt.ultrasonic('4').distance('centimeters'), 'less', 15)", 2.2]);
+), ["rt.compare(_est_device_ultrasonic_1.distance('centimeters'), 'less', 15)", 2.2]);
+assert.strictEqual(
+    fakePythonGenerator.libraries_.estDevice_ultrasonic_1,
+    '_est_device_ultrasonic_1 = rt.ultrasonic(1)\n' +
+    "_est_device_ultrasonic_1.distance('centimeters')\n"
+);
 assert.deepStrictEqual(fakePythonGenerator.sensor_temperature(
     makeFakeBlock('sensor_temperature', {
         values: {PORT: 'port_var'},
@@ -2552,6 +2745,14 @@ assert.match(
 assert.ok(!estHardwareStatusButtonSource.includes('styles.menuIcon'));
 assert.ok(!estHardwareStatusButtonSource.includes('<svg'));
 assert.match(estHardwareStatusButtonSource, /getEstText\('hardware\.manualRefresh'/);
+assert.match(estHardwareStatusButtonSource, /batteryPercentText\(status\)/);
+assert.ok(!estHardwareStatusButtonSource.includes('batteryLevel}/4'));
+assert.match(estHardwareStatusButtonSource, /getEstText\('firmware\.updateButton'/);
+assert.match(estHardwareStatusButtonSource, /FIRMWARE_UPDATE_ACTIONS = \{/);
+assert.match(estHardwareStatusButtonSource, /data-firmware-target=\{FIRMWARE_UPDATE_ACTIONS\.upgrade\}/);
+assert.match(estHardwareStatusButtonSource, /data-firmware-target=\{FIRMWARE_UPDATE_ACTIONS\.downgrade\}/);
+assert.match(estHardwareStatusButtonSource, /ipcRenderer\.invoke\('est-flash-firmware'/);
+assert.match(estHardwareStatusButtonSource, /dialog\.showMessageBox\(remote\.getCurrentWindow\(\)/);
 assert.match(estHardwareStatusButtonSource, /includeProgramStatus: true/);
 assert.match(estHardwareStatusButtonSource, /REFRESH_INTERVAL_MS = 3000/);
 assert.match(estHardwareStatusButtonSource, /PANEL_DEFAULT_WIDTH = 600/);
@@ -2606,6 +2807,9 @@ assert.match(estHardwareStatusButtonStyles, /\.summary-grid\s*\{[\s\S]*grid-temp
 assert.match(estHardwareStatusButtonStyles, /@media \(max-width: 720px\)[\s\S]*\.port-list\s*\{[\s\S]*repeat\(2/);
 assert.match(estHardwareStatusButtonStyles, /@media \(max-width: 720px\)[\s\S]*\.summary-grid\s*\{[\s\S]*minmax\(70px/);
 assert.match(estHardwareStatusButtonStyles, /\.panel-header\s*\{[\s\S]*cursor: move/);
+assert.match(estHardwareStatusButtonStyles, /\.firmware-update-button/);
+assert.match(estHardwareStatusButtonStyles, /\.firmware-update-menu/);
+assert.match(estHardwareStatusButtonStyles, /\.firmware-update-option\s*\{[\s\S]*text-align: left/);
 assert.ok(!estHardwareStatusButtonStyles.includes('border-left: 1px solid'));
 const estDeviceServiceSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -2629,6 +2833,9 @@ const estProgramMainSource = fs.readFileSync(path.resolve(
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-download-program'/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-run-program'/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-stop-program'/);
+assert.match(estProgramMainSource, /ipcMain\.handle\('est-flash-firmware'/);
+assert.match(estProgramMainSource, /estFirmwareUpdateState/);
+assert.match(estProgramMainSource, /flashEstFirmware\(request\)/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-get-status', \(event, options\)/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-auto-connect', \(event, options\)/);
 const packageJson = require(path.resolve(__dirname, '..', 'package.json'));
@@ -3531,6 +3738,7 @@ assert.strictEqual(CAPABILITY_TEMPERATURE_SENSOR, 1 << 22);
 assert.strictEqual(CAPABILITY_COOPERATIVE_MULTITASK, 1 << 23);
 assert.strictEqual(CAPABILITY_RUNTIME_BASIC_EVENT_HATS, 1 << 24);
 assert.strictEqual(CAPABILITY_MOTOR_STALL_DETECTION, 1 << 25);
+assert.strictEqual(CAPABILITY_AUDIO_PLAYBACK, 1 << 26);
 const m114ADeviceStatusPayload = new Uint8Array(72);
 m114ADeviceStatusPayload[0] = 1;
 m114ADeviceStatusPayload[1] = 25;
@@ -3588,6 +3796,14 @@ assert.deepStrictEqual(
 assert.deepStrictEqual(
     capabilityNamesFor(CAPABILITY_MOTOR_STALL_DETECTION),
     ['motor-stall-detection']
+);
+assert.deepStrictEqual(
+    capabilityNamesFor(CAPABILITY_AUDIO_PLAYBACK),
+    ['audio-playback']
+);
+assert.deepStrictEqual(
+    capabilityNamesFor(CAPABILITY_AUDIO_RESOURCE_FLASH),
+    ['audio-resource-flash']
 );
 assert.strictEqual(checkProgramFirmwareCompatibility(parsedM114ADeviceStatus).programCompatible, true);
 assert.strictEqual(
@@ -4455,7 +4671,7 @@ validateEstDefaultProject()
     .then(() => testUsbDisconnectClearsStaleTransport())
     .then(() => testBuiltInMotorBlock())
     .then(() => console.log(
-        'EST protocol, queue, 85 EST blocks, and native operator/data/procedure tests passed'
+        'EST protocol, queue, 87 EST blocks, and native operator/data/procedure tests passed'
     ))
     .catch(error => {
         console.error(error);

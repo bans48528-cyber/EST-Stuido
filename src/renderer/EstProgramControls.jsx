@@ -55,6 +55,7 @@ class EstProgramControls extends React.Component {
         super(props);
         this.state = {
             busyAction: null,
+            isEstConnected: false,
             isSlotMenuOpen: false,
             operationMessage: null,
             programActionsAllowed: false,
@@ -90,6 +91,7 @@ class EstProgramControls extends React.Component {
     handleConnectionStatus (event) {
         const status = event && event.detail;
         this.setState({
+            isEstConnected: Boolean(status && status.isConnected),
             programActionsAllowed: Boolean(status && status.isConnected && status.isCompatible)
         });
     }
@@ -207,6 +209,7 @@ class EstProgramControls extends React.Component {
         const {locale} = this.props;
         const {
             busyAction,
+            isEstConnected,
             isSlotMenuOpen,
             operationMessage,
             programActionsAllowed,
@@ -216,7 +219,7 @@ class EstProgramControls extends React.Component {
         return (
             <div
                 aria-label={getEstText('programControls.group', locale)}
-                className={styles.controls}
+                className={classNames(styles.controls, isEstConnected && styles.controlsConnected)}
                 ref={this.handleContainerRef}
                 role="group"
             >

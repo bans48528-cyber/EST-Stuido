@@ -1,4 +1,6 @@
 import {
+    CAPABILITY_AUDIO_RESOURCE_FLASH,
+    CAPABILITY_AUDIO_PLAYBACK,
     CAPABILITY_COOPERATIVE_MULTITASK,
     CAPABILITY_DISPLAY_FONT_STYLES,
     CAPABILITY_FIRMWARE_UPDATE,
@@ -164,6 +166,9 @@ export const EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION = 'M1.22E';
 export const EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION = 'M1.22I';
 export const EST_PROGRAM_DUAL_SPEED_API_MIN_FIRMWARE_VERSION = 'M1.22L';
 export const EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION = 'M1.22M';
+export const EST_PROGRAM_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION = 'M1.22V';
+export const EST_PROGRAM_AUDIO_API_MIN_FIRMWARE_VERSION = 'M1.23D';
+const EST_PROGRAM_LEGACY_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION = 'M1.22U';
 const EST_PROGRAM_SENSOR_WAIT_RUNTIME_PATTERN =
     /\brt\.wait_(?:brick_button|color|touch|ultrasonic|ir_proximity|ir_beacon_button|gyro)\s*\(/;
 const EST_PROGRAM_REQUIRED_CAPABILITIES = (
@@ -176,7 +181,8 @@ const EST_PROGRAM_CAPABILITY_PROTOCOL_MINOR_REQUIREMENTS = Object.freeze([
     [CAPABILITY_TEMPERATURE_SENSOR, EST_PROGRAM_TEMPERATURE_PROTOCOL_MINOR],
     [CAPABILITY_COOPERATIVE_MULTITASK, EST_PROGRAM_COOPERATIVE_PROTOCOL_MINOR],
     [CAPABILITY_RUNTIME_BASIC_EVENT_HATS, EST_PROGRAM_BASIC_EVENT_HATS_PROTOCOL_MINOR],
-    [CAPABILITY_MOTOR_STALL_DETECTION, EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR]
+    [CAPABILITY_MOTOR_STALL_DETECTION, EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR],
+    [CAPABILITY_AUDIO_PLAYBACK, EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR]
 ]);
 export const EST_CAPABILITY_NAMES = Object.freeze([
     [CAPABILITY_FIRMWARE_UPDATE, 'firmware-update'],
@@ -204,7 +210,9 @@ export const EST_CAPABILITY_NAMES = Object.freeze([
     [CAPABILITY_TEMPERATURE_SENSOR, 'runtime-temperature'],
     [CAPABILITY_COOPERATIVE_MULTITASK, 'cooperative-multitask'],
     [CAPABILITY_RUNTIME_BASIC_EVENT_HATS, 'runtime-basic-event-hats'],
-    [CAPABILITY_MOTOR_STALL_DETECTION, 'motor-stall-detection']
+    [CAPABILITY_MOTOR_STALL_DETECTION, 'motor-stall-detection'],
+    [CAPABILITY_AUDIO_PLAYBACK, 'audio-playback'],
+    [CAPABILITY_AUDIO_RESOURCE_FLASH, 'audio-resource-flash']
 ]);
 
 export const capabilityNamesFor = capabilities => EST_CAPABILITY_NAMES
@@ -270,6 +278,9 @@ export const programRequiredCapabilitiesForSource = source => {
     if (/\brt\.motor_stalled\s*\(/.test(text)) {
         capabilities |= CAPABILITY_MOTOR_STALL_DETECTION;
     }
+    if (/\best\.audio\./.test(text)) {
+        capabilities |= CAPABILITY_AUDIO_PLAYBACK;
+    }
     if (/^@rt\.on_(?:brick_button|condition|timer_gt)\b/gm.test(text)) {
         capabilities |= CAPABILITY_RUNTIME_BASIC_EVENT_HATS;
     }
@@ -289,6 +300,15 @@ export const programRequiredCapabilitiesForSource = source => {
 
 export const programMinimumFirmwareVersionForSource = source => {
     const text = typeof source === 'string' ? source : Buffer.from(source || '').toString('utf8');
+    if (/\best\.audio\./.test(text)) {
+        return EST_PROGRAM_AUDIO_API_MIN_FIRMWARE_VERSION;
+    }
+    if (/\brt\.(?:drive_start_dual_power|line_follow_dual_power_step)\s*\(/.test(text)) {
+        return EST_PROGRAM_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION;
+    }
+    if (/\brt\.line_follow_(?:init|dual_step)\s*\(/.test(text)) {
+        return EST_PROGRAM_LEGACY_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION;
+    }
     if (EST_PROGRAM_SENSOR_WAIT_RUNTIME_PATTERN.test(text)) {
         return EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION;
     }
@@ -622,6 +642,50 @@ export const parseHeartbeatResponse = report => {
     return String.fromCharCode(...parsed.payload);
 };
 
+const BATTERY_SOC_CURVE = Object.freeze([
+    [6000, 0],
+    [6540, 5],
+    [7220, 10],
+    [7380, 15],
+    [7420, 20],
+    [7460, 25],
+    [7500, 30],
+    [7540, 35],
+    [7580, 40],
+    [7600, 45],
+    [7640, 50],
+    [7700, 55],
+    [7740, 60],
+    [7820, 65],
+    [7900, 70],
+    [7960, 75],
+    [8040, 80],
+    [8160, 85],
+    [8220, 90],
+    [8300, 95],
+    [8400, 100]
+]);
+
+export const batteryPercentFromSampleMv = sampleMv => {
+    const packMv = Math.max(Number(sampleMv) || 0, 0) * 4;
+    if (packMv <= BATTERY_SOC_CURVE[0][0]) {
+        return 0;
+    }
+    for (let index = 1; index < BATTERY_SOC_CURVE.length; index++) {
+        const [lowerMv, lowerPercent] = BATTERY_SOC_CURVE[index - 1];
+        const [upperMv, upperPercent] = BATTERY_SOC_CURVE[index];
+        if (packMv <= upperMv) {
+            const spanMv = upperMv - lowerMv;
+            const offsetMv = packMv - lowerMv;
+            const spanPercent = upperPercent - lowerPercent;
+            return lowerPercent + Math.floor(
+                ((offsetMv * spanPercent) + Math.floor(spanMv / 2)) / spanMv
+            );
+        }
+    }
+    return 100;
+};
+
 export const parseDeviceStatusResponse = report => {
     const parsed = parseFrame(report, 0x19);
     if (!parsed || parsed.payload.length !== 72) {
@@ -670,6 +734,7 @@ export const parseDeviceStatusResponse = report => {
         batteryLevel: payload[11],
         batteryAdcRaw: readUint16(12),
         batterySampleMv: readUint16(14),
+        batteryPercent: batteryPercentFromSampleMv(readUint16(14)),
         capabilities: readUint32(16),
         uptimeMs: readUint32(20),
         motors,

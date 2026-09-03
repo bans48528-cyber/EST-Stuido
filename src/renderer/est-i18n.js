@@ -82,6 +82,25 @@ const zhCN = {
     'hardware.no': '否',
     'hardware.none': 'none',
     'hardware.unknown': 'unknown ({value})',
+    'firmware.updateButton': '固件更新',
+    'firmware.menuAria': '固件更新选项',
+    'firmware.upgradeEstOs': '升级EST OS',
+    'firmware.downgradeLegacyEst': '降级旧EST系统',
+    'firmware.confirmTitle': '确认固件更新',
+    'firmware.confirmAction': '继续',
+    'firmware.cancelAction': '取消',
+    'firmware.upgradeConfirmMessage': '升级到最新 EST OS？',
+    'firmware.upgradeConfirmDetail': '请保持 EST 通过 USB 连接，升级期间不要拔线或关闭软件。',
+    'firmware.downgradeConfirmMessage': '降级到旧版 EST 系统？',
+    'firmware.downgradeConfirmDetail': '此操作用于兼容旧版项目。请保持 EST 通过 USB 连接，降级期间不要拔线或关闭软件。',
+    'firmware.updateRunning': '正在更新固件，请保持连接...',
+    'firmware.updateDone': '固件更新完成：{version}',
+    'firmware.successTitle': '固件更新完成',
+    'firmware.successMessage': 'EST 已更新到 {version}',
+    'firmware.successDetail': '升级包：{path}\nSHA-256：{sha256}',
+    'firmware.errorTitle': '固件更新失败',
+    'firmware.errorMessage': '无法完成 EST 固件更新。',
+    'firmware.busy': '更新中...',
 
     'category.motor': '电机',
     'category.movement': '移动',
@@ -134,6 +153,8 @@ const zhCN = {
     'block.movement.dualSpeedFor': '以 %1 %2 %% 的速度移动 %3 %4',
     'block.movement.startSteerSpeed': '以 %1 %% 的速度开始向 %2 移动',
     'block.movement.startDualSpeed': '以 %1 %2 %% 的速度开始移动',
+    'block.movement.lineFollowInit': 'PWM巡线参数初始化',
+    'block.movement.lineFollowDualStep': '双输入PWM巡线 左输入 %1 右输入 %2 左基础功率 %3 右基础功率 %4 Kp %5 Kd %6',
 
     'block.display.imageFor': '显示 %1 %2 秒',
     'block.display.image': '显示 %1',
@@ -220,6 +241,7 @@ const zhCN = {
     'option.statusLight.off': '关闭',
     'option.statusLight.red': '红色',
     'option.statusLight.blue': '蓝色',
+    'option.sound.pianoPrefix': '钢琴',
     'option.sound.communication_hello': 'Communication / Hello',
     'option.touchEvent.pressed': '被按压',
     'option.touchEvent.released': '被松开',
@@ -340,6 +362,27 @@ const en = {
     'hardware.no': 'no',
     'hardware.none': 'none',
     'hardware.unknown': 'unknown ({value})',
+    'firmware.updateButton': 'Firmware Update',
+    'firmware.menuAria': 'Firmware update options',
+    'firmware.upgradeEstOs': 'Upgrade EST OS',
+    'firmware.downgradeLegacyEst': 'Downgrade to old EST',
+    'firmware.confirmTitle': 'Confirm firmware update',
+    'firmware.confirmAction': 'Continue',
+    'firmware.cancelAction': 'Cancel',
+    'firmware.upgradeConfirmMessage': 'Upgrade to the latest EST OS?',
+    'firmware.upgradeConfirmDetail':
+        'Keep EST connected by USB. Do not unplug it or close the app during the update.',
+    'firmware.downgradeConfirmMessage': 'Downgrade to the old EST system?',
+    'firmware.downgradeConfirmDetail':
+        'Use this for old project compatibility. Keep EST connected by USB during the downgrade.',
+    'firmware.updateRunning': 'Updating firmware. Keep EST connected...',
+    'firmware.updateDone': 'Firmware update complete: {version}',
+    'firmware.successTitle': 'Firmware update complete',
+    'firmware.successMessage': 'EST has been updated to {version}',
+    'firmware.successDetail': 'Package: {path}\nSHA-256: {sha256}',
+    'firmware.errorTitle': 'Firmware update failed',
+    'firmware.errorMessage': 'Could not complete the EST firmware update.',
+    'firmware.busy': 'Updating...',
 
     'category.motor': 'Motor',
     'category.movement': 'Move',
@@ -392,6 +435,10 @@ const en = {
     'block.movement.dualSpeedFor': 'move at %1 %2 %% speed for %3 %4',
     'block.movement.startSteerSpeed': 'at %1 %% speed start steering %2',
     'block.movement.startDualSpeed': 'start moving at %1 %2 %% speed',
+    'block.movement.lineFollowInit': 'initialize PWM line follow parameters',
+    'block.movement.lineFollowDualStep':
+        'dual-input PWM line follow left %1 right %2 left base power %3 ' +
+        'right base power %4 Kp %5 Kd %6',
 
     'block.display.imageFor': 'show %1 for %2 seconds',
     'block.display.image': 'show %1',
@@ -478,6 +525,7 @@ const en = {
     'option.statusLight.off': 'off',
     'option.statusLight.red': 'red',
     'option.statusLight.blue': 'blue',
+    'option.sound.pianoPrefix': 'Piano',
     'option.sound.communication_hello': 'Communication / Hello',
     'option.touchEvent.pressed': 'pressed',
     'option.touchEvent.released': 'released',
@@ -592,6 +640,27 @@ const ptBR = {
     'hardware.value': 'Valor atual',
     'hardware.yes': 'sim',
     'hardware.no': 'nao',
+    'firmware.updateButton': 'Atualizar firmware',
+    'firmware.menuAria': 'Opcoes de atualizacao de firmware',
+    'firmware.upgradeEstOs': 'Atualizar EST OS',
+    'firmware.downgradeLegacyEst': 'Voltar ao EST antigo',
+    'firmware.confirmTitle': 'Confirmar atualizacao de firmware',
+    'firmware.confirmAction': 'Continuar',
+    'firmware.cancelAction': 'Cancelar',
+    'firmware.upgradeConfirmMessage': 'Atualizar para o EST OS mais recente?',
+    'firmware.upgradeConfirmDetail':
+        'Mantenha o EST conectado por USB. Nao desconecte nem feche o app durante a atualizacao.',
+    'firmware.downgradeConfirmMessage': 'Voltar para o sistema EST antigo?',
+    'firmware.downgradeConfirmDetail':
+        'Use isto para compatibilidade com projetos antigos. Mantenha o EST conectado por USB durante o processo.',
+    'firmware.updateRunning': 'Atualizando firmware. Mantenha o EST conectado...',
+    'firmware.updateDone': 'Atualizacao de firmware concluida: {version}',
+    'firmware.successTitle': 'Atualizacao concluida',
+    'firmware.successMessage': 'EST atualizado para {version}',
+    'firmware.successDetail': 'Pacote: {path}\nSHA-256: {sha256}',
+    'firmware.errorTitle': 'Falha na atualizacao',
+    'firmware.errorMessage': 'Nao foi possivel concluir a atualizacao do firmware EST.',
+    'firmware.busy': 'Atualizando...',
 
     'category.motor': 'Motor',
     'category.movement': 'Movimento',
@@ -635,6 +704,10 @@ const ptBR = {
     'block.movement.dualSpeedFor': 'mover a %1 %2 %% de velocidade por %3 %4',
     'block.movement.startSteerSpeed': 'a %1 %% de velocidade comecar virando %2',
     'block.movement.startDualSpeed': 'comecar movendo a %1 %2 %% de velocidade',
+    'block.movement.lineFollowInit': 'inicializar parametros PWM de seguir linha',
+    'block.movement.lineFollowDualStep':
+        'seguir linha PWM esq. %1 dir. %2 potencia esq. %3 ' +
+        'potencia dir. %4 Kp %5 Kd %6',
 
     'block.display.imageFor': 'mostrar %1 por %2 segundos',
     'block.display.image': 'mostrar %1',
@@ -721,6 +794,7 @@ const ptBR = {
     'option.statusLight.off': 'desligada',
     'option.statusLight.red': 'vermelha',
     'option.statusLight.blue': 'azul',
+    'option.sound.pianoPrefix': 'Piano',
     'option.touchEvent.pressed': 'pressionado',
     'option.touchEvent.released': 'solto',
     'option.comparator.less': 'menor que (<)',
@@ -900,6 +974,22 @@ export const getEstLocalizedOptions = (group, values, locale = getCurrentEstLoca
 );
 
 export const getEstImageOptions = imageIds => imageIds.map(id => [id.replace('/', ' / '), id]);
+
+const pianoSoundLabel = id => {
+    const match = /^Piano\/([A-G])(s?)([0-9])$/.exec(id);
+    if (!match) return null;
+    return `${match[1]}${match[2] ? '#' : ''}${match[3]}`;
+};
+
+export const getEstSoundOptions = (soundIds, locale = getCurrentEstLocale()) => (
+    soundIds.map(id => {
+        const note = pianoSoundLabel(id);
+        if (note) {
+            return [`${getEstText('option.sound.pianoPrefix', locale)} ${note}`, id];
+        }
+        return [getEstText(`option.sound.${id}`, locale), id];
+    })
+);
 
 export const formatEstSteeringDisplayText = (value, locale = getCurrentEstLocale()) => {
     const steering = Number(value);

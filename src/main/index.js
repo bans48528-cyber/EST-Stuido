@@ -14,6 +14,7 @@ import appIconIco from '../icon/OpenBlockDesktop.ico';
 import appIconPng from '../icon/OpenBlockDesktop.png';
 import {productName, version} from '../../package.json';
 import {EstDeviceService} from './est/device-service';
+import {flashEstFirmware} from './est/firmware-update-service';
 import {createNodeHidEstTransportFactory} from './est/transports/node-hid';
 
 import formatMessage from 'format-message';
@@ -23,6 +24,9 @@ const estDeviceService = new EstDeviceService({
     transportFactory: createNodeHidEstTransportFactory()
 });
 const estStudioAppId = 'com.eststudio.desktop';
+const estFirmwareUpdateState = {
+    inProgress: false
+};
 
 formatMessage.setup({translations: locales});
 
@@ -638,14 +642,57 @@ ipcMain.on('set-locale', (event, arg) => {
     formatMessage.setup({locale: arg});
 });
 
-ipcMain.handle('est-list-devices', () => estDeviceService.listDevices());
-ipcMain.handle('est-connect', (event, device) => estDeviceService.connect(device));
+const firmwareUpdateConnectionState = () => ({
+    state: 'firmware-updating',
+    compatible: false,
+    message: 'EST firmware update is in progress',
+    status: null
+});
+
+const requireNoFirmwareUpdate = () => {
+    if (estFirmwareUpdateState.inProgress) {
+        throw new Error('EST firmware update is in progress');
+    }
+};
+
+ipcMain.handle('est-list-devices', () => (
+    estFirmwareUpdateState.inProgress ? [] : estDeviceService.listDevices()
+));
+ipcMain.handle('est-connect', (event, device) => {
+    requireNoFirmwareUpdate();
+    return estDeviceService.connect(device);
+});
 ipcMain.handle('est-disconnect', () => estDeviceService.disconnect());
-ipcMain.handle('est-get-status', (event, options) => estDeviceService.getStatus(options));
-ipcMain.handle('est-auto-connect', (event, options) => estDeviceService.autoConnect(options));
-ipcMain.handle('est-download-program', (event, request) => estDeviceService.downloadProgram(request));
-ipcMain.handle('est-run-program', (event, request) => estDeviceService.runProgram(request));
-ipcMain.handle('est-stop-program', () => estDeviceService.stopCurrentProgram());
+ipcMain.handle('est-get-status', (event, options) => (
+    estFirmwareUpdateState.inProgress ? firmwareUpdateConnectionState() : estDeviceService.getStatus(options)
+));
+ipcMain.handle('est-auto-connect', (event, options) => (
+    estFirmwareUpdateState.inProgress ? firmwareUpdateConnectionState() : estDeviceService.autoConnect(options)
+));
+ipcMain.handle('est-download-program', (event, request) => {
+    requireNoFirmwareUpdate();
+    return estDeviceService.downloadProgram(request);
+});
+ipcMain.handle('est-run-program', (event, request) => {
+    requireNoFirmwareUpdate();
+    return estDeviceService.runProgram(request);
+});
+ipcMain.handle('est-stop-program', () => {
+    requireNoFirmwareUpdate();
+    return estDeviceService.stopCurrentProgram();
+});
+ipcMain.handle('est-flash-firmware', async (event, request) => {
+    if (estFirmwareUpdateState.inProgress) {
+        throw new Error('EST firmware update is already in progress');
+    }
+    estFirmwareUpdateState.inProgress = true;
+    try {
+        await estDeviceService.disconnect();
+        return await flashEstFirmware(request);
+    } finally {
+        estFirmwareUpdateState.inProgress = false;
+    }
+});
 
 
 // start loading initial project data before the GUI needs it so the load seems faster

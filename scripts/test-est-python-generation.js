@@ -746,6 +746,25 @@ assert.match(directSpeedOutputs, /rt\.drive_dual_speed_for\(left_speed, right_sp
 assert.doesNotMatch(directSpeedOutputs, /_est_speed/);
 assert.strictEqual(Object.prototype.hasOwnProperty.call(generator.libraries_, 'estSpeedHelpers'), false);
 
+resetGenerator();
+assert.strictEqual(generator.drive_line_follow_init({}), 'rt.line_follow_init()\n');
+assert.strictEqual(generator.imports_.estRuntime, 'import est_runtime as rt');
+
+resetGenerator();
+assert.strictEqual(generator.drive_line_follow_dual_step({
+    values: {
+        LEFT_INPUT: 'rt.color(1).reflection()',
+        RIGHT_INPUT: 'right_sensor',
+        LEFT_BASE_POWER: 'left_base + 5',
+        RIGHT_BASE_POWER: 'right_base',
+        KP: 'kp_value',
+        KD: '0.01'
+    },
+    getFieldValue: () => null
+}), 'rt.line_follow_dual_power_step(rt.color(1).reflection(), right_sensor, ' +
+    'left_base + 5, right_base, kp_value, 0.01)\n');
+assert.strictEqual(generator.imports_.estRuntime, 'import est_runtime as rt');
+
 [
     'regular_black',
     'bold_black',
@@ -782,6 +801,18 @@ assert.strictEqual(generator.display_text_line({
 assert.strictEqual(generator.imports_.estRuntime, 'import est_runtime as rt');
 assert.strictEqual(generator.imports_.estHardware, undefined);
 assert.deepStrictEqual(Object.keys(generator.libraries_), []);
+
+resetGenerator();
+assert.strictEqual(generator.sound_play({
+    getFieldValue: () => null
+}), 'est.audio.play(\'Piano/C4\', wait=False)\n');
+assert.strictEqual(generator.imports_.estHardware, 'import est');
+
+resetGenerator();
+assert.strictEqual(generator.sound_play_wait({
+    getFieldValue: name => (name === 'SOUND' ? 'Piano/Cs4' : null)
+}), 'est.audio.play(\'Piano/Cs4\', wait=True)\n');
+assert.strictEqual(generator.imports_.estHardware, 'import est');
 
 const sensorPortBlock = ({values = {}, fields = {}} = {}) => ({
     values: {PORT: 'port_var', ...values},
@@ -825,20 +856,81 @@ const sensorDefaultPortBlock = ({values = {}, fields = {}} = {}) => ({
     getFieldValue: name => fields[name]
 });
 [
-    ['sensor_color_reflection', {}, "rt.color('3').reflection()"],
-    ['sensor_temperature', {}, "rt.temperature('3').celsius()"],
-    ['sensor_touch_pressed', {}, "rt.touch('1').pressed()"],
+    ['sensor_color_reflection', {}, '_est_device_color_1.reflection()',
+        'estDevice_color_1',
+        '_est_device_color_1 = rt.color(1)\n_est_device_color_1.reflection()\n'],
+    ['sensor_temperature', {}, '_est_device_temperature_1.celsius()',
+        'estDevice_temperature_1',
+        '_est_device_temperature_1 = rt.temperature(1)\n_est_device_temperature_1.celsius()\n'],
+    ['sensor_touch_pressed', {}, '_est_device_touch_1.pressed()',
+        'estDevice_touch_1',
+        '_est_device_touch_1 = rt.touch(1)\n_est_device_touch_1.pressed()\n'],
     ['sensor_ultrasonic_distance', {
         fields: {UNIT: 'centimeters'}
-    }, "rt.ultrasonic('4').distance('centimeters')"],
-    ['sensor_ir_proximity', {}, "rt.infrared('4').proximity()"],
-    ['sensor_gyro_angle', {}, "rt.gyro('2').angle()"]
-].forEach(([blockId, blockOptions, expectedCode]) => {
+    }, "_est_device_ultrasonic_1.distance('centimeters')",
+    'estDevice_ultrasonic_1',
+    "_est_device_ultrasonic_1 = rt.ultrasonic(1)\n_est_device_ultrasonic_1.distance('centimeters')\n"],
+    ['sensor_ir_proximity', {}, '_est_device_infrared_1.proximity()',
+        'estDevice_infrared_1',
+        '_est_device_infrared_1 = rt.infrared(1)\n_est_device_infrared_1.proximity()\n'],
+    ['sensor_gyro_angle', {}, '_est_device_gyro_1.angle()',
+        'estDevice_gyro_1',
+        '_est_device_gyro_1 = rt.gyro(1)\n_est_device_gyro_1.angle()\n']
+].forEach(([blockId, blockOptions, expectedCode, expectedKey, expectedSetup]) => {
     resetGenerator();
     const output = generator[blockId](sensorDefaultPortBlock(blockOptions));
     const code = Array.isArray(output) ? output[0] : output;
     assert.strictEqual(code, expectedCode, `${blockId} default port`);
+    assert.strictEqual(generator.libraries_[expectedKey], expectedSetup);
 });
+
+resetGenerator();
+const fixedColorBlock = sensorDefaultPortBlock();
+assert.strictEqual(
+    generator.sensor_color_reflection(fixedColorBlock)[0],
+    '_est_device_color_1.reflection()'
+);
+assert.strictEqual(
+    generator.sensor_color_ambient(fixedColorBlock)[0],
+    '_est_device_color_1.ambient()'
+);
+assert.deepStrictEqual(Object.keys(generator.libraries_), ['estDevice_color_1']);
+assert.strictEqual(
+    generator.libraries_.estDevice_color_1,
+    '_est_device_color_1 = rt.color(1)\n_est_device_color_1.reflection()\n'
+);
+
+resetGenerator();
+const waitColorCode = generator.sensor_wait_color(sensorDefaultPortBlock({
+    fields: {COLOR_EVENT: 'red'}
+}));
+assert.strictEqual(waitColorCode, "rt.wait_color('1', 'red')\n");
+assert.strictEqual(
+    generator.libraries_.estDevice_color_1,
+    '_est_device_color_1 = rt.color(1)\n_est_device_color_1.color()\n'
+);
+
+resetGenerator();
+const preparedReflection = generator.sensor_color_reflection(sensorDefaultPortBlock())[0];
+assert.strictEqual(generator.event_program_start({
+    type: 'event_program_start',
+    id: 'prepared-sensor-start',
+    nextCode: `${generator.INDENT}value = ${preparedReflection}\n`,
+    nextConnection: {targetBlock: () => ({type: 'sensor_color_reflection'})}
+}), null);
+const preparedSensorProgram = [
+    dictionaryCode(generator.imports_),
+    dictionaryCode(generator.libraries_),
+    dictionaryCode(generator.setups_)
+].join('\n');
+assert.ok(
+    preparedSensorProgram.indexOf('_est_device_color_1 = rt.color(1)') <
+    preparedSensorProgram.indexOf('@rt.on_start')
+);
+assert.ok(
+    preparedSensorProgram.indexOf('_est_device_color_1.reflection()') <
+    preparedSensorProgram.indexOf('rt.run()')
+);
 
 const combinedBlocks = allEstGeneratorIds.map(blockId => (
     makeBlockFromDefinition(definitionById.get(blockId), 'combined')

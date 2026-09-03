@@ -1,3 +1,5 @@
+import {dialog} from '@electron/remote';
+import * as remote from '@electron/remote/renderer';
 import classNames from 'classnames';
 import {ipcRenderer} from 'electron';
 import PropTypes from 'prop-types';
@@ -63,6 +65,10 @@ const SENSOR_MODE_NAMES = {
     }
 };
 const ACTIVE_PROGRAM_STATES = new Set([3, 4]);
+const FIRMWARE_UPDATE_ACTIONS = {
+    upgrade: 'latest-os',
+    downgrade: 'legacy-est'
+};
 
 const stripRemoteErrorPrefix = message => String(message || '').replace(
     /^Error invoking remote method '[^']+': (?:Error|TypeError):\s*/,
@@ -86,6 +92,10 @@ const isProgramRunning = status => (
 
 const valueOrDash = value => (
     value === 0 || value ? String(value) : '-'
+);
+
+const batteryPercentText = status => (
+    status && Number.isInteger(status.batteryPercent) ? `${status.batteryPercent}%` : '-'
 );
 
 const hexByte = value => {
@@ -120,6 +130,9 @@ class EstHardwareStatusButton extends React.Component {
         this.state = {
             connection: null,
             errorMessage: null,
+            firmwareUpdateBusy: null,
+            firmwareUpdateMenuOpen: false,
+            firmwareUpdateMessage: null,
             isLoading: false,
             isOpen: false,
             panelPosition: null,
@@ -135,6 +148,8 @@ class EstHardwareStatusButton extends React.Component {
         this.handlePanelDragMove = this.handlePanelDragMove.bind(this);
         this.handlePanelDragStart = this.handlePanelDragStart.bind(this);
         this.handleWindowResize = this.handleWindowResize.bind(this);
+        this.handleFirmwareUpdateOption = this.handleFirmwareUpdateOption.bind(this);
+        this.handleFirmwareUpdateToggle = this.handleFirmwareUpdateToggle.bind(this);
         this.handleManualRefresh = this.handleManualRefresh.bind(this);
         this.handleToggle = this.handleToggle.bind(this);
         this.handleClose = this.handleClose.bind(this);
@@ -172,6 +187,7 @@ class EstHardwareStatusButton extends React.Component {
         this.setState(state => {
             const isOpen = !state.isOpen;
             return {
+                firmwareUpdateMenuOpen: false,
                 isOpen,
                 panelPosition: isOpen ?
                     (state.panelPosition ?
@@ -189,11 +205,88 @@ class EstHardwareStatusButton extends React.Component {
     }
 
     handleClose () {
-        this.setState({isOpen: false}, () => this.stopProgramStatusTimer());
+        this.setState({
+            firmwareUpdateMenuOpen: false,
+            isOpen: false
+        }, () => this.stopProgramStatusTimer());
     }
 
     handleManualRefresh () {
+        this.setState({firmwareUpdateMenuOpen: false});
         this.refreshStatus();
+    }
+
+    handleFirmwareUpdateToggle () {
+        if (this.state.firmwareUpdateBusy) {
+            return;
+        }
+        this.setState(state => ({
+            firmwareUpdateMenuOpen: !state.firmwareUpdateMenuOpen
+        }));
+    }
+
+    async handleFirmwareUpdateOption (event) {
+        const target = event.currentTarget.dataset.firmwareTarget;
+        if (this.state.firmwareUpdateBusy || !target) {
+            return;
+        }
+        const {locale} = this.props;
+        const isUpgrade = target === FIRMWARE_UPDATE_ACTIONS.upgrade;
+        const confirmation = await dialog.showMessageBox(remote.getCurrentWindow(), {
+            type: 'warning',
+            buttons: [
+                getEstText('firmware.confirmAction', locale),
+                getEstText('firmware.cancelAction', locale)
+            ],
+            cancelId: 1,
+            defaultId: 1,
+            title: getEstText('firmware.confirmTitle', locale),
+            message: getEstText(
+                isUpgrade ? 'firmware.upgradeConfirmMessage' : 'firmware.downgradeConfirmMessage',
+                locale
+            ),
+            detail: getEstText(
+                isUpgrade ? 'firmware.upgradeConfirmDetail' : 'firmware.downgradeConfirmDetail',
+                locale
+            )
+        });
+        if (!confirmation || confirmation.response !== 0) {
+            this.setState({firmwareUpdateMenuOpen: false});
+            return;
+        }
+        this.setState({
+            firmwareUpdateBusy: target,
+            firmwareUpdateMenuOpen: false,
+            firmwareUpdateMessage: getEstText('firmware.updateRunning', locale)
+        });
+        try {
+            const result = await ipcRenderer.invoke('est-flash-firmware', {target});
+            const targetVersion = result && result.targetVersion ? result.targetVersion : '-';
+            this.setState({
+                firmwareUpdateMessage: getEstText('firmware.updateDone', locale, {version: targetVersion})
+            });
+            await dialog.showMessageBox(remote.getCurrentWindow(), {
+                type: 'info',
+                title: getEstText('firmware.successTitle', locale),
+                message: getEstText('firmware.successMessage', locale, {version: targetVersion}),
+                detail: getEstText('firmware.successDetail', locale, {
+                    path: result && result.packagePath ? result.packagePath : '-',
+                    sha256: result && result.sha256 ? result.sha256 : '-'
+                })
+            });
+            this.refreshStatus();
+        } catch (error) {
+            const detail = formatStatusError(error, locale);
+            this.setState({firmwareUpdateMessage: detail});
+            await dialog.showMessageBox(remote.getCurrentWindow(), {
+                type: 'error',
+                title: getEstText('firmware.errorTitle', locale),
+                message: getEstText('firmware.errorMessage', locale),
+                detail
+            });
+        } finally {
+            this.setState({firmwareUpdateBusy: null});
+        }
     }
 
     handlePanelDragStart (event) {
@@ -361,7 +454,7 @@ class EstHardwareStatusButton extends React.Component {
                         '-'}</strong>
                     <span>{getEstText('hardware.battery', locale)}</span>
                     <strong>
-                        {status ? `${status.batteryLevel}/4 (${Math.min(status.batteryLevel, 4) * 25}%)` : '-'}
+                        {batteryPercentText(status)}
                     </strong>
                     <span>{getEstText('hardware.adc', locale)}</span>
                     <strong>{status ? valueOrDash(status.batteryAdcRaw) : '-'}</strong>
@@ -459,6 +552,9 @@ class EstHardwareStatusButton extends React.Component {
         const {locale} = this.props;
         const {
             errorMessage,
+            firmwareUpdateBusy,
+            firmwareUpdateMenuOpen,
+            firmwareUpdateMessage,
             isLoading,
             status
         } = this.state;
@@ -489,6 +585,46 @@ class EstHardwareStatusButton extends React.Component {
                                 getEstText('hardware.subtitle', locale)}</p>
                         </div>
                         <div className={styles.panelActions}>
+                            <div className={styles.firmwareUpdateWrap}>
+                                <button
+                                    aria-expanded={firmwareUpdateMenuOpen}
+                                    aria-haspopup="menu"
+                                    className={styles.firmwareUpdateButton}
+                                    disabled={Boolean(firmwareUpdateBusy)}
+                                    type="button"
+                                    onClick={this.handleFirmwareUpdateToggle}
+                                >
+                                    {firmwareUpdateBusy ?
+                                        getEstText('firmware.busy', locale) :
+                                        getEstText('firmware.updateButton', locale)}
+                                </button>
+                                {firmwareUpdateMenuOpen && (
+                                    <div
+                                        aria-label={getEstText('firmware.menuAria', locale)}
+                                        className={styles.firmwareUpdateMenu}
+                                        role="menu"
+                                    >
+                                        <button
+                                            className={styles.firmwareUpdateOption}
+                                            data-firmware-target={FIRMWARE_UPDATE_ACTIONS.upgrade}
+                                            role="menuitem"
+                                            type="button"
+                                            onClick={this.handleFirmwareUpdateOption}
+                                        >
+                                            {getEstText('firmware.upgradeEstOs', locale)}
+                                        </button>
+                                        <button
+                                            className={styles.firmwareUpdateOption}
+                                            data-firmware-target={FIRMWARE_UPDATE_ACTIONS.downgrade}
+                                            role="menuitem"
+                                            type="button"
+                                            onClick={this.handleFirmwareUpdateOption}
+                                        >
+                                            {getEstText('firmware.downgradeLegacyEst', locale)}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                             <button
                                 className={styles.refreshButton}
                                 disabled={isLoading}
@@ -510,6 +646,11 @@ class EstHardwareStatusButton extends React.Component {
                     {programRunning && (
                         <div className={styles.notice}>
                             {getEstText('hardware.runningNotice', locale)}
+                        </div>
+                    )}
+                    {firmwareUpdateMessage && (
+                        <div className={styles.notice}>
+                            {firmwareUpdateMessage}
                         </div>
                     )}
                     {errorMessage && (

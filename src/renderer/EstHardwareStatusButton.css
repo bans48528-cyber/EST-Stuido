@@ -116,6 +116,66 @@
     flex: 0 0 auto;
 }
 
+.firmware-update-wrap {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.firmware-update-button {
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    border-radius: 6px;
+    background: #ffffff;
+    color: #dc2626;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.firmware-update-button:hover,
+.firmware-update-button:active {
+    background: #fee2e2;
+}
+
+.firmware-update-button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.firmware-update-menu {
+    position: absolute;
+    z-index: 1;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 150px;
+    overflow: hidden;
+    border: 1px solid rgba(31, 41, 55, 0.14);
+    border-radius: 8px;
+    background: #f8fafc;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+}
+
+.firmware-update-option {
+    display: block;
+    width: 100%;
+    height: 34px;
+    padding: 0 12px;
+    border: 0;
+    background: transparent;
+    color: #111827;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.firmware-update-option:hover,
+.firmware-update-option:active {
+    background: #e5e7eb;
+}
+
 .refresh-button {
     height: 28px;
     padding: 0 10px;
