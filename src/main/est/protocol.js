@@ -24,6 +24,7 @@ import {
     CAPABILITY_PERSISTENT_PROGRAM,
     CAPABILITY_PYTHON_PROGRAM,
     CAPABILITY_RUNTIME_BASIC_EVENT_HATS,
+    CAPABILITY_RUNTIME_BROADCAST,
     CAPABILITY_TEMPERATURE_SENSOR,
     CAPABILITY_UNLIMITED_PYTHON_RUN,
     CAPABILITY_ZERO_SPEED_MOTOR_CONTROL,
@@ -162,15 +163,31 @@ const EST_PROGRAM_TEMPERATURE_PROTOCOL_MINOR = EST_PROGRAM_COMPATIBILITY_TABLE['
 const EST_PROGRAM_COOPERATIVE_PROTOCOL_MINOR = 25;
 const EST_PROGRAM_BASIC_EVENT_HATS_PROTOCOL_MINOR = 25;
 const EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR = 26;
+const EST_PROGRAM_BROADCAST_PROTOCOL_MINOR = 28;
 export const EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION = 'M1.22E';
 export const EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION = 'M1.22I';
 export const EST_PROGRAM_DUAL_SPEED_API_MIN_FIRMWARE_VERSION = 'M1.22L';
 export const EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION = 'M1.22M';
 export const EST_PROGRAM_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION = 'M1.22V';
 export const EST_PROGRAM_AUDIO_API_MIN_FIRMWARE_VERSION = 'M1.23D';
-const EST_PROGRAM_LEGACY_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION = 'M1.22U';
+export const EST_PROGRAM_AUDIO_RESOURCE_API_MIN_FIRMWARE_VERSION = 'M1.24B';
+export const EST_PROGRAM_BROADCAST_API_MIN_FIRMWARE_VERSION = 'M1.25A';
 const EST_PROGRAM_SENSOR_WAIT_RUNTIME_PATTERN =
     /\brt\.wait_(?:brick_button|color|touch|ultrasonic|ir_proximity|ir_beacon_button|gyro)\s*\(/;
+const EST_AUDIO_PLAY_LITERAL_PATTERN = /\best\.audio\.play\s*\(\s*(['"])([^'"]+)\1/g;
+const EST_PIANO_AUDIO_RESOURCE_PATTERN = /^Piano\/(?:[A-G]s?[4-6]|C7)$/;
+const sourceUsesExternalAudioResource = text => {
+    let match = EST_AUDIO_PLAY_LITERAL_PATTERN.exec(text);
+    while (match) {
+        if (!EST_PIANO_AUDIO_RESOURCE_PATTERN.test(match[2])) {
+            EST_AUDIO_PLAY_LITERAL_PATTERN.lastIndex = 0;
+            return true;
+        }
+        match = EST_AUDIO_PLAY_LITERAL_PATTERN.exec(text);
+    }
+    EST_AUDIO_PLAY_LITERAL_PATTERN.lastIndex = 0;
+    return false;
+};
 const EST_PROGRAM_REQUIRED_CAPABILITIES = (
     CAPABILITY_FROZEN_EST_RUNTIME |
     CAPABILITY_UNLIMITED_PYTHON_RUN |
@@ -182,7 +199,8 @@ const EST_PROGRAM_CAPABILITY_PROTOCOL_MINOR_REQUIREMENTS = Object.freeze([
     [CAPABILITY_COOPERATIVE_MULTITASK, EST_PROGRAM_COOPERATIVE_PROTOCOL_MINOR],
     [CAPABILITY_RUNTIME_BASIC_EVENT_HATS, EST_PROGRAM_BASIC_EVENT_HATS_PROTOCOL_MINOR],
     [CAPABILITY_MOTOR_STALL_DETECTION, EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR],
-    [CAPABILITY_AUDIO_PLAYBACK, EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR]
+    [CAPABILITY_AUDIO_PLAYBACK, EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR],
+    [CAPABILITY_RUNTIME_BROADCAST, EST_PROGRAM_BROADCAST_PROTOCOL_MINOR]
 ]);
 export const EST_CAPABILITY_NAMES = Object.freeze([
     [CAPABILITY_FIRMWARE_UPDATE, 'firmware-update'],
@@ -212,7 +230,8 @@ export const EST_CAPABILITY_NAMES = Object.freeze([
     [CAPABILITY_RUNTIME_BASIC_EVENT_HATS, 'runtime-basic-event-hats'],
     [CAPABILITY_MOTOR_STALL_DETECTION, 'motor-stall-detection'],
     [CAPABILITY_AUDIO_PLAYBACK, 'audio-playback'],
-    [CAPABILITY_AUDIO_RESOURCE_FLASH, 'audio-resource-flash']
+    [CAPABILITY_AUDIO_RESOURCE_FLASH, 'audio-resource-flash'],
+    [CAPABILITY_RUNTIME_BROADCAST, 'runtime-broadcast']
 ]);
 
 export const capabilityNamesFor = capabilities => EST_CAPABILITY_NAMES
@@ -281,8 +300,14 @@ export const programRequiredCapabilitiesForSource = source => {
     if (/\best\.audio\./.test(text)) {
         capabilities |= CAPABILITY_AUDIO_PLAYBACK;
     }
+    if (sourceUsesExternalAudioResource(text)) {
+        capabilities |= CAPABILITY_AUDIO_RESOURCE_FLASH;
+    }
     if (/^@rt\.on_(?:brick_button|condition|timer_gt)\b/gm.test(text)) {
         capabilities |= CAPABILITY_RUNTIME_BASIC_EVENT_HATS;
+    }
+    if (/\brt\.broadcast\s*\(|^@rt\.on_broadcast\s*\(/m.test(text)) {
+        capabilities |= CAPABILITY_RUNTIME_BROADCAST;
     }
     const startHandlerCount = (text.match(/^@rt\.on_start\b/gm) || []).length;
     if (
@@ -291,7 +316,8 @@ export const programRequiredCapabilitiesForSource = source => {
         /\bawait\s+rt\.(?:yield_once|sleep|wait_until|motor_run_for|drive_move_for|drive_steer_for)\s*\(/.test(text) ||
         /\bawait\s+rt\.(?:display_image_for|wait_[a-z_]+)\s*\(/.test(text) ||
         /\brt\.stop\s*\(/.test(text) ||
-        /\brt\.stop_other_stacks\s*\(/.test(text)
+        /\brt\.stop_other_stacks\s*\(/.test(text) ||
+        /\brt\.broadcast\s*\([^\n]*\bwait\s*=\s*True\s*\)/.test(text)
     ) {
         capabilities |= CAPABILITY_COOPERATIVE_MULTITASK;
     }
@@ -300,14 +326,17 @@ export const programRequiredCapabilitiesForSource = source => {
 
 export const programMinimumFirmwareVersionForSource = source => {
     const text = typeof source === 'string' ? source : Buffer.from(source || '').toString('utf8');
+    if (/\brt\.broadcast\s*\(|^@rt\.on_broadcast\s*\(/m.test(text)) {
+        return EST_PROGRAM_BROADCAST_API_MIN_FIRMWARE_VERSION;
+    }
+    if (sourceUsesExternalAudioResource(text)) {
+        return EST_PROGRAM_AUDIO_RESOURCE_API_MIN_FIRMWARE_VERSION;
+    }
     if (/\best\.audio\./.test(text)) {
         return EST_PROGRAM_AUDIO_API_MIN_FIRMWARE_VERSION;
     }
-    if (/\brt\.(?:drive_start_dual_power|line_follow_dual_power_step)\s*\(/.test(text)) {
+    if (/\brt\.(?:drive_start_dual_power|line_follow_(?:init|dual_power_step))\s*\(/.test(text)) {
         return EST_PROGRAM_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION;
-    }
-    if (/\brt\.line_follow_(?:init|dual_step)\s*\(/.test(text)) {
-        return EST_PROGRAM_LEGACY_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION;
     }
     if (EST_PROGRAM_SENSOR_WAIT_RUNTIME_PATTERN.test(text)) {
         return EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION;
@@ -325,86 +354,6 @@ export const programMinimumFirmwareVersionForSource = source => {
 };
 
 export const EST_PROGRAM_UNSUPPORTED_RUNTIME_FEATURES = Object.freeze([
-    {
-        id: 'broadcast',
-        label: '广播消息',
-        pattern: /\brt\.broadcast\s*\(/
-    },
-    {
-        id: 'on_broadcast',
-        label: '接收广播事件帽',
-        pattern: /^@rt\.on_broadcast\s*\(/m
-    },
-    {
-        id: 'on_color',
-        label: '颜色传感器事件帽',
-        pattern: /^@rt\.on_color\s*\(/m
-    },
-    {
-        id: 'on_touch',
-        label: '触碰传感器事件帽',
-        pattern: /^@rt\.on_touch\s*\(/m
-    },
-    {
-        id: 'on_ultrasonic',
-        label: '超声波传感器事件帽',
-        pattern: /^@rt\.on_ultrasonic\s*\(/m
-    },
-    {
-        id: 'on_ir_proximity',
-        label: '红外近程事件帽',
-        pattern: /^@rt\.on_ir_proximity\s*\(/m
-    },
-    {
-        id: 'on_ir_beacon_button',
-        label: '红外信标按钮事件帽',
-        pattern: /^@rt\.on_ir_beacon_button\s*\(/m
-    },
-    {
-        id: 'on_gyro_angle',
-        label: '陀螺仪角度事件帽',
-        pattern: /^@rt\.on_gyro_angle\s*\(/m
-    },
-    {
-        id: 'color_calibrate',
-        label: '颜色反射校准',
-        pattern: /\brt\.color_calibrate\s*\(/
-    },
-    {
-        id: 'color_reset_calibration',
-        label: '重置颜色反射校准',
-        pattern: /\brt\.color_reset_calibration\s*\(/
-    },
-    {
-        id: 'infrared_beacon_heading',
-        label: '红外信标方向',
-        pattern: /\.beacon_heading\s*\(/
-    },
-    {
-        id: 'infrared_beacon_proximity',
-        label: '红外信标近程',
-        pattern: /\.beacon_proximity\s*\(/
-    },
-    {
-        id: 'infrared_beacon_buttons',
-        label: '红外信标按钮列表',
-        pattern: /\.beacon_buttons\s*\(/
-    },
-    {
-        id: 'infrared_beacon_button_pressed',
-        label: '红外信标按钮是否按下',
-        pattern: /\.beacon_button_pressed\s*\(/
-    },
-    {
-        id: 'infrared_beacon_active',
-        label: '红外信标活动状态',
-        pattern: /\.beacon_active\s*\(/
-    },
-    {
-        id: 'ir_beacon_compare',
-        label: '红外信标比较',
-        pattern: /\brt\.ir_beacon_compare\s*\(/
-    },
     {
         id: 'compare_changed',
         label: '传感器数值变化比较',

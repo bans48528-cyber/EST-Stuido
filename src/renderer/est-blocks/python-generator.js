@@ -1,4 +1,10 @@
 import {installEstPythonNameSanitizer} from './python-names';
+import {
+    EST_PIANO_MAX_MIDI_NOTE,
+    EST_PIANO_MIN_MIDI_NOTE,
+    EST_PIANO_PITCH_NAMES,
+    estPianoResourceForMidiNote
+} from './piano-resources';
 
 const registeredGenerators = new WeakSet();
 
@@ -6,6 +12,7 @@ const EVENT_HAT_IDS = new Set([
     'event_program_start',
     'event_brick_button',
     'event_condition',
+    'event_broadcast_received',
     'event_timer'
 ]);
 
@@ -36,9 +43,15 @@ const BRICK_BUTTON_CONSTANTS = {
     up: 'est.buttons.UP',
     down: 'est.buttons.DOWN'
 };
+const DEFAULT_SOUND_RESOURCE = 'Animals/Cat purr';
+const EST_PIANO_RESOURCE_LITERAL_RE = new RegExp(
+    '^([\'"])Piano\\/(?:[A-G]s?[4-6]|C7)\\1$'
+);
 
 const ASYNC_RUNTIME_STATEMENT_RE =
     /^(\s*)(?!await\b)(rt\.(?:yield_once|sleep|wait_until|motor_run_for|drive_move_for|drive_steer_for|drive_dual_speed_for|display_image_for|wait_[a-z_]+)\s*\()/gm;
+const ASYNC_BROADCAST_WAIT_STATEMENT_RE =
+    /^(\s*)(?!await\b)(rt\.broadcast\s*\([^\n]*\bwait\s*=\s*True\s*\))/gm;
 const STACK_STOP_STATEMENT_RE = /\brt\.(?:stop|stop_other_stacks)\s*\(/;
 
 const ensureDictionary = (generator, name) => {
@@ -92,6 +105,30 @@ const infraredRemoteChannel = () => '1';
 const valueOr = (generator, block, name, fallback) => (
     generator.valueToCode(block, name, orderOf(generator, 'ORDER_NONE')) || fallback
 );
+
+const ensurePianoResourceHelper = generator => {
+    const libraries = ensureDictionary(generator, 'libraries_');
+    if (Object.prototype.hasOwnProperty.call(libraries, 'estPianoResource')) return;
+    const pitchNames = EST_PIANO_PITCH_NAMES.map(name => quote(generator, name)).join(', ');
+    libraries.estPianoResource =
+        'def _est_piano_resource(note):\n' +
+        `${generator.INDENT}note = max(${EST_PIANO_MIN_MIDI_NOTE}, ` +
+            `min(${EST_PIANO_MAX_MIDI_NOTE}, int(round(note))))\n` +
+        `${generator.INDENT}names = (${pitchNames})\n` +
+        `${generator.INDENT}octave = 4 + ((note - ${EST_PIANO_MIN_MIDI_NOTE}) // 12)\n` +
+        `${generator.INDENT}return 'Piano/' + names[note % 12] + str(octave)\n`;
+};
+
+const pianoResourceCode = (generator, code) => {
+    const source = String(code || EST_PIANO_MIN_MIDI_NOTE).trim();
+    if (EST_PIANO_RESOURCE_LITERAL_RE.test(source)) return source;
+    const literalNote = Number(source);
+    if (Number.isFinite(literalNote)) {
+        return quote(generator, estPianoResourceForMidiNote(literalNote));
+    }
+    ensurePianoResourceHelper(generator);
+    return `_est_piano_resource(${source})`;
+};
 
 const doubleQuotedMotorPortLiteral = code => {
     const match = String(code).match(/^['"]([ABCD])['"]$/);
@@ -165,19 +202,28 @@ const hasAsyncRuntimeStatement = code => {
     return ASYNC_RUNTIME_STATEMENT_RE.test(code);
 };
 
+const hasAsyncBroadcastWaitStatement = code => {
+    ASYNC_BROADCAST_WAIT_STATEMENT_RE.lastIndex = 0;
+    return ASYNC_BROADCAST_WAIT_STATEMENT_RE.test(code);
+};
+
 const stackNeedsCooperativeRuntime = (generator, block, code) => (
     EVENT_HAT_IDS.has(block.type) &&
     (
         (block.type === 'event_program_start' && (generator.estProgramStartCount_ || 0) > 1) ||
         STACK_STOP_STATEMENT_RE.test(code) ||
         /\bawait\s+rt\./.test(code) ||
-        hasAsyncRuntimeStatement(code)
+        hasAsyncRuntimeStatement(code) ||
+        hasAsyncBroadcastWaitStatement(code)
     )
 );
 
 const asyncifyStackCode = code => {
     ASYNC_RUNTIME_STATEMENT_RE.lastIndex = 0;
-    return code.replace(ASYNC_RUNTIME_STATEMENT_RE, '$1await $2');
+    ASYNC_BROADCAST_WAIT_STATEMENT_RE.lastIndex = 0;
+    return code
+        .replace(ASYNC_RUNTIME_STATEMENT_RE, '$1await $2')
+        .replace(ASYNC_BROADCAST_WAIT_STATEMENT_RE, '$1await $2');
 };
 
 const registerEventHat = (generator, block, decorator) => {
@@ -225,6 +271,10 @@ const registerLifecycle = (ScratchBlocks, generator) => {
 };
 
 const registerSupportGenerators = generator => {
+    generator.note = block => [
+        numberField(block, 'NOTE', '60'),
+        orderOf(generator, 'ORDER_ATOMIC', 0)
+    ];
     generator.operator_random = block => {
         ensureRuntimeImport(generator);
         const first = valueOr(generator, block, 'FROM', '0');
@@ -447,25 +497,26 @@ const registerDisplayGenerators = generator => {
 const registerSoundGenerators = generator => {
     generator.sound_play_wait = block => {
         ensureHardwareImport(generator);
-        const sound = quoteField(generator, block, 'SOUND', 'Piano/C4');
+        const sound = quoteField(generator, block, 'SOUND', DEFAULT_SOUND_RESOURCE);
         return `est.audio.play(${sound}, wait=True)\n`;
     };
     generator.sound_play = block => {
         ensureHardwareImport(generator);
-        const sound = quoteField(generator, block, 'SOUND', 'Piano/C4');
+        const sound = quoteField(generator, block, 'SOUND', DEFAULT_SOUND_RESOURCE);
         return `est.audio.play(${sound}, wait=False)\n`;
     };
     generator.sound_beep_for = block => {
         ensureHardwareImport(generator);
         ensureRuntimeImport(generator);
-        const note = valueOr(generator, block, 'NOTE', '60');
+        const note = valueOr(generator, block, 'NOTE', numberField(block, 'NOTE', '60'));
         const seconds = valueOr(generator, block, 'SECONDS', '0');
-        return `est.audio.tone(${note}, rt.seconds_to_ms(${seconds}), wait=True)\n`;
+        const resource = pianoResourceCode(generator, note);
+        return `est.audio.play(${resource}, wait=False)\nrt.sleep(${seconds})\nest.audio.stop()\n`;
     };
     generator.sound_beep = block => {
         ensureHardwareImport(generator);
-        const note = valueOr(generator, block, 'NOTE', '60');
-        return `est.audio.tone(${note})\n`;
+        const note = valueOr(generator, block, 'NOTE', numberField(block, 'NOTE', '60'));
+        return `est.audio.play(${pianoResourceCode(generator, note)}, wait=False)\n`;
     };
     generator.sound_stop_all = () => {
         ensureHardwareImport(generator);
@@ -488,6 +539,10 @@ const registerEventGenerators = generator => {
     generator.event_condition = block => {
         const condition = valueOr(generator, block, 'CONDITION', 'False');
         return registerEventHat(generator, block, `@rt.on_condition(lambda: ${condition})`);
+    };
+    generator.event_broadcast_received = block => {
+        const message = quoteField(generator, block, 'MESSAGE', 'message_1');
+        return registerEventHat(generator, block, `@rt.on_broadcast(${message})`);
     };
     generator.event_broadcast = block => {
         ensureRuntimeImport(generator);
@@ -592,15 +647,6 @@ const registerSensorGenerators = generator => {
         const event = quoteField(generator, block, 'BUTTON_EVENT', 'pressed');
         return `rt.wait_brick_button(${button}, ${event})\n`;
     };
-    generator.sensor_color_calibrate_reflection = block => {
-        ensureRuntimeImport(generator);
-        const option = quoteField(generator, block, 'CALIBRATION', 'minimum');
-        return `rt.color_calibrate(${option}, ${compareValue(block)})\n`;
-    };
-    generator.sensor_color_reset_calibration = () => {
-        ensureRuntimeImport(generator);
-        return 'rt.color_reset_calibration()\n';
-    };
     generator.sensor_color_reflection = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'color', 'reflection()');
@@ -696,60 +742,11 @@ const registerSensorGenerators = generator => {
         return `rt.wait_ir_proximity(${sensor.port}, ${comparator(block)}, ` +
             `${compareValue(block)})\n`;
     };
-    generator.sensor_ir_beacon_heading = block => {
-        ensureRuntimeImport(generator);
-        const channel = infraredRemoteChannel();
-        return functionCall(
-            generator,
-            `rt.infrared(${sensorPort(block, '1')}).beacon_heading(${channel})`
-        );
-    };
-    generator.sensor_ir_beacon_proximity = block => {
-        ensureRuntimeImport(generator);
-        const channel = infraredRemoteChannel();
-        return functionCall(
-            generator,
-            `rt.infrared(${sensorPort(block, '1')}).beacon_proximity(${channel})`
-        );
-    };
-    generator.sensor_ir_beacon_buttons = block => {
-        ensureRuntimeImport(generator);
-        const channel = infraredRemoteChannel();
-        return functionCall(
-            generator,
-            `rt.infrared(${sensorPort(block, '1')}).beacon_buttons(${channel})`
-        );
-    };
-    generator.sensor_ir_beacon_button_pressed = block => {
-        ensureRuntimeImport(generator);
-        const channel = infraredRemoteChannel();
-        const button = quoteField(generator, block, 'BEACON_BUTTON', 'none');
-        return functionCall(
-            generator,
-            `rt.infrared(${sensorPort(block, '1')}).beacon_button_pressed(${channel}, ${button})`
-        );
-    };
     generator.sensor_wait_ir_beacon_button = block => {
         ensureRuntimeImport(generator);
         const channel = infraredRemoteChannel();
         const event = quoteField(generator, block, 'BEACON_EVENT', 'top_left_pressed');
         return `rt.wait_ir_beacon_button(${sensorPort(block, '1')}, ${channel}, ${event})\n`;
-    };
-    generator.sensor_ir_beacon_active = block => {
-        ensureRuntimeImport(generator);
-        const channel = infraredRemoteChannel();
-        return functionCall(
-            generator,
-            `rt.infrared(${sensorPort(block, '1')}).beacon_active(${channel})`
-        );
-    };
-    generator.sensor_ir_beacon_active_compare = block => {
-        ensureRuntimeImport(generator);
-        const channel = infraredRemoteChannel();
-        const property = quoteField(generator, block, 'PROPERTY', 'heading');
-        const code = `rt.ir_beacon_compare(${sensorPort(block, '1')}, ${channel}, ` +
-            `${property}, ${comparator(block)}, ${compareValue(block)})`;
-        return functionCall(generator, code);
     };
     generator.sensor_gyro_angle = block => {
         ensureRuntimeImport(generator);

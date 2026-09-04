@@ -52,7 +52,10 @@ export const EST_PROGRAM_COMPATIBILITY_TABLE = Object.freeze({
     'M1.23K': Object.freeze({protocolMajor: 1, protocolMinor: 26}),
     'M1.23L': Object.freeze({protocolMajor: 1, protocolMinor: 26}),
     'M1.23M': Object.freeze({protocolMajor: 1, protocolMinor: 26}),
-    'M1.24A': Object.freeze({protocolMajor: 1, protocolMinor: 27})
+    'M1.24A': Object.freeze({protocolMajor: 1, protocolMinor: 27}),
+    'M1.24B': Object.freeze({protocolMajor: 1, protocolMinor: 27}),
+    'M1.24C': Object.freeze({protocolMajor: 1, protocolMinor: 27}),
+    'M1.25A': Object.freeze({protocolMajor: 1, protocolMinor: 28})
 });
 
 export const CAPABILITY_FIRMWARE_UPDATE = 1 << 0;
@@ -83,6 +86,7 @@ export const CAPABILITY_RUNTIME_BASIC_EVENT_HATS = 1 << 24;
 export const CAPABILITY_MOTOR_STALL_DETECTION = 1 << 25;
 export const CAPABILITY_AUDIO_PLAYBACK = 1 << 26;
 export const CAPABILITY_AUDIO_RESOURCE_FLASH = 1 << 27;
+export const CAPABILITY_RUNTIME_BROADCAST = 1 << 28;
 
 export const PYTHON_PROGRAM_ACTION_STATUS = 0x00;
 export const PYTHON_PROGRAM_ACTION_BEGIN = 0x01;

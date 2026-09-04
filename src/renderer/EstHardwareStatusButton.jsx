@@ -148,6 +148,7 @@ class EstHardwareStatusButton extends React.Component {
         this.handlePanelDragMove = this.handlePanelDragMove.bind(this);
         this.handlePanelDragStart = this.handlePanelDragStart.bind(this);
         this.handleWindowResize = this.handleWindowResize.bind(this);
+        this.handleFirmwareUpdateProgress = this.handleFirmwareUpdateProgress.bind(this);
         this.handleFirmwareUpdateOption = this.handleFirmwareUpdateOption.bind(this);
         this.handleFirmwareUpdateToggle = this.handleFirmwareUpdateToggle.bind(this);
         this.handleManualRefresh = this.handleManualRefresh.bind(this);
@@ -158,6 +159,7 @@ class EstHardwareStatusButton extends React.Component {
     componentDidMount () {
         window.addEventListener(EST_CONNECTION_STATUS_EVENT, this.handleConnectionStatus);
         window.addEventListener('resize', this.handleWindowResize);
+        ipcRenderer.on('est-firmware-update-progress', this.handleFirmwareUpdateProgress);
     }
 
     componentDidUpdate () {
@@ -167,6 +169,7 @@ class EstHardwareStatusButton extends React.Component {
     componentWillUnmount () {
         window.removeEventListener(EST_CONNECTION_STATUS_EVENT, this.handleConnectionStatus);
         window.removeEventListener('resize', this.handleWindowResize);
+        ipcRenderer.removeListener('est-firmware-update-progress', this.handleFirmwareUpdateProgress);
         this.handlePanelDragEnd();
         this.stopProgramStatusTimer();
     }
@@ -225,6 +228,17 @@ class EstHardwareStatusButton extends React.Component {
         }));
     }
 
+    handleFirmwareUpdateProgress (event, progress) {
+        if (!this.state.firmwareUpdateBusy || !progress) {
+            return;
+        }
+        if (progress.stage === 'audio-resources') {
+            this.setState({
+                firmwareUpdateMessage: getEstText('firmware.audioSyncRunning', this.props.locale)
+            });
+        }
+    }
+
     async handleFirmwareUpdateOption (event) {
         const target = event.currentTarget.dataset.firmwareTarget;
         if (this.state.firmwareUpdateBusy || !target) {
@@ -262,13 +276,25 @@ class EstHardwareStatusButton extends React.Component {
         try {
             const result = await ipcRenderer.invoke('est-flash-firmware', {target});
             const targetVersion = result && result.targetVersion ? result.targetVersion : '-';
+            const audioResourcesSynced = Boolean(result && result.audioResourcesSynced);
             this.setState({
-                firmwareUpdateMessage: getEstText('firmware.updateDone', locale, {version: targetVersion})
+                firmwareUpdateMessage: getEstText(
+                    audioResourcesSynced ? 'firmware.updateWithAudioDone' : 'firmware.updateDone',
+                    locale,
+                    {version: targetVersion}
+                )
             });
             await dialog.showMessageBox(remote.getCurrentWindow(), {
                 type: 'info',
-                title: getEstText('firmware.successTitle', locale),
-                message: getEstText('firmware.successMessage', locale, {version: targetVersion}),
+                title: getEstText(
+                    audioResourcesSynced ? 'firmware.successWithAudioTitle' : 'firmware.successTitle',
+                    locale
+                ),
+                message: getEstText(
+                    audioResourcesSynced ? 'firmware.successWithAudioMessage' : 'firmware.successMessage',
+                    locale,
+                    {version: targetVersion}
+                ),
                 detail: getEstText('firmware.successDetail', locale, {
                     path: result && result.packagePath ? result.packagePath : '-',
                     sha256: result && result.sha256 ? result.sha256 : '-'

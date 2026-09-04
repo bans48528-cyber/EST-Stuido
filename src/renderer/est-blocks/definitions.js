@@ -6,6 +6,13 @@ import eventHostBlockIcon from './est-event-host-icon.svg';
 import motorBlockIcon from './est-motor-icon.svg';
 import motorBlockIconCentered from './est-motor-icon-centered.svg';
 import musicBlockIcon from './est-music-icon.svg';
+import {
+    EST_PIANO_MAX_MIDI_NOTE,
+    EST_PIANO_MIN_MIDI_NOTE,
+    clampEstPianoMidiNote,
+    estPianoDisplayNameForMidiNote
+} from './piano-resources';
+import SOUND_VALUES from './sound-resources';
 import sensorButtonBlockIcon from './est-sensor-button-icon.svg';
 import sensorButtonBlockIconCentered from './est-sensor-button-icon-centered.svg';
 import sensorColorBlockIcon from './est-sensor-color-icon.svg';
@@ -94,6 +101,7 @@ const CATEGORY_BLOCK_IDS = {
         'event_program_start',
         'event_brick_button',
         'event_condition',
+        'event_broadcast_received',
         'event_broadcast',
         'event_broadcast_wait',
         'event_timer'
@@ -113,8 +121,6 @@ const CATEGORY_BLOCK_IDS = {
         'sensor_brick_button_value',
         'sensor_brick_button_pressed',
         'sensor_wait_brick_button',
-        'sensor_color_calibrate_reflection',
-        'sensor_color_reset_calibration',
         'sensor_color_reflection',
         'sensor_color_reflection_compare',
         'sensor_color_ambient',
@@ -131,13 +137,7 @@ const CATEGORY_BLOCK_IDS = {
         'sensor_ir_proximity',
         'sensor_ir_proximity_compare',
         'sensor_wait_ir_proximity',
-        'sensor_ir_beacon_heading',
-        'sensor_ir_beacon_proximity',
-        'sensor_ir_beacon_buttons',
-        'sensor_ir_beacon_button_pressed',
         'sensor_wait_ir_beacon_button',
-        'sensor_ir_beacon_active',
-        'sensor_ir_beacon_active_compare',
         'sensor_gyro_angle',
         'sensor_gyro_rate',
         'sensor_gyro_reset',
@@ -196,18 +196,6 @@ const FONT_VALUES = [
     'large_white'
 ];
 const STATUS_LIGHT_VALUES = ['off', 'red', 'blue'];
-const SOUND_VALUES = [
-    'Piano/C4', 'Piano/Cs4', 'Piano/D4', 'Piano/Ds4',
-    'Piano/E4', 'Piano/F4', 'Piano/Fs4', 'Piano/G4',
-    'Piano/Gs4', 'Piano/A4', 'Piano/As4', 'Piano/B4',
-    'Piano/C5', 'Piano/Cs5', 'Piano/D5', 'Piano/Ds5',
-    'Piano/E5', 'Piano/F5', 'Piano/Fs5', 'Piano/G5',
-    'Piano/Gs5', 'Piano/A5', 'Piano/As5', 'Piano/B5',
-    'Piano/C6', 'Piano/Cs6', 'Piano/D6', 'Piano/Ds6',
-    'Piano/E6', 'Piano/F6', 'Piano/Fs6', 'Piano/G6',
-    'Piano/Gs6', 'Piano/A6', 'Piano/As6', 'Piano/B6',
-    'Piano/C7'
-];
 const TOUCH_EVENT_VALUES = ['pressed', 'released'];
 const COMPARATOR_VALUES = ['less', 'greater', 'equal'];
 const COLOR_VALUES = ['none', 'black', 'blue', 'green', 'yellow', 'red', 'white', 'brown'];
@@ -221,15 +209,15 @@ const BEACON_EVENT_VALUES = [
     'right_released',
     'active'
 ];
-const BEACON_BUTTON_VALUES = ['none', 'top_left', 'bottom_left', 'top_right', 'bottom_right', 'beacon'];
 const FIXED_IR_REMOTE_CHANNEL = '1';
 const BEACON_CHANNEL_VALUES = [FIXED_IR_REMOTE_CHANNEL];
 const BRICK_BUTTON_VALUES = ['none', 'back', 'left', 'confirm', 'right', 'up', 'down'];
 const WAIT_BUTTON_VALUES = ['left', 'confirm', 'right', 'up', 'down'];
 const DISTANCE_UNIT_VALUES = ['centimeters', 'inches'];
-const BEACON_PROPERTY_VALUES = ['heading', 'proximity'];
-const CALIBRATION_VALUES = ['minimum', 'maximum'];
-const MESSAGE_VALUES = ['message_1'];
+const MESSAGE_VALUES = [
+    'message_1', 'message_2', 'message_3', 'message_4',
+    'message_5', 'message_6', 'message_7', 'message_8'
+];
 const STOP_SCOPE_VALUES = ['this_stack', 'all'];
 const literalOptions = values => values.map(value => [value, value]);
 const optionsFor = (group, values, locale) => getEstLocalizedOptions(group, values, locale);
@@ -299,12 +287,9 @@ const COLOR_OPTIONS = optionsFor('color', COLOR_VALUES, EST_DEFAULT_LOCALE);
 const COLOR_EVENT_OPTIONS = colorEventOptionsFor(EST_DEFAULT_LOCALE);
 const TEMPERATURE_UNIT_OPTIONS = optionsFor('temperatureUnit', TEMPERATURE_UNIT_VALUES, EST_DEFAULT_LOCALE);
 const BEACON_EVENT_OPTIONS = optionsFor('beaconEvent', BEACON_EVENT_VALUES, EST_DEFAULT_LOCALE);
-const BEACON_BUTTON_OPTIONS = optionsFor('beaconButton', BEACON_BUTTON_VALUES, EST_DEFAULT_LOCALE);
 const BEACON_CHANNEL_OPTIONS = literalOptions(BEACON_CHANNEL_VALUES);
 const BRICK_BUTTON_OPTIONS = optionsFor('brickButton', BRICK_BUTTON_VALUES, EST_DEFAULT_LOCALE);
 const DISTANCE_UNIT_OPTIONS = optionsFor('distanceUnit', DISTANCE_UNIT_VALUES, EST_DEFAULT_LOCALE);
-const BEACON_PROPERTY_OPTIONS = optionsFor('beaconProperty', BEACON_PROPERTY_VALUES, EST_DEFAULT_LOCALE);
-const CALIBRATION_OPTIONS = optionsFor('calibration', CALIBRATION_VALUES, EST_DEFAULT_LOCALE);
 const MESSAGE_OPTIONS = optionsFor('message', MESSAGE_VALUES, EST_DEFAULT_LOCALE);
 const STOP_SCOPE_OPTIONS = optionsFor('stopScope', STOP_SCOPE_VALUES, EST_DEFAULT_LOCALE);
 const EST_BLOCK_ICON_SIZE = 38;
@@ -314,13 +299,7 @@ const EST_ICON_DIVIDER_LENGTH = Number((EST_BLOCK_ICON_SIZE * 0.52 * 1.3).toFixe
 const EST_IR_FIXED_CHANNEL_EXTENSION = 'est_ir_fixed_channel';
 const EST_IR_CHANNEL_MIGRATION_EVENT = 'est-ir-channel-migrated';
 const IR_CHANNEL_BLOCK_IDS = new Set([
-    'sensor_ir_beacon_heading',
-    'sensor_ir_beacon_proximity',
-    'sensor_ir_beacon_buttons',
-    'sensor_ir_beacon_button_pressed',
-    'sensor_wait_ir_beacon_button',
-    'sensor_ir_beacon_active',
-    'sensor_ir_beacon_active_compare'
+    'sensor_wait_ir_beacon_button'
 ]);
 let infraredChannelMigrationNoticeShown = false;
 const svgDataUri = source => `data:image/svg+xml;utf8,${encodeURIComponent(source)}`;
@@ -906,7 +885,7 @@ const makeSoundDefinitions = (locale = getCurrentEstLocale()) => {
 
 const makeEventDefinitions = (locale = getCurrentEstLocale()) => {
     const touchEventOptions = optionsFor('touchEvent', TOUCH_EVENT_VALUES, locale);
-    const brickButtonOptions = optionsFor('brickButton', BRICK_BUTTON_VALUES, locale);
+    const brickButtonOptions = optionsFor('brickButton', WAIT_BUTTON_VALUES, locale);
     const messageOptions = optionsFor('message', MESSAGE_VALUES, locale);
     return [
         hatWithIcon('event', 'event_program_start', eventHatIcon, getEstText('block.event.programStart', locale)),
@@ -917,12 +896,23 @@ const makeEventDefinitions = (locale = getCurrentEstLocale()) => {
         hatWithIcon('event', 'event_condition', eventHatIcon, getEstText('block.event.condition', locale), [
             valueInput('CONDITION', 'Boolean')
         ]),
+        hatWithIcon(
+            'event',
+            'event_broadcast_received',
+            eventHatIcon,
+            getEstText('block.event.broadcastReceived', locale),
+            [dropdown('MESSAGE', messageOptions)]
+        ),
         commandWithIcon('event', 'event_broadcast', eventHostIcon, getEstText('block.event.broadcast', locale), [
             dropdown('MESSAGE', messageOptions)
         ]),
-        commandWithIcon('event', 'event_broadcast_wait', eventHostIcon, getEstText('block.event.broadcastWait', locale), [
-            dropdown('MESSAGE', messageOptions)
-        ]),
+        commandWithIcon(
+            'event',
+            'event_broadcast_wait',
+            eventHostIcon,
+            getEstText('block.event.broadcastWait', locale),
+            [dropdown('MESSAGE', messageOptions)]
+        ),
         hatWithIcon('event', 'event_timer', eventHatIcon, getEstText('block.event.timer', locale), [
             valueInput('SECONDS', 'Number')
         ])
@@ -995,15 +985,12 @@ const makeSensorDefinitions = (ScratchBlocks, locale = getCurrentEstLocale()) =>
     const brickButtonOptions = optionsFor('brickButton', BRICK_BUTTON_VALUES, locale);
     const waitButtonOptions = optionsFor('brickButton', WAIT_BUTTON_VALUES, locale);
     const touchEventOptions = optionsFor('touchEvent', TOUCH_EVENT_VALUES, locale);
-    const calibrationOptions = optionsFor('calibration', CALIBRATION_VALUES, locale);
     const comparatorOptions = optionsFor('comparator', COMPARATOR_VALUES, locale);
     const colorOptions = optionsFor('color', COLOR_VALUES, locale);
     const colorEventOptions = colorEventOptionsFor(locale);
     const temperatureUnitOptions = optionsFor('temperatureUnit', TEMPERATURE_UNIT_VALUES, locale);
     const distanceUnitOptions = optionsFor('distanceUnit', DISTANCE_UNIT_VALUES, locale);
-    const beaconButtonOptions = optionsFor('beaconButton', BEACON_BUTTON_VALUES, locale);
     const beaconEventOptions = optionsFor('beaconEvent', BEACON_EVENT_VALUES, locale);
-    const beaconPropertyOptions = optionsFor('beaconProperty', BEACON_PROPERTY_VALUES, locale);
     return [
         reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_brick_button_value', sensorButtonIcon,
             getEstText('block.sensing.buttonValue', locale)),
@@ -1020,18 +1007,6 @@ const makeSensorDefinitions = (ScratchBlocks, locale = getCurrentEstLocale()) =>
                 dropdown('BUTTON', waitButtonOptions),
                 dropdown('BUTTON_EVENT', touchEventOptions)
             ]),
-        commandWithIcon(
-            'sensing',
-            'sensor_color_calibrate_reflection',
-            sensorColorIcon,
-            getEstText('block.sensing.calibrateReflection', locale),
-            [
-                dropdown('CALIBRATION', calibrationOptions),
-                valueInput('VALUE', 'Number')
-            ]
-        ),
-        commandWithIcon('sensing', 'sensor_color_reset_calibration', sensorColorIcon,
-            getEstText('block.sensing.resetReflectionCalibration', locale)),
         reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_color_reflection', sensorColorIcon,
             getEstText('block.sensing.reflection', locale), [
                 valueInput('PORT')
@@ -1127,45 +1102,11 @@ const makeSensorDefinitions = (ScratchBlocks, locale = getCurrentEstLocale()) =>
                 dropdown('COMPARATOR', comparatorOptions),
                 valueInput('VALUE', 'Number')
             ]),
-        withFixedInfraredChannelMigration(reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_beacon_heading', sensorIrIcon,
-            getEstText('block.sensing.irBeaconHeading', locale), [
-                valueInput('PORT'),
-                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
-            ])),
-        withFixedInfraredChannelMigration(reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_beacon_proximity', sensorIrIcon,
-            getEstText('block.sensing.irBeaconProximity', locale), [
-                valueInput('PORT'),
-                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
-            ])),
-        withFixedInfraredChannelMigration(reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_beacon_buttons', sensorIrIcon,
-            getEstText('block.sensing.irBeaconButtons', locale), [
-                valueInput('PORT'),
-                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
-            ])),
-        withFixedInfraredChannelMigration(booleanReporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_beacon_button_pressed', sensorIrIcon,
-            getEstText('block.sensing.irBeaconButtonPressed', locale), [
-                valueInput('PORT'),
-                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
-                dropdown('BEACON_BUTTON', beaconButtonOptions)
-            ])),
         withFixedInfraredChannelMigration(commandWithIcon('sensing', 'sensor_wait_ir_beacon_button', sensorIrIcon,
             getEstText('block.sensing.waitIrBeaconButton', locale), [
                 valueInput('PORT'),
                 dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
                 dropdown('BEACON_EVENT', beaconEventOptions)
-            ])),
-        withFixedInfraredChannelMigration(booleanReporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_beacon_active', sensorIrIcon,
-            getEstText('block.sensing.irBeaconActive', locale), [
-                valueInput('PORT'),
-                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS)
-            ])),
-        withFixedInfraredChannelMigration(booleanReporterWithIcon(ScratchBlocks, 'sensing', 'sensor_ir_beacon_active_compare', sensorIrIcon,
-            getEstText('block.sensing.irBeaconActiveCompare', locale), [
-                valueInput('PORT'),
-                dropdown('CHANNEL', BEACON_CHANNEL_OPTIONS),
-                dropdown('PROPERTY', beaconPropertyOptions),
-                dropdown('COMPARATOR', comparatorOptions),
-                valueInput('VALUE', 'Number')
             ])),
         reporterWithIcon(ScratchBlocks, 'sensing', 'sensor_gyro_angle', sensorGyroIcon,
             getEstText('block.sensing.gyroAngle', locale), [
@@ -1216,6 +1157,17 @@ const configuredZoomControlTypes = new WeakSet();
 const configuredDisplayImageDropdownTypes = new WeakSet();
 const EST_HISTORY_CONTROL_COUNT = 2;
 const XLINK_NAMESPACE = 'http://www.w3.org/1999/xlink';
+const EST_DISPLAY_IMAGE_DROPDOWN_PATCH = '__estDisplayImageDropdownThumbnailsPatched';
+const EST_DATA_CATEGORY_PATCH = '__estStageMonitorBlocksHidden';
+const EST_PIANO_NOTE_FIELD_PATCH = '__estPianoMp3RangePatched';
+const EST_PIANO_NOTE_BLOCK_IDS = new Set(['sound_beep_for', 'sound_beep']);
+const configuredPianoNoteFieldTypes = new WeakSet();
+const EST_STAGE_MONITOR_ADDERS = [
+    'addShowVariable',
+    'addHideVariable',
+    'addShowList',
+    'addHideList'
+];
 
 const isDisplayImageDropdownField = field => (
     field &&
@@ -1265,6 +1217,7 @@ const configureDisplayImageDropdownThumbnails = ScratchBlocks => {
     const FieldDropdown = ScratchBlocks && ScratchBlocks.FieldDropdown;
     if (!FieldDropdown || !FieldDropdown.prototype ||
         typeof FieldDropdown.prototype.showEditor_ !== 'function' ||
+        FieldDropdown.prototype[EST_DISPLAY_IMAGE_DROPDOWN_PATCH] ||
         configuredDisplayImageDropdownTypes.has(FieldDropdown)) {
         return;
     }
@@ -1276,7 +1229,82 @@ const configureDisplayImageDropdownThumbnails = ScratchBlocks => {
         }
         return result;
     };
+    FieldDropdown.prototype[EST_DISPLAY_IMAGE_DROPDOWN_PATCH] = true;
     configuredDisplayImageDropdownTypes.add(FieldDropdown);
+};
+
+const configureEstDataCategory = ScratchBlocks => {
+    const DataCategory = ScratchBlocks && ScratchBlocks.DataCategory;
+    if (!DataCategory || DataCategory[EST_DATA_CATEGORY_PATCH]) {
+        return;
+    }
+    EST_STAGE_MONITOR_ADDERS.forEach(methodName => {
+        DataCategory[methodName] = () => {};
+    });
+    DataCategory[EST_DATA_CATEGORY_PATCH] = true;
+};
+
+const parentBlockForField = field => {
+    const sourceBlock = field && field.sourceBlock_;
+    if (!sourceBlock) return null;
+    if (typeof sourceBlock.getParent === 'function') return sourceBlock.getParent();
+    return sourceBlock.parentBlock_ || null;
+};
+
+const isEstPianoNoteField = field => {
+    const sourceBlock = field && field.sourceBlock_;
+    const parentBlock = parentBlockForField(field);
+    return Boolean(
+        sourceBlock &&
+        sourceBlock.type === 'note' &&
+        parentBlock &&
+        EST_PIANO_NOTE_BLOCK_IDS.has(parentBlock.type)
+    );
+};
+
+const configureEstPianoNotePicker = ScratchBlocks => {
+    const FieldNote = ScratchBlocks && ScratchBlocks.FieldNote;
+    if (!FieldNote || !FieldNote.prototype ||
+        FieldNote.prototype[EST_PIANO_NOTE_FIELD_PATCH] ||
+        configuredPianoNoteFieldTypes.has(FieldNote)) {
+        return;
+    }
+
+    const validateNote = FieldNote.prototype.classValidator;
+    const changeOctave = FieldNote.prototype.changeOctaveBy_;
+    const updateSelection = FieldNote.prototype.updateSelection_;
+    const minOctave = Math.floor(EST_PIANO_MIN_MIDI_NOTE / 12);
+    const maxOctave = Math.floor((EST_PIANO_MAX_MIDI_NOTE - 1) / 12);
+
+    FieldNote.prototype.classValidator = function estPianoNoteValidator (text) {
+        const validated = validateNote.call(this, text);
+        if (validated === null || !isEstPianoNoteField(this)) return validated;
+        return String(clampEstPianoMidiNote(validated));
+    };
+
+    FieldNote.prototype.changeOctaveBy_ = function estPianoChangeOctave (octaves) {
+        if (isEstPianoNoteField(this)) {
+            const displayedOctave = Number.isFinite(this.displayedOctave_) ?
+                this.displayedOctave_ : Math.floor(clampEstPianoMidiNote(this.getText()) / 12);
+            const nextOctave = displayedOctave + octaves;
+            if (nextOctave < minOctave || nextOctave > maxOctave) return;
+        }
+        return changeOctave.call(this, octaves);
+    };
+
+    FieldNote.prototype.updateSelection_ = function estPianoUpdateSelection () {
+        const result = updateSelection.call(this);
+        if (!isEstPianoNoteField(this) || !this.noteNameText_) return result;
+        this.noteNameText_.textContent = estPianoDisplayNameForMidiNote(this.getText());
+        if (this.lowCText_ && this.highCText_ && Number.isFinite(this.displayedOctave_)) {
+            this.lowCText_.textContent = `C${this.displayedOctave_ - 1}`;
+            this.highCText_.textContent = `C${this.displayedOctave_}`;
+        }
+        return result;
+    };
+
+    FieldNote.prototype[EST_PIANO_NOTE_FIELD_PATCH] = true;
+    configuredPianoNoteFieldTypes.add(FieldNote);
 };
 
 const createEstHistoryControl = (ScratchBlocks, zoomControls, icon, index, redo, label) => {
@@ -1399,6 +1427,8 @@ const registerEstLocaleListener = ScratchBlocks => {
 export const registerEstBlocks = ScratchBlocks => {
     configureEstWorkspaceControls(ScratchBlocks);
     configureDisplayImageDropdownThumbnails(ScratchBlocks);
+    configureEstDataCategory(ScratchBlocks);
+    configureEstPianoNotePicker(ScratchBlocks);
     if (registeredTargets.has(ScratchBlocks)) return;
     registerEstSteeringField(ScratchBlocks);
     registerEstInfraredChannelMigrationExtension(ScratchBlocks);
@@ -1442,6 +1472,7 @@ export {
     SENSOR_PORT_OPTIONS,
     TEMPERATURE_UNIT_OPTIONS,
     configureEstWorkspaceControls,
+    configureEstPianoNotePicker,
     formatSteeringDisplayText,
     isSteeringDialMarkVisible,
     makeEstBlockDefinitions

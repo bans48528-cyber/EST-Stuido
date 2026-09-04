@@ -54,6 +54,7 @@ const {
     checksum,
     crc32,
     EST_PROGRAM_AUDIO_API_MIN_FIRMWARE_VERSION,
+    EST_PROGRAM_BROADCAST_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_DUAL_SPEED_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION,
@@ -73,6 +74,7 @@ const {
     splitReports
 } = require(path.join(estRoot, 'protocol.js'));
 const {
+    buildAudioResourceSyncCommandArgs,
     buildFlashCommandArgs,
     EST_FIRMWARE_UPDATE_TARGETS,
     resolveFirmwareUpdatePackage,
@@ -90,6 +92,7 @@ const {
     CAPABILITY_MOTOR_PAIR_POSITION,
     CAPABILITY_MOTOR_STALL_DETECTION,
     CAPABILITY_RUNTIME_BASIC_EVENT_HATS,
+    CAPABILITY_RUNTIME_BROADCAST,
     CAPABILITY_TEMPERATURE_SENSOR,
     CAPABILITY_UNLIMITED_PYTHON_RUN,
     CAPABILITY_ZERO_SPEED_MOTOR_CONTROL,
@@ -119,12 +122,21 @@ const {
     EST_SUPPORT_BLOCK_IDS,
     FIXED_IR_REMOTE_CHANNEL,
     MOTOR_COLOURS,
+    configureEstPianoNotePicker,
     configureEstWorkspaceControls,
     formatSteeringDisplayText,
     isSteeringDialMarkVisible,
     makeEstBlockDefinitions,
     registerEstBlocks
 } = require(path.join(estBlocksRoot, 'definitions.js'));
+const {
+    EST_PIANO_MAX_MIDI_NOTE,
+    EST_PIANO_MIN_MIDI_NOTE,
+    EST_PIANO_RESOURCE_VALUES,
+    clampEstPianoMidiNote,
+    estPianoDisplayNameForMidiNote,
+    estPianoResourceForMidiNote
+} = require(path.join(estBlocksRoot, 'piano-resources.js'));
 const getEstToolboxCategories = require(path.join(estBlocksRoot, 'toolbox.js')).default;
 const EstMotorBlocks = require(path.join(estBlocksRoot, 'runtime.js'));
 const {
@@ -379,11 +391,17 @@ assert.deepStrictEqual(Object.keys(EST_PROGRAM_COMPATIBILITY_TABLE), [
     'M1.23K',
     'M1.23L',
     'M1.23M',
-    'M1.24A'
+    'M1.24A',
+    'M1.24B',
+    'M1.24C',
+    'M1.25A'
 ]);
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.22H'], {protocolMajor: 1, protocolMinor: 26});
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.22I'], {protocolMajor: 1, protocolMinor: 26});
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.24A'], {protocolMajor: 1, protocolMinor: 27});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.24B'], {protocolMajor: 1, protocolMinor: 27});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.24C'], {protocolMajor: 1, protocolMinor: 27});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.25A'], {protocolMajor: 1, protocolMinor: 28});
 assert.deepStrictEqual(parseEstFirmwareVersion('M1.22E'), {
     family: 'M',
     major: 1,
@@ -436,7 +454,7 @@ try {
     fs.writeFileSync(path.join(releasePackageDir, 'est_minimal_upgrade_app_m122a.upgrade.bin'), 'release');
     fs.writeFileSync(path.join(buildPackageDir, 'est_minimal_upgrade_app.manifest.json'), JSON.stringify({
         sha256: 'latest-sha',
-        version: 'M1.22Y'
+        version: 'M1.24B'
     }));
     fs.writeFileSync(path.join(buildPackageDir, 'est_minimal_upgrade_app.upgrade.bin'), 'latest');
     fs.writeFileSync(path.join(legacyPackageDir, 'EST_Main_V3_official.manifest.json'), JSON.stringify({
@@ -446,7 +464,7 @@ try {
     fs.writeFileSync(path.join(legacyPackageDir, 'EST_Main_V3_official.upgrade.bin'), 'legacy');
 
     const latestPackage = resolveLatestEstOsPackage([firmwareFixtureRoot]);
-    assert.strictEqual(latestPackage.targetVersion, 'M1.22Y');
+    assert.strictEqual(latestPackage.targetVersion, 'M1.24B');
     assert.strictEqual(latestPackage.sha256, 'latest-sha');
     assert.ok(latestPackage.packagePath.endsWith('est_minimal_upgrade_app.upgrade.bin'));
     const legacyPackage = resolveLegacyEstPackage([firmwareFixtureRoot]);
@@ -456,7 +474,7 @@ try {
         resolveFirmwareUpdatePackage(EST_FIRMWARE_UPDATE_TARGETS.LATEST_OS, {
             firmwareRoot: firmwareFixtureRoot
         }).targetVersion,
-        'M1.22Y'
+        'M1.24B'
     );
     assert.strictEqual(
         resolveFirmwareUpdatePackage(EST_FIRMWARE_UPDATE_TARGETS.LEGACY_EST, {
@@ -470,6 +488,11 @@ try {
         EST_FIRMWARE_UPDATE_TARGETS.LATEST_OS
     );
     assert.ok(upgradeArgs.includes('--force'));
+    const audioSyncArgs = buildAudioResourceSyncCommandArgs({args: []}, latestPackage);
+    assert.ok(audioSyncArgs.includes('audio-resource-sync'));
+    assert.ok(!audioSyncArgs.includes('--replace'));
+    assert.ok(!audioSyncArgs.includes('--clear-first'));
+    assert.ok(audioSyncArgs.some(argument => argument.endsWith(path.join('assets', 'audio'))));
     const downgradeArgs = buildFlashCommandArgs(
         {args: ['-3']},
         legacyPackage,
@@ -587,17 +610,15 @@ assert.strictEqual(
     'M1.23D'
 );
 assert.strictEqual(
+    programMinimumFirmwareVersionForSource('import est\nest.audio.play("Animals/Cat purr", wait=True)\n'),
+    'M1.24B'
+);
+assert.strictEqual(
     programMinimumFirmwareVersionForSource(
         'import est\nimport est_runtime as rt\nest.audio.play("Piano/C4")\n' +
         'rt.line_follow_dual_power_step(a, b, 30, 30, 1, 0.01)\n'
     ),
     'M1.23D'
-);
-assert.strictEqual(
-    programMinimumFirmwareVersionForSource(
-        'import est_runtime as rt\nrt.line_follow_dual_step(a, b, 30, 30, 1, 0.01)\n'
-    ),
-    'M1.22U'
 );
 [
     "await rt.wait_brick_button('confirm', 'pressed')",
@@ -633,6 +654,10 @@ assert.strictEqual(
     CAPABILITY_AUDIO_PLAYBACK
 );
 assert.strictEqual(
+    programRequiredCapabilitiesForSource('import est\nest.audio.play("Animals/Cat purr")\n'),
+    (CAPABILITY_AUDIO_PLAYBACK | CAPABILITY_AUDIO_RESOURCE_FLASH) >>> 0
+);
+assert.strictEqual(
     programRequiredCapabilitiesForSource(
         '@rt.on_start\nasync def stack_1():\n  await rt.sleep(1)\nrt.run()\n'
     ),
@@ -655,6 +680,22 @@ assert.strictEqual(
         '@rt.on_timer_gt(1)\ndef stack_1():\n  pass\nrt.run()\n'
     ),
     CAPABILITY_RUNTIME_BASIC_EVENT_HATS
+);
+assert.strictEqual(
+    programRequiredCapabilitiesForSource(
+        '@rt.on_broadcast("message_8")\ndef stack_1():\n  pass\nrt.run()\n'
+    ),
+    CAPABILITY_RUNTIME_BROADCAST
+);
+assert.strictEqual(
+    programRequiredCapabilitiesForSource(
+        '@rt.on_start\nasync def stack_1():\n  await rt.broadcast("message_2", wait=True)\nrt.run()\n'
+    ),
+    (CAPABILITY_RUNTIME_BROADCAST | CAPABILITY_COOPERATIVE_MULTITASK) >>> 0
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource('rt.broadcast("message_1", wait=False)'),
+    EST_PROGRAM_BROADCAST_API_MIN_FIRMWARE_VERSION
 );
 assert.strictEqual(
     programRequiredCapabilitiesForSource(
@@ -681,24 +722,6 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(
     programUnsupportedRuntimeFeaturesForSource(
-        "import est_runtime as rt\n@rt.on_ir_beacon_button('4', 1, 'active')\ndef stack_1():\n  pass\n"
-    ).map(feature => feature.id),
-    ['on_ir_beacon_button']
-);
-assert.deepStrictEqual(
-    programUnsupportedRuntimeFeaturesForSource(
-        "import est_runtime as rt\nvalue = rt.infrared('4').beacon_heading(1)\n"
-    ).map(feature => feature.id),
-    ['infrared_beacon_heading']
-);
-assert.deepStrictEqual(
-    programUnsupportedRuntimeFeaturesForSource(
-        "import est_runtime as rt\nvalue = rt.ir_beacon_compare('4', 1, 'heading', 'less', 0)\n"
-    ).map(feature => feature.id),
-    ['ir_beacon_compare']
-);
-assert.deepStrictEqual(
-    programUnsupportedRuntimeFeaturesForSource(
         "import est_runtime as rt\nok = rt.compare(rt.color('3').reflection(), 'changed', 1)\n"
     ).map(feature => feature.id),
     ['compare_changed']
@@ -707,7 +730,7 @@ assert.deepStrictEqual(
     programUnsupportedRuntimeFeaturesForSource(
         "import est_runtime as rt\nrt.broadcast('message_1', wait=False)\nrt.wait_color('3', 'red')\n"
     ).map(feature => feature.id),
-    ['broadcast']
+    []
 );
 assert.deepStrictEqual(
     programUnsupportedRuntimeFeaturesForSource(
@@ -989,7 +1012,7 @@ const definitionsPresentBeforeEstRegistration = [];
 const registeredExtensions = {};
 const registeredFields = {};
 const FakeFieldTextInput = function () {};
-FakeFieldTextInput.htmlInput_ = null;
+FakeFieldTextInput.htmlInput_ = {value: ''};
 const FakeFieldAngle = function (value) {
     this.value = value;
 };
@@ -1003,6 +1026,34 @@ const FakeFieldDropdown = function () {};
 FakeFieldDropdown.prototype.showEditor_ = function () {
     fakeDropdownShowCalls += 1;
     return 'opened';
+};
+const FakeFieldNote = function () {
+    this.displayedOctave_ = 5;
+    this.text_ = '60';
+    this.octaveChanges = [];
+};
+FakeFieldNote.prototype.getText = function () {
+    return this.text_;
+};
+FakeFieldNote.prototype.classValidator = function (text) {
+    const value = Number(text);
+    if (!Number.isFinite(value)) return null;
+    return String(Math.max(0, Math.min(130, value)));
+};
+FakeFieldNote.prototype.changeOctaveBy_ = function (octaves) {
+    this.displayedOctave_ += octaves;
+    this.octaveChanges.push(octaves);
+};
+FakeFieldNote.prototype.updateSelection_ = function () {
+    return 'updated';
+};
+const fakeDataCategoryCalls = [];
+const fakeDataCategory = {
+    addShowVariable: () => fakeDataCategoryCalls.push('show-variable'),
+    addHideVariable: () => fakeDataCategoryCalls.push('hide-variable'),
+    addShowList: () => fakeDataCategoryCalls.push('show-list'),
+    addHideList: () => fakeDataCategoryCalls.push('hide-list'),
+    addSetVariableTo: () => fakeDataCategoryCalls.push('set-variable')
 };
 const fakeScratchBlocks = {
     Blocks: Object.fromEntries(EST_REPLACED_OPENBLOCK_BLOCK_IDS.map(blockId => [
@@ -1023,8 +1074,10 @@ const fakeScratchBlocks = {
             registeredExtensions[type] = extension;
         }
     },
+    DataCategory: fakeDataCategory,
     FieldAngle: FakeFieldAngle,
     FieldDropdown: FakeFieldDropdown,
+    FieldNote: FakeFieldNote,
     FieldTextInput: FakeFieldTextInput,
     OUTPUT_SHAPE_HEXAGONAL: 1,
     OUTPUT_SHAPE_ROUND: 2,
@@ -1040,14 +1093,60 @@ const fakeScratchBlocks = {
 };
 registerEstBlocks(fakeScratchBlocks);
 registerEstBlocks(fakeScratchBlocks);
+[
+    'addShowVariable',
+    'addHideVariable',
+    'addShowList',
+    'addHideList'
+].forEach(methodName => fakeDataCategory[methodName]());
+assert.deepStrictEqual(fakeDataCategoryCalls, []);
+fakeDataCategory.addSetVariableTo();
+assert.deepStrictEqual(fakeDataCategoryCalls, ['set-variable']);
 assert.strictEqual(FakeFieldDropdown.prototype.showEditor_.call({
     name: 'IMAGE',
     sourceBlock_: {type: 'display_image'}
 }), 'opened');
 assert.strictEqual(fakeDropdownShowCalls, 1);
+assert.strictEqual(EST_PIANO_MIN_MIDI_NOTE, 60);
+assert.strictEqual(EST_PIANO_MAX_MIDI_NOTE, 96);
+assert.strictEqual(EST_PIANO_RESOURCE_VALUES.length, 37);
+assert.strictEqual(EST_PIANO_RESOURCE_VALUES[0], 'Piano/C4');
+assert.strictEqual(EST_PIANO_RESOURCE_VALUES[1], 'Piano/Cs4');
+assert.strictEqual(EST_PIANO_RESOURCE_VALUES[36], 'Piano/C7');
+assert.strictEqual(clampEstPianoMidiNote(40), 60);
+assert.strictEqual(clampEstPianoMidiNote(110), 96);
+assert.strictEqual(estPianoResourceForMidiNote(66), 'Piano/Fs4');
+assert.strictEqual(estPianoDisplayNameForMidiNote(66), 'F#4');
+const estPianoField = new FakeFieldNote();
+estPianoField.sourceBlock_ = {
+    type: 'note',
+    parentBlock_: {type: 'sound_beep_for'}
+};
+assert.strictEqual(estPianoField.classValidator('40'), '60');
+assert.strictEqual(estPianoField.classValidator('110'), '96');
+estPianoField.changeOctaveBy_(-1);
+assert.deepStrictEqual(estPianoField.octaveChanges, []);
+estPianoField.changeOctaveBy_(1);
+assert.deepStrictEqual(estPianoField.octaveChanges, [1]);
+estPianoField.displayedOctave_ = 7;
+estPianoField.changeOctaveBy_(1);
+assert.deepStrictEqual(estPianoField.octaveChanges, [1]);
+estPianoField.text_ = '61';
+estPianoField.displayedOctave_ = 5;
+estPianoField.noteNameText_ = {textContent: ''};
+estPianoField.lowCText_ = {textContent: ''};
+estPianoField.highCText_ = {textContent: ''};
+assert.strictEqual(estPianoField.updateSelection_(), 'updated');
+assert.strictEqual(estPianoField.noteNameText_.textContent, 'C#4');
+assert.strictEqual(estPianoField.lowCText_.textContent, 'C4');
+assert.strictEqual(estPianoField.highCText_.textContent, 'C5');
+const ordinaryNoteField = new FakeFieldNote();
+ordinaryNoteField.sourceBlock_ = {type: 'note', parentBlock_: {type: 'operator_add'}};
+assert.strictEqual(ordinaryNoteField.classValidator('40'), '40');
+assert.strictEqual(typeof configureEstPianoNotePicker, 'function');
 assert.strictEqual(typeof registeredExtensions[EST_IR_FIXED_CHANNEL_EXTENSION], 'function');
 const legacyInfraredChannelBlock = {
-    type: 'sensor_ir_beacon_heading',
+    type: 'sensor_wait_ir_beacon_button',
     channel: '4',
     getFieldValue: name => (name === 'CHANNEL' ? legacyInfraredChannelBlock.channel : null),
     setFieldValue: (value, name) => {
@@ -1152,9 +1251,9 @@ const expectedCategoryCounts = {
     movement: 13,
     display: 6,
     sound: 6,
-    event: 6,
+    event: 7,
     control: 9,
-    sensing: 35
+    sensing: 27
 };
 assert.deepStrictEqual(
     Object.fromEntries(Object.entries(CATEGORY_BLOCK_IDS).map(([categoryId, blockIds]) => [
@@ -1163,8 +1262,8 @@ assert.deepStrictEqual(
     ])),
     expectedCategoryCounts
 );
-assert.strictEqual(registeredBlockDefinitions.length, 91);
-assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 87);
+assert.strictEqual(registeredBlockDefinitions.length, 84);
+assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 80);
 assert.deepStrictEqual(EST_REPLACED_OPENBLOCK_BLOCK_IDS, [
     'sound_play',
     'event_broadcast',
@@ -1253,11 +1352,17 @@ assert.strictEqual(steeringField.getDisplayText_(), '左:-40');
 const blockDefinitionFor = blockId => registeredBlockDefinitions.find(definition => definition.type === blockId);
 const soundOptions = definitionArguments(blockDefinitionFor('sound_play'))
     .find(argument => argument.name === 'SOUND').options;
-assert.strictEqual(soundOptions.length, 37);
-assert.deepStrictEqual(soundOptions[0], ['钢琴 C4', 'Piano/C4']);
-assert.deepStrictEqual(soundOptions[1], ['钢琴 C#4', 'Piano/Cs4']);
-assert.deepStrictEqual(soundOptions[soundOptions.length - 1], ['钢琴 C7', 'Piano/C7']);
-assert.ok(!soundOptions.some(option => option[1] === 'communication_hello'));
+assert.strictEqual(soundOptions.length, 127);
+assert.deepStrictEqual(soundOptions[0], ['Animals / Cat purr', 'Animals/Cat purr']);
+assert.deepStrictEqual(soundOptions[soundOptions.length - 1], ['System / Start up', 'System/Start up']);
+const noteForDuration = definitionArguments(blockDefinitionFor('sound_beep_for'))
+    .find(argument => argument.name === 'NOTE');
+const noteContinuous = definitionArguments(blockDefinitionFor('sound_beep'))
+    .find(argument => argument.name === 'NOTE');
+assert.strictEqual(noteForDuration.type, 'input_value');
+assert.strictEqual(Object.prototype.hasOwnProperty.call(noteForDuration, 'check'), false);
+assert.strictEqual(noteContinuous.type, 'input_value');
+assert.strictEqual(Object.prototype.hasOwnProperty.call(noteContinuous, 'check'), false);
 assert.strictEqual(EST_LOCALE_NAMES['pt-br'], 'Português (Brasil)');
 assert.strictEqual(normalizeEstLocale('pt_BR'), 'pt-br');
 assert.strictEqual(getEstText('menu.hardwareStatus', 'pt-br'), 'Status do hardware');
@@ -1286,7 +1391,7 @@ const ptBlockDefinitions = makeEstBlockDefinitions(fakeScratchBlocks, 'pt-br');
 const ptBlockDefinitionFor = blockId => ptBlockDefinitions.find(definition => definition.type === blockId);
 const ptSoundOptions = definitionArguments(ptBlockDefinitionFor('sound_play'))
     .find(argument => argument.name === 'SOUND').options;
-assert.deepStrictEqual(ptSoundOptions[1], ['Piano C#4', 'Piano/Cs4']);
+assert.deepStrictEqual(ptSoundOptions[0], ['Animals / Cat purr', 'Animals/Cat purr']);
 const ptMotorStalledDefinition = ptBlockDefinitionFor('motor_stalled');
 assert.strictEqual(ptMotorStalledDefinition.message0, '%1 %2 motor %3 esta travado?');
 const ptMotorRunForDirection = definitionArguments(ptBlockDefinitionFor('motor_run_for'))
@@ -1360,6 +1465,7 @@ CATEGORY_BLOCK_IDS.sound.forEach(blockId => {
     'event_program_start',
     'event_brick_button',
     'event_condition',
+    'event_broadcast_received',
     'event_timer'
 ].forEach(blockId => {
     assertLeadingBlockIcon(blockDefinitionFor(blockId), 'EST_EVENT_HAT_ICON', /est-event-hat-icon\.svg$/);
@@ -1379,8 +1485,6 @@ const sensorIconSource = (definition, filename) => (
     ['sensor_brick_button_value', 'EST_SENSOR_BUTTON_ICON', 'est-sensor-button-icon.svg'],
     ['sensor_brick_button_pressed', 'EST_SENSOR_BUTTON_ICON', 'est-sensor-button-icon.svg'],
     ['sensor_wait_brick_button', 'EST_SENSOR_BUTTON_ICON', 'est-sensor-button-icon.svg'],
-    ['sensor_color_calibrate_reflection', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
-    ['sensor_color_reset_calibration', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
     ['sensor_color_reflection', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
     ['sensor_color_reflection_compare', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
     ['sensor_color_ambient', 'EST_SENSOR_COLOR_ICON', 'est-sensor-color-icon.svg'],
@@ -1397,13 +1501,7 @@ const sensorIconSource = (definition, filename) => (
     ['sensor_ir_proximity', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
     ['sensor_ir_proximity_compare', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
     ['sensor_wait_ir_proximity', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
-    ['sensor_ir_beacon_heading', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
-    ['sensor_ir_beacon_proximity', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
-    ['sensor_ir_beacon_buttons', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
-    ['sensor_ir_beacon_button_pressed', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
     ['sensor_wait_ir_beacon_button', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
-    ['sensor_ir_beacon_active', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
-    ['sensor_ir_beacon_active_compare', 'EST_SENSOR_IR_ICON', 'est-sensor-ir-icon.svg', 46],
     ['sensor_gyro_angle', 'EST_SENSOR_GYRO_ICON', 'est-sensor-gyro-icon.svg'],
     ['sensor_gyro_rate', 'EST_SENSOR_GYRO_ICON', 'est-sensor-gyro-icon.svg'],
     ['sensor_gyro_reset', 'EST_SENSOR_GYRO_ICON', 'est-sensor-gyro-icon.svg'],
@@ -1563,8 +1661,6 @@ eventBrickButtonDefinition.args0.filter(argument => argument.type !== 'field_ima
 });
 const eventBrickButtonField = eventBrickButtonDefinition.args0.find(argument => argument.name === 'BUTTON');
 assert.deepStrictEqual(eventBrickButtonField.options.map(option => option[1]), [
-    'none',
-    'back',
     'left',
     'confirm',
     'right',
@@ -1580,18 +1676,17 @@ assert.deepStrictEqual(
         .options.map(option => option[1]),
     ['left', 'confirm', 'right', 'up', 'down']
 );
-['event_broadcast', 'event_broadcast_wait'].forEach(blockId => {
+['event_broadcast_received', 'event_broadcast', 'event_broadcast_wait'].forEach(blockId => {
     const definition = registeredBlockDefinitions.find(item => item.type === blockId);
-    assert.strictEqual(definition.args0.find(argument => argument.name === 'MESSAGE').type, 'field_dropdown');
+    const messageField = definition.args0.find(argument => argument.name === 'MESSAGE');
+    assert.strictEqual(messageField.type, 'field_dropdown');
+    assert.deepStrictEqual(messageField.options.map(option => option[1]), [
+        'message_1', 'message_2', 'message_3', 'message_4',
+        'message_5', 'message_6', 'message_7', 'message_8'
+    ]);
 });
 [
-    'sensor_ir_beacon_heading',
-    'sensor_ir_beacon_proximity',
-    'sensor_ir_beacon_buttons',
-    'sensor_ir_beacon_button_pressed',
-    'sensor_wait_ir_beacon_button',
-    'sensor_ir_beacon_active',
-    'sensor_ir_beacon_active_compare'
+    'sensor_wait_ir_beacon_button'
 ].forEach(blockId => {
     const definition = registeredBlockDefinitions.find(item => item.type === blockId);
     const channel = definitionArguments(definition).find(argument => argument.name === 'CHANNEL');
@@ -1616,20 +1711,14 @@ const sensorPortDefaults = {
     sensor_ir_proximity: '1',
     sensor_ir_proximity_compare: '1',
     sensor_wait_ir_proximity: '1',
-    sensor_ir_beacon_heading: '1',
-    sensor_ir_beacon_proximity: '1',
-    sensor_ir_beacon_buttons: '1',
-    sensor_ir_beacon_button_pressed: '1',
     sensor_wait_ir_beacon_button: '1',
-    sensor_ir_beacon_active: '1',
-    sensor_ir_beacon_active_compare: '1',
     sensor_gyro_angle: '1',
     sensor_gyro_rate: '1',
     sensor_gyro_reset: '1',
     sensor_gyro_compare: '1',
     sensor_wait_gyro: '1'
 };
-assert.strictEqual(Object.keys(sensorPortDefaults).length, 28);
+assert.strictEqual(Object.keys(sensorPortDefaults).length, 22);
 Object.keys(sensorPortDefaults).forEach(blockId => {
     const definition = registeredBlockDefinitions.find(item => item.type === blockId);
     const port = definitionArguments(definition).find(argument => argument.name === 'PORT');
@@ -1663,20 +1752,17 @@ const relaxedNumericInputs = {
     display_image_for: ['SECONDS'],
     display_text_line: ['LINE'],
     display_text_xy: ['X', 'Y'],
-    sound_beep_for: ['NOTE', 'SECONDS'],
-    sound_beep: ['NOTE'],
+    sound_beep_for: ['SECONDS'],
     sound_set_volume: ['VOLUME'],
     event_timer: ['SECONDS'],
     control_wait_seconds: ['SECONDS'],
     control_repeat: ['TIMES'],
-    sensor_color_calibrate_reflection: ['VALUE'],
     sensor_color_reflection_compare: ['VALUE'],
     sensor_color_ambient_compare: ['VALUE'],
     sensor_ultrasonic_compare: ['VALUE'],
     sensor_wait_ultrasonic: ['VALUE'],
     sensor_ir_proximity_compare: ['VALUE'],
     sensor_wait_ir_proximity: ['VALUE'],
-    sensor_ir_beacon_active_compare: ['VALUE'],
     sensor_gyro_compare: ['VALUE'],
     sensor_wait_gyro: ['VALUE']
 };
@@ -1707,6 +1793,20 @@ assert.deepStrictEqual(numberCheckedInputs, []);
         assert.strictEqual(condition.check, 'Boolean', blockId);
     });
 const estToolboxCategories = getEstToolboxCategories();
+const noteShadowPattern = blockId => new RegExp([
+    `<block type="${blockId}">`,
+    '[\\s\\S]*?<value name="NOTE">',
+    '[\\s\\S]*?<shadow type="note">',
+    '[\\s\\S]*?<field name="NOTE">60<\\/field>'
+].join(''));
+assert.match(
+    estToolboxCategories,
+    noteShadowPattern('sound_beep_for')
+);
+assert.match(
+    estToolboxCategories,
+    noteShadowPattern('sound_beep')
+);
 ['电机', '移动', '显示', '播放', '事件', '控制', '传感器']
     .forEach(categoryName => {
         assert.match(estToolboxCategories, new RegExp(`<category[^>]*name="${categoryName}"`, 's'));
@@ -1722,13 +1822,7 @@ const toolboxBlockXml = blockId => {
     return match ? match[1] : '';
 };
 [
-    'sensor_ir_beacon_heading',
-    'sensor_ir_beacon_proximity',
-    'sensor_ir_beacon_buttons',
-    'sensor_ir_beacon_button_pressed',
-    'sensor_wait_ir_beacon_button',
-    'sensor_ir_beacon_active',
-    'sensor_ir_beacon_active_compare'
+    'sensor_wait_ir_beacon_button'
 ].forEach(blockId => {
     assert.match(toolboxBlockXml(blockId), /<field name="CHANNEL">1<\/field>/, `${blockId}.CHANNEL toolbox`);
 });
@@ -1828,7 +1922,7 @@ assert.match(
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_steering_picker">/g) || []).length, 4);
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_motor_port_picker">/g) || []).length, 12);
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_drive_port_picker">/g) || []).length, 2);
-assert.strictEqual((estToolboxCategories.match(/<shadow type="est_sensor_port_picker">/g) || []).length, 28);
+assert.strictEqual((estToolboxCategories.match(/<shadow type="est_sensor_port_picker">/g) || []).length, 22);
 assert.strictEqual((estToolboxCategories.match(/<shadow type="est_event_/g) || []).length, 0);
 assert.ok(!estToolboxCategories.includes('data_variable'));
 assert.ok(!estToolboxCategories.includes('procedure_definition'));
@@ -2195,8 +2289,18 @@ assert.strictEqual(
         `  rt.stop('this_stack')\n`
 );
 assert.strictEqual(fakePythonGenerator.sound_beep_for(makeFakeBlock('sound_beep_for', {
-    values: {NOTE: '60', SECONDS: '1'}
-})), 'est.audio.tone(60, rt.seconds_to_ms(1), wait=True)\n');
+    values: {NOTE: 'pitch + 2', SECONDS: '1'}
+})), 'est.audio.play(_est_piano_resource(pitch + 2), wait=False)\nrt.sleep(1)\nest.audio.stop()\n');
+assert.match(fakePythonGenerator.libraries_.estPianoResource, /def _est_piano_resource\(note\):/);
+assert.strictEqual(fakePythonGenerator.sound_beep(makeFakeBlock('sound_beep', {
+    fields: {NOTE: '66'}
+})), "est.audio.play('Piano/Fs4', wait=False)\n");
+assert.strictEqual(fakePythonGenerator.sound_beep(makeFakeBlock('sound_beep', {
+    values: {NOTE: '96'}
+})), "est.audio.play('Piano/C7', wait=False)\n");
+assert.deepStrictEqual(fakePythonGenerator.note(makeFakeBlock('note', {
+    fields: {NOTE: '72'}
+})), ['72', fakePythonGenerator.ORDER_ATOMIC]);
 const estDefaultProjectData = createEstDefaultProjectData();
 assert.strictEqual(estDefaultProjectData.targets.length, 2);
 assert.strictEqual(estDefaultProjectData.targets[0].isStage, true);
@@ -2752,6 +2856,10 @@ assert.match(estHardwareStatusButtonSource, /FIRMWARE_UPDATE_ACTIONS = \{/);
 assert.match(estHardwareStatusButtonSource, /data-firmware-target=\{FIRMWARE_UPDATE_ACTIONS\.upgrade\}/);
 assert.match(estHardwareStatusButtonSource, /data-firmware-target=\{FIRMWARE_UPDATE_ACTIONS\.downgrade\}/);
 assert.match(estHardwareStatusButtonSource, /ipcRenderer\.invoke\('est-flash-firmware'/);
+assert.match(estHardwareStatusButtonSource, /ipcRenderer\.on\('est-firmware-update-progress'/);
+assert.match(estHardwareStatusButtonSource, /ipcRenderer\.removeListener\('est-firmware-update-progress'/);
+assert.match(estHardwareStatusButtonSource, /firmware\.audioSyncRunning/);
+assert.match(estHardwareStatusButtonSource, /firmware\.updateWithAudioDone/);
 assert.match(estHardwareStatusButtonSource, /dialog\.showMessageBox\(remote\.getCurrentWindow\(\)/);
 assert.match(estHardwareStatusButtonSource, /includeProgramStatus: true/);
 assert.match(estHardwareStatusButtonSource, /REFRESH_INTERVAL_MS = 3000/);
@@ -2835,7 +2943,8 @@ assert.match(estProgramMainSource, /ipcMain\.handle\('est-run-program'/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-stop-program'/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-flash-firmware'/);
 assert.match(estProgramMainSource, /estFirmwareUpdateState/);
-assert.match(estProgramMainSource, /flashEstFirmware\(request\)/);
+assert.match(estProgramMainSource, /flashEstFirmware\(request, progress =>/);
+assert.match(estProgramMainSource, /event\.sender\.send\('est-firmware-update-progress', progress\)/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-get-status', \(event, options\)/);
 assert.match(estProgramMainSource, /ipcMain\.handle\('est-auto-connect', \(event, options\)/);
 const packageJson = require(path.resolve(__dirname, '..', 'package.json'));
@@ -3805,6 +3914,10 @@ assert.deepStrictEqual(
     capabilityNamesFor(CAPABILITY_AUDIO_RESOURCE_FLASH),
     ['audio-resource-flash']
 );
+assert.deepStrictEqual(
+    capabilityNamesFor(CAPABILITY_RUNTIME_BROADCAST),
+    ['runtime-broadcast']
+);
 assert.strictEqual(checkProgramFirmwareCompatibility(parsedM114ADeviceStatus).programCompatible, true);
 assert.strictEqual(
     checkProgramFirmwareCompatibility(parsedM114ADeviceStatus, CAPABILITY_TEMPERATURE_SENSOR).programCompatible,
@@ -4419,13 +4532,6 @@ const testProgramDownloadRunAndStop = async () => {
         }),
         /M1\.22H.*M1\.22L/
     );
-    await assert.rejects(
-        unsupportedRuntimeService.runProgram({
-            source: "import est_runtime as rt\n@rt.on_color('3', 'red')\ndef stack_1():\n  pass\n",
-            slot: 1
-        }),
-        /尚未实现.*颜色传感器事件帽.*on_color/
-    );
     assert.deepStrictEqual(unsupportedRuntimeTransport.actions, ['25:0']);
 
     const stopped = await service.stopCurrentProgram();
@@ -4671,7 +4777,7 @@ validateEstDefaultProject()
     .then(() => testUsbDisconnectClearsStaleTransport())
     .then(() => testBuiltInMotorBlock())
     .then(() => console.log(
-        'EST protocol, queue, 87 EST blocks, and native operator/data/procedure tests passed'
+        'EST protocol, queue, 80 EST blocks, and native operator/data/procedure tests passed'
     ))
     .catch(error => {
         console.error(error);

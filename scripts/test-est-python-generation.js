@@ -559,6 +559,40 @@ const quotedMessage = generator.event_broadcast({
 addSyntaxCase('quoted_unicode_message', `${programPreamble()}\n${quotedMessage}`);
 
 resetGenerator();
+assert.strictEqual(
+    generator.event_broadcast({getFieldValue: () => 'message_8'}),
+    "rt.broadcast('message_8', wait=False)\n"
+);
+assert.strictEqual(
+    generator.event_broadcast_wait({getFieldValue: () => 'message_2'}),
+    "rt.broadcast('message_2', wait=True)\n"
+);
+
+const broadcastReceiver = {
+    type: 'event_broadcast_received',
+    id: 'broadcast-receiver',
+    nextCode:
+        "  rt.broadcast('message_2', wait=False)\n" +
+        "  rt.broadcast('message_3', wait=True)\n" +
+        '  rt.sleep(0.1)\n',
+    getFieldValue: name => (name === 'MESSAGE' ? 'message_8' : null),
+    nextConnection: {targetBlock: () => ({type: 'event_broadcast'})}
+};
+resetGenerator([broadcastReceiver]);
+assert.strictEqual(generator.event_broadcast_received(broadcastReceiver), null);
+assert.match(generator.libraries_.est_stack_1, /@rt\.on_broadcast\('message_8'\)/);
+assert.match(generator.libraries_.est_stack_1, /async def stack_1\(\):/);
+assert.match(generator.libraries_.est_stack_1, /rt\.broadcast\('message_2', wait=False\)/);
+assert.doesNotMatch(generator.libraries_.est_stack_1, /await rt\.broadcast\('message_2', wait=False\)/);
+assert.match(generator.libraries_.est_stack_1, /await rt\.broadcast\('message_3', wait=True\)/);
+assert.match(generator.libraries_.est_stack_1, /await rt\.sleep\(0\.1\)/);
+addSyntaxCase('broadcast_receiver_and_wait', [
+    programPreamble(),
+    dictionaryCode(generator.libraries_),
+    dictionaryCode(generator.setups_)
+].filter(Boolean).join('\n'));
+
+resetGenerator();
 const displayImageWithSpace = generator.display_image({
     values: {},
     getFieldValue: name => (name === 'IMAGE' ? 'Expressions/Big smile' : null)
@@ -805,14 +839,29 @@ assert.deepStrictEqual(Object.keys(generator.libraries_), []);
 resetGenerator();
 assert.strictEqual(generator.sound_play({
     getFieldValue: () => null
-}), 'est.audio.play(\'Piano/C4\', wait=False)\n');
+}), 'est.audio.play(\'Animals/Cat purr\', wait=False)\n');
 assert.strictEqual(generator.imports_.estHardware, 'import est');
 
 resetGenerator();
 assert.strictEqual(generator.sound_play_wait({
-    getFieldValue: name => (name === 'SOUND' ? 'Piano/Cs4' : null)
-}), 'est.audio.play(\'Piano/Cs4\', wait=True)\n');
+    getFieldValue: name => (name === 'SOUND' ? 'System/Ready' : null)
+}), 'est.audio.play(\'System/Ready\', wait=True)\n');
 assert.strictEqual(generator.imports_.estHardware, 'import est');
+
+resetGenerator();
+assert.strictEqual(generator.sound_beep({
+    values: {NOTE: '60'},
+    getFieldValue: () => null
+}), "est.audio.play('Piano/C4', wait=False)\n");
+assert.strictEqual(generator.imports_.estHardware, 'import est');
+
+resetGenerator();
+assert.strictEqual(generator.sound_beep_for({
+    values: {NOTE: '61', SECONDS: '0.5'},
+    getFieldValue: () => null
+}), "est.audio.play('Piano/Cs4', wait=False)\nrt.sleep(0.5)\nest.audio.stop()\n");
+assert.strictEqual(generator.imports_.estHardware, 'import est');
+assert.strictEqual(generator.imports_.estRuntime, 'import est_runtime as rt');
 
 const sensorPortBlock = ({values = {}, fields = {}} = {}) => ({
     values: {PORT: 'port_var', ...values},
@@ -835,13 +884,6 @@ const sensorPortBlock = ({values = {}, fields = {}} = {}) => ({
         fields: {UNIT: 'centimeters'}
     }, "rt.ultrasonic(port_var).distance('centimeters')"],
     ['sensor_ir_proximity', {}, 'rt.infrared(port_var).proximity()'],
-    ['sensor_ir_beacon_heading', {
-        fields: {CHANNEL: '4'}
-    }, 'rt.infrared(port_var).beacon_heading(1)'],
-    ['sensor_ir_beacon_active_compare', {
-        values: {VALUE: '0'},
-        fields: {CHANNEL: '3', PROPERTY: 'heading', COMPARATOR: 'less'}
-    }, "rt.ir_beacon_compare(port_var, 1, 'heading', 'less', 0)"],
     ['sensor_gyro_angle', {}, 'rt.gyro(port_var).angle()'],
     ['sensor_gyro_reset', {}, 'rt.gyro(port_var).reset_angle()\n']
 ].forEach(([blockId, blockOptions, expectedCode]) => {

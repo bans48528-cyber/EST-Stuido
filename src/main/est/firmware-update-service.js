@@ -178,6 +178,11 @@ const firmwareUpdateRequiresForce = target => (
     target === EST_FIRMWARE_UPDATE_TARGETS.LEGACY_EST
 );
 
+const firmwareSupportsBundledAudioResources = packageInfo => {
+    const comparison = compareEstFirmwareVersions(packageInfo.targetVersion, 'M1.24B');
+    return comparison !== null && comparison >= 0;
+};
+
 export const buildFlashCommandArgs = (candidate, packageInfo, target) => {
     const scriptPath = path.join(
         packageInfo.firmwareRoot,
@@ -198,6 +203,36 @@ export const buildFlashCommandArgs = (candidate, packageInfo, target) => {
         args.push('--force');
     }
     return args;
+};
+
+export const buildAudioResourceSyncCommandArgs = (candidate, packageInfo) => {
+    const scriptPath = path.join(
+        packageInfo.firmwareRoot,
+        'tools',
+        'est_hid_sender',
+        'est_hid_sender.py'
+    );
+    const assetsDir = path.join(
+        packageInfo.firmwareRoot,
+        'firmware',
+        'minimal_upgrade_app',
+        'assets',
+        'audio'
+    );
+    const inventoryPath = path.join(
+        packageInfo.firmwareRoot,
+        'docs',
+        'audio_resources_inventory_2026-09-03.json'
+    );
+    return [
+        ...candidate.args,
+        scriptPath,
+        'audio-resource-sync',
+        '--assets-dir',
+        assetsDir,
+        '--inventory',
+        inventoryPath
+    ];
 };
 
 const runPythonUpdater = (packageInfo, target) => new Promise((resolve, reject) => {
@@ -261,13 +296,102 @@ const runPythonUpdater = (packageInfo, target) => new Promise((resolve, reject) 
     tryCandidate(0);
 });
 
-export const flashEstFirmware = async (request = {}) => {
+const runPythonAudioResourceSync = packageInfo => new Promise((resolve, reject) => {
+    const scriptPath = path.join(
+        packageInfo.firmwareRoot,
+        'tools',
+        'est_hid_sender',
+        'est_hid_sender.py'
+    );
+    const assetsDir = path.join(
+        packageInfo.firmwareRoot,
+        'firmware',
+        'minimal_upgrade_app',
+        'assets',
+        'audio'
+    );
+    const inventoryPath = path.join(
+        packageInfo.firmwareRoot,
+        'docs',
+        'audio_resources_inventory_2026-09-03.json'
+    );
+    if (!fs.existsSync(scriptPath)) {
+        reject(new Error(`未找到 EST HID 工具：${scriptPath}`));
+        return;
+    }
+    if (!fs.existsSync(assetsDir) || !fs.existsSync(inventoryPath)) {
+        reject(new Error('未找到 EST 音效资源目录或音效清单。'));
+        return;
+    }
+    const candidates = getPythonCandidates();
+    const tryCandidate = index => {
+        if (index >= candidates.length) {
+            reject(new Error('未找到可用的 Python。请确认 python 或 py -3 可在命令行运行。'));
+            return;
+        }
+        const candidate = candidates[index];
+        const args = buildAudioResourceSyncCommandArgs(candidate, packageInfo);
+        const child = spawn(candidate.command, args, {
+            cwd: packageInfo.firmwareRoot,
+            env: {
+                ...process.env,
+                PYTHONIOENCODING: 'utf-8'
+            },
+            windowsHide: true
+        });
+        let stdout = '';
+        let stderr = '';
+        let spawnFailed = false;
+        child.stdout.on('data', data => {
+            stdout = appendTail(stdout, data.toString('utf8'));
+        });
+        child.stderr.on('data', data => {
+            stderr = appendTail(stderr, data.toString('utf8'));
+        });
+        child.on('error', error => {
+            spawnFailed = true;
+            if (error && error.code === 'ENOENT') {
+                tryCandidate(index + 1);
+                return;
+            }
+            reject(error);
+        });
+        child.on('close', code => {
+            if (spawnFailed) return;
+            if (code === 0) {
+                resolve({
+                    audioResourceCommand: candidate.command,
+                    audioResourceStderr: stderr.trim(),
+                    audioResourceStdout: stdout.trim()
+                });
+                return;
+            }
+            const output = (stderr || stdout).trim();
+            reject(new Error(output || `音效资源同步失败，工具退出码 ${code}`));
+        });
+    };
+    tryCandidate(0);
+});
+
+export const flashEstFirmware = async (request = {}, onProgress = () => {}) => {
     const target = request && request.target;
     const packageInfo = resolveFirmwareUpdatePackage(target);
+    onProgress({stage: 'firmware'});
     const toolResult = await runPythonUpdater(packageInfo, target);
+    const audioResourcesSynced = (
+        target === EST_FIRMWARE_UPDATE_TARGETS.LATEST_OS &&
+        firmwareSupportsBundledAudioResources(packageInfo)
+    );
+    let audioResourceResult = {};
+    if (audioResourcesSynced) {
+        onProgress({stage: 'audio-resources'});
+        audioResourceResult = await runPythonAudioResourceSync(packageInfo);
+    }
     return {
         ...packageInfo,
         ...toolResult,
+        ...audioResourceResult,
+        audioResourcesSynced,
         target
     };
 };

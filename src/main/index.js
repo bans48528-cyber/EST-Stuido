@@ -688,7 +688,11 @@ ipcMain.handle('est-flash-firmware', async (event, request) => {
     estFirmwareUpdateState.inProgress = true;
     try {
         await estDeviceService.disconnect();
-        return await flashEstFirmware(request);
+        return await flashEstFirmware(request, progress => {
+            if (!event.sender.isDestroyed()) {
+                event.sender.send('est-firmware-update-progress', progress);
+            }
+        });
     } finally {
         estFirmwareUpdateState.inProgress = false;
     }

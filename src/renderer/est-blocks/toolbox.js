@@ -12,6 +12,13 @@ const numberShadow = (name, value) => `
                 </shadow>
             </value>`;
 
+const noteShadow = (name, value) => `
+            <value name="${name}">
+                <shadow type="note">
+                    <field name="NOTE">${value}</field>
+                </shadow>
+            </value>`;
+
 const wholeNumberShadow = (name, value) => `
             <value name="${name}">
                 <shadow type="math_whole_number">
@@ -119,10 +126,10 @@ const displayCategory = locale => category(getEstText('category.display', locale
 ]);
 
 const soundCategory = locale => category(getEstText('category.sound', locale), 'estSound', 'sound', [
-    block('sound_play_wait', field('SOUND', 'Piano/C4')),
-    block('sound_play', field('SOUND', 'Piano/C4')),
-    block('sound_beep_for', `${numberShadow('NOTE', 60)}${numberShadow('SECONDS', 0.2)}`),
-    block('sound_beep', numberShadow('NOTE', 60)),
+    block('sound_play_wait', field('SOUND', 'Animals/Cat purr')),
+    block('sound_play', field('SOUND', 'Animals/Cat purr')),
+    block('sound_beep_for', `${noteShadow('NOTE', 60)}${numberShadow('SECONDS', 0.2)}`),
+    block('sound_beep', noteShadow('NOTE', 60)),
     block('sound_stop_all'),
     block('sound_set_volume', numberShadow('VOLUME', 100))
 ]);
@@ -131,6 +138,7 @@ const eventCategory = locale => category(getEstText('category.event', locale), '
     block('event_program_start'),
     block('event_brick_button', `${field('BUTTON', 'confirm')}${field('BUTTON_EVENT', 'pressed')}`),
     block('event_condition'),
+    block('event_broadcast_received', field('MESSAGE', 'message_1')),
     block('event_broadcast', field('MESSAGE', 'message_1')),
     block('event_broadcast_wait', field('MESSAGE', 'message_1')),
     block('event_timer', numberShadow('SECONDS', 10))
@@ -153,8 +161,6 @@ const sensorCategory = locale => category(getEstText('category.sensing', locale)
     block('sensor_brick_button_pressed', field('BUTTON', 'confirm')),
     block('sensor_wait_brick_button', `${field('BUTTON', 'confirm')}${field('BUTTON_EVENT', 'pressed')}`),
     separator,
-    block('sensor_color_calibrate_reflection', `${field('CALIBRATION', 'minimum')}${numberShadow('VALUE', 0)}`),
-    block('sensor_color_reset_calibration'),
     block('sensor_color_reflection', sensorPortShadow('PORT', '1')),
     block('sensor_color_reflection_compare', `${sensorPortShadow('PORT', '1')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 50)}`),
     block('sensor_color_ambient', sensorPortShadow('PORT', '1')),
@@ -175,13 +181,7 @@ const sensorCategory = locale => category(getEstText('category.sensing', locale)
     block('sensor_ir_proximity', sensorPortShadow('PORT', '1')),
     block('sensor_ir_proximity_compare', `${sensorPortShadow('PORT', '1')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 15)}`),
     block('sensor_wait_ir_proximity', `${sensorPortShadow('PORT', '1')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 15)}`),
-    block('sensor_ir_beacon_heading', `${sensorPortShadow('PORT', '1')}${field('CHANNEL', '1')}`),
-    block('sensor_ir_beacon_proximity', `${sensorPortShadow('PORT', '1')}${field('CHANNEL', '1')}`),
-    block('sensor_ir_beacon_buttons', `${sensorPortShadow('PORT', '1')}${field('CHANNEL', '1')}`),
-    block('sensor_ir_beacon_button_pressed', `${sensorPortShadow('PORT', '1')}${field('CHANNEL', '1')}${field('BEACON_BUTTON', 'top_left')}`),
     block('sensor_wait_ir_beacon_button', `${sensorPortShadow('PORT', '1')}${field('CHANNEL', '1')}${field('BEACON_EVENT', 'top_left_pressed')}`),
-    block('sensor_ir_beacon_active', `${sensorPortShadow('PORT', '1')}${field('CHANNEL', '1')}`),
-    block('sensor_ir_beacon_active_compare', `${sensorPortShadow('PORT', '1')}${field('CHANNEL', '1')}${field('PROPERTY', 'heading')}${field('COMPARATOR', 'less')}${numberShadow('VALUE', 0)}`),
     separator,
     block('sensor_gyro_angle', sensorPortShadow('PORT', '1')),
     block('sensor_gyro_rate', sensorPortShadow('PORT', '1')),
