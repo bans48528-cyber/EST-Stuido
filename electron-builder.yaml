@@ -25,6 +25,17 @@ files:
       - '**/*'
       - '!**/*.map'
 extraFiles: ['LICENSE', 'LICENSE.ScratchFoundation', 'TRADEMARK']
+extraResources:
+  - from: resources/est-build-library
+    to: est-build-library
+    filter:
+      - '**/*'
+  - from: resources/est-firmware
+    to: est-firmware
+    filter:
+      - '**/*'
+      - '!**/__pycache__/**'
+      - '!**/*.pyc'
 
 appId: com.eststudio.desktop
 productName: "EST Studio"

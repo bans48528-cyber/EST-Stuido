@@ -13,21 +13,33 @@ const transformDownloader = source => {
 };
 
 const transformUploader = source => {
+    const importMarker = "import bindAll from 'lodash.bindall';";
     const acceptMarker = "this.inputElement.accept = '.ob,.sb,.sb2,.sb3';";
     const titleCommentMarker = `            // only parse title with valid scratch project extensions
             // (.ob .sb, .sb2, and .sb3)`;
     const titlePatternMarker =
         '            const matches = fileInputFilename.match(/^(.*)\\.((ob)|(sb[23]))?$/);';
-    if (!source.includes(acceptMarker) || !source.includes(titleCommentMarker) ||
+    const titleUpdateMarker = '                            this.props.onSetProjectTitle(uploadedProjectTitle);';
+    if (!source.includes(importMarker) || !source.includes(acceptMarker) || !source.includes(titleCommentMarker) ||
+        !source.includes(titleUpdateMarker) ||
         !source.includes(titlePatternMarker)) {
         throw new Error('Unable to locate the OpenBlock project upload extension logic.');
     }
     return source
+        .replace(importMarker, `import {ipcRenderer} from 'electron';\n${importMarker}`)
         .replace(acceptMarker, "this.inputElement.accept = '.ests';")
         .replace(titleCommentMarker, '            // Parse EST Studio project titles from .ests filenames.')
         .replace(
             titlePatternMarker,
             '            const matches = fileInputFilename.match(/^(.*)\\.ests$/i);'
+        )
+        .replace(
+            titleUpdateMarker,
+            `${titleUpdateMarker}\n` +
+            '                            if (this.fileToUpload && this.fileToUpload.path) {\n' +
+            "                                ipcRenderer.invoke('est-home-remember-project', " +
+            'this.fileToUpload.path);\n' +
+            '                            }'
         );
 };
 

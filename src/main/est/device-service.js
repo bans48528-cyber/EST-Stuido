@@ -1,7 +1,10 @@
 import {
+    CAPABILITY_MOTOR_TYPE,
+    CAPABILITY_LARGE_PYTHON_PROGRAM,
     COMMAND_PERSISTENT_PROGRAM,
     COMMAND_PYTHON_PROGRAM,
     COMMAND_DEVICE_STATUS,
+    COMMAND_MOTOR_TYPE,
     FRAGMENT_WRITE_DELAY_MS,
     HID_READ_TIMEOUT_MS,
     LEGACY_REPORT_SIZE,
@@ -11,7 +14,8 @@ import {
     PROGRAM_STATUS_POLL_INTERVAL_MS,
     PYTHON_PROGRAM_CHUNK_SIZE,
     PYTHON_PROGRAM_FLAG_TIMEOUT_ARMED,
-    PYTHON_PROGRAM_MAX_SIZE,
+    PYTHON_PROGRAM_LEGACY_MAX_SIZE,
+    PYTHON_PROGRAM_PROTOCOL_MAX_SIZE,
     PYTHON_PROGRAM_NO_TIMEOUT_MS,
     PYTHON_PROGRAM_STATE_COMPLETED,
     PYTHON_PROGRAM_STATE_EXCEPTION,
@@ -22,7 +26,9 @@ import {
     PYTHON_PROGRAM_STATE_STOPPED,
     PYTHON_PROGRAM_STATE_TIMED_OUT
 } from './constants';
+import {validateMicroPythonSourceSyntax} from './python-syntax-service';
 import {
+    buildMotorTypeFrame,
     buildPersistentProgramLoadFrame,
     buildPersistentProgramSaveFrame,
     buildPythonProgramBeginFrame,
@@ -39,6 +45,7 @@ import {
     parseDeviceStatusResponse,
     parseFrame,
     parseHeartbeatResponse,
+    parseMotorTypeResponse,
     parsePersistentProgramResponse,
     parsePythonProgramResponse,
     programMinimumFirmwareVersionForSource,
@@ -52,9 +59,14 @@ const PROGRAM_FIRMWARE_UPGRADE_MESSAGE =
 const EST_USB_DISCONNECTED_MESSAGE = 'EST USB 连接已断开，请重新连接 EST 后重试。';
 const PROGRAM_UNSUPPORTED_RUNTIME_MESSAGE =
     '当前 EST 固件尚未实现这个程序使用的积木接口，已阻止下载。请删除或替换这些积木，等待后续固件开放对应能力。';
+const PROGRAM_LARGE_SOURCE_MIN_FIRMWARE_VERSION = 'M1.26A';
+
+const isEstCommandTimeoutError = error =>
+    Boolean(error && /^Timed out waiting for EST command /.test(String(error.message || error)));
 
 const normalizeStatusOptions = options => ({
-    includeProgramStatus: Boolean(options && options.includeProgramStatus)
+    includeProgramStatus: Boolean(options && options.includeProgramStatus),
+    includePortInfo: Boolean(options && options.includePortInfo)
 });
 
 const programFirmwareUpgradeError = compatibility => {
@@ -80,13 +92,15 @@ export class EstDeviceService {
         requestTimeoutMs = PROGRAM_REQUEST_TIMEOUT_MS,
         fragmentWriteDelayMs = FRAGMENT_WRITE_DELAY_MS,
         programStatusRequestTimeoutMs = PROGRAM_STATUS_REQUEST_TIMEOUT_MS,
-        programStatusPollIntervalMs = PROGRAM_STATUS_POLL_INTERVAL_MS
+        programStatusPollIntervalMs = PROGRAM_STATUS_POLL_INTERVAL_MS,
+        syntaxChecker = validateMicroPythonSourceSyntax
     } = {}) {
         this.transportFactory = transportFactory;
         this.requestTimeoutMs = requestTimeoutMs;
         this.fragmentWriteDelayMs = fragmentWriteDelayMs;
         this.programStatusRequestTimeoutMs = programStatusRequestTimeoutMs;
         this.programStatusPollIntervalMs = programStatusPollIntervalMs;
+        this.syntaxChecker = syntaxChecker;
         this.transport = null;
         this.device = null;
         this.firmwareVersion = null;
@@ -161,7 +175,7 @@ export class EstDeviceService {
     }
 
     async _getStatusNow (options = {}) {
-        const {includeProgramStatus} = normalizeStatusOptions(options);
+        const {includeProgramStatus, includePortInfo} = normalizeStatusOptions(options);
         if (this.pythonProgramActive && this.transport) {
             return this._getProgramStatusSnapshotNow();
         }
@@ -172,6 +186,21 @@ export class EstDeviceService {
                 throw new Error('EST returned an invalid device status snapshot');
             }
             this.lastDeviceStatus = this._decorateDeviceStatus(status);
+            if (includePortInfo && (status.capabilities & CAPABILITY_MOTOR_TYPE) !== 0) {
+                try {
+                    const motorTypeReport = await this._requestFrameNow(
+                        buildMotorTypeFrame(),
+                        COMMAND_MOTOR_TYPE,
+                        this.requestTimeoutMs
+                    );
+                    const motorTypes = parseMotorTypeResponse(motorTypeReport);
+                    if (motorTypes) {
+                        this.lastDeviceStatus = {...this.lastDeviceStatus, motorTypes};
+                    }
+                } catch (error) {
+                    // Port information is optional context and must not make the normal status request fail.
+                }
+            }
             this.firmwareVersion = status.firmwareVersion;
             if (this.pythonProgramActive || includeProgramStatus) {
                 try {
@@ -248,7 +277,7 @@ export class EstDeviceService {
         if (this.shuttingDown) {
             return {state: 'shutting-down'};
         }
-        if (statusOptions.includeProgramStatus) {
+        if (statusOptions.includeProgramStatus || statusOptions.includePortInfo) {
             return this._autoConnect(statusOptions);
         }
         if (this.autoConnectPromise) {
@@ -382,7 +411,11 @@ export class EstDeviceService {
     } = {}) {
         return this._enqueueCommand(async () => {
             const download = await this._saveProgramToSlotNow(source, slot, programName);
-            const run = await this._loadAndRunProgramNow(slot, timeoutMs);
+            // SAVE verifies the persistent copy and leaves the same source valid in RAM.
+            // Run that copy directly instead of reading the slot back from flash.
+            const run = {
+                runStatus: await this._runReadyProgramNow(timeoutMs)
+            };
             return {...download, run};
         });
     }
@@ -409,8 +442,10 @@ export class EstDeviceService {
         if (sourceBytes.length < 1) {
             throw new RangeError('Python program must not be empty');
         }
-        if (sourceBytes.length > PYTHON_PROGRAM_MAX_SIZE) {
-            throw new RangeError(`Python program must be at most ${PYTHON_PROGRAM_MAX_SIZE} UTF-8 bytes`);
+        if (sourceBytes.length > PYTHON_PROGRAM_PROTOCOL_MAX_SIZE) {
+            throw new RangeError(
+                `Python program exceeds the ${PYTHON_PROGRAM_PROTOCOL_MAX_SIZE}-byte protocol limit`
+            );
         }
         if (sourceBytes.includes(0)) {
             throw new RangeError('Python program must not contain NUL bytes');
@@ -420,14 +455,32 @@ export class EstDeviceService {
 
     async _uploadPythonNow (source) {
         const sourceBytes = this._normalizePythonSource(source);
+        this.syntaxChecker(sourceBytes);
         const unsupportedRuntimeFeatures = programUnsupportedRuntimeFeaturesForSource(sourceBytes);
         if (unsupportedRuntimeFeatures.length > 0) {
             throw programUnsupportedRuntimeError(unsupportedRuntimeFeatures);
         }
-        await this._requireProgramCompatibilityNow(
-            programRequiredCapabilitiesForSource(sourceBytes),
-            programMinimumFirmwareVersionForSource(sourceBytes)
+        const requiredCapabilities = programRequiredCapabilitiesForSource(sourceBytes);
+        const minimumFirmwareVersion = programMinimumFirmwareVersionForSource(sourceBytes);
+        const deviceStatus = await this._requireProgramCompatibilityNow(
+            requiredCapabilities,
+            minimumFirmwareVersion
         );
+        const reportedLimit = Number(deviceStatus && deviceStatus.maxProgramBytes);
+        const deviceLimit = Number.isInteger(reportedLimit) && reportedLimit > 0 ?
+            Math.min(reportedLimit, PYTHON_PROGRAM_PROTOCOL_MAX_SIZE) :
+            PYTHON_PROGRAM_LEGACY_MAX_SIZE;
+        if (sourceBytes.length > deviceLimit) {
+            throw new RangeError(
+                `程序大小 ${sourceBytes.length} 字节，超过设备上限 ${deviceLimit} 字节`
+            );
+        }
+        if (sourceBytes.length > PYTHON_PROGRAM_LEGACY_MAX_SIZE) {
+            await this._requireProgramCompatibilityNow(
+                requiredCapabilities | CAPABILITY_LARGE_PYTHON_PROGRAM,
+                PROGRAM_LARGE_SOURCE_MIN_FIRMWARE_VERSION
+            );
+        }
         await this._stopCurrentProgramNow();
         const sourceCrc32 = crc32(sourceBytes);
         let status = await this._pythonProgramActionNow(
@@ -487,6 +540,7 @@ export class EstDeviceService {
         if (!compatibility || !compatibility.programCompatible) {
             throw programFirmwareUpgradeError(compatibility);
         }
+        return status;
     }
 
     async _saveProgramToSlotNow (source, slot, programName) {
@@ -505,17 +559,54 @@ export class EstDeviceService {
     async _loadAndRunProgramNow (slot, timeoutMs) {
         await this._requireProgramCompatibilityNow();
         const loadFrame = buildPersistentProgramLoadFrame(slot);
-        const runFrame = buildPythonProgramRunFrame(timeoutMs);
         const loadedStatus = await this._persistentProgramActionNow(loadFrame);
         this._requirePersistentProgramSuccess(loadedStatus, 'load program');
-        const runStatus = await this._pythonProgramActionNow(runFrame);
-        this._requirePythonProgramSuccess(runStatus, 'start program');
-        this._updatePythonProgramActivity(runStatus);
+        // Allow the persistent-status IN transfer to retire before sending 0x24.
+        // Without this gap the device can execute RUN while its first reply is busy.
+        await this._delay(500);
+        const runStatus = await this._runReadyProgramNow(timeoutMs);
         return {
             slot,
             loadedStatus,
             runStatus
         };
+    }
+
+    async _runReadyProgramNow (timeoutMs) {
+        const runFrame = buildPythonProgramRunFrame(timeoutMs);
+        let runStatus;
+        try {
+            runStatus = await this._pythonProgramActionNow(runFrame);
+        } catch (error) {
+            if (!isEstCommandTimeoutError(error)) {
+                throw error;
+            }
+            let statusError = error;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    runStatus = await this._pythonProgramActionNow(buildPythonProgramStatusFrame());
+                    break;
+                } catch (retryError) {
+                    statusError = retryError;
+                    if (!isEstCommandTimeoutError(retryError) || attempt === 2) {
+                        throw retryError;
+                    }
+                    await this._delay(50);
+                }
+            }
+            if (!runStatus) {
+                throw statusError;
+            }
+            if (runStatus.state === PYTHON_PROGRAM_STATE_READY) {
+                await this._delay(50);
+                runStatus = await this._pythonProgramActionNow(runFrame);
+            } else if (!this._pythonProgramActive(runStatus) && !this._pythonProgramFinished(runStatus)) {
+                throw error;
+            }
+        }
+        this._requirePythonProgramSuccess(runStatus, 'start program');
+        this._updatePythonProgramActivity(runStatus);
+        return runStatus;
     }
 
     async _stopCurrentProgramNow () {
@@ -578,6 +669,15 @@ export class EstDeviceService {
             throw new Error(`EST RAM Python program is busy: ${operation}`);
         }
         if (status.result !== 1) {
+            if (status.error === 7) {
+                throw new Error(`EST 拒绝程序：源码超过设备容量 (${operation})`);
+            }
+            if (status.error === 8) {
+                throw new Error(`EST MicroPython 编译内存不足 (${operation})`);
+            }
+            if (status.error === 9) {
+                throw new Error(`EST 拒绝程序：Python 语法错误 (${operation})`);
+            }
             throw new Error(`EST rejected RAM Python operation: ${operation}; error=${status.error}`);
         }
     }

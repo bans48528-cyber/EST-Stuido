@@ -89,6 +89,12 @@ module.exports = function (source) {
     }
 
     if (resourcePath.endsWith('/containers/blocks.jsx')) {
+        const messageBoxImport = `import MessageBoxType from '../lib/message-box.js';\n`;
+        const estAiWorkspaceImport = `import {
+    EST_AI_IMPORT_REQUEST_EVENT,
+    importEstBlockIrToWorkspace
+} from 'est-ai-workspace';
+`;
         const deviceLibraryImport = `import DeviceLibrary from './device-library.jsx';\n`;
         const modalReducersImport =
             `import {closeExtensionLibrary, openSoundRecorder, openConnectionModal, closeDeviceLibrary} ` +
@@ -112,6 +118,17 @@ module.exports = function (source) {
     }
 
 `;
+        const componentDidMountWorkspaceMarker =
+            `        this.workspace = this.ScratchBlocks.inject(this.blocks, workspaceConfig);\n`;
+        const componentWillUnmountMarker = `    componentWillUnmount () {
+        this.detachVM();
+        this.workspace.dispose();
+`;
+        const connectionMethodMarker = `    handleConnectionModalStart () {
+        this.props.onOpenConnectionModal();
+    }
+`;
+        const bindMethodMarker = `            'handleDeviceSelected',\n`;
         const promptCallbackMarker = `    handlePromptCallback (input, variableOptions) {
         this.state.prompt.callback(
             input,
@@ -144,6 +161,7 @@ module.exports = function (source) {
             throw new Error('Unable to locate the OpenBlock native toolbox callback registrations.');
         }
         return source
+            .replace(messageBoxImport, `${messageBoxImport}${estAiWorkspaceImport}`)
             .replace(deviceLibraryImport, '')
             .replace(
                 modalReducersImport,
@@ -157,6 +175,20 @@ module.exports = function (source) {
             .replace('    onRequestCloseDeviceLibrary: PropTypes.func,\n', '')
             .replace('    deviceLibraryVisible: state.scratchGui.modals.deviceLibrary,\n', '')
             .replace(closeDeviceLibraryDispatch, '')
+            .replace(bindMethodMarker, `${bindMethodMarker}            'handleEstAiImportRequest',\n`)
+            .replace(
+                componentDidMountWorkspaceMarker,
+                `${componentDidMountWorkspaceMarker}        window.addEventListener(
+            EST_AI_IMPORT_REQUEST_EVENT,
+            this.handleEstAiImportRequest
+        );
+`
+            )
+            .replace(componentWillUnmountMarker, `    componentWillUnmount () {
+        window.removeEventListener(EST_AI_IMPORT_REQUEST_EVENT, this.handleEstAiImportRequest);
+        this.detachVM();
+        this.workspace.dispose();
+`)
             .replace(messageBoxRenderPropsMarker, `            onSetBaudrate,
             onShowMessageBox,
             toolboxXML,`)
@@ -170,6 +202,29 @@ module.exports = function (source) {
     }
 
 `)
+            .replace(connectionMethodMarker, `    handleEstAiImportRequest (event) {
+        const detail = event && event.detail;
+        if (!detail) return;
+        detail.handled = true;
+        try {
+            const result = importEstBlockIrToWorkspace({
+                ScratchBlocks: this.ScratchBlocks,
+                workspace: this.workspace,
+                vm: this.props.vm,
+                ir: detail.ir,
+                mode: detail.mode
+            });
+            if (typeof detail.resolve === 'function') detail.resolve(result);
+        } catch (error) {
+            if (typeof detail.reject === 'function') {
+                detail.reject(error);
+            } else {
+                this.props.onShowMessageBox(MessageBoxType.alert, error.message);
+            }
+        }
+    }
+
+${connectionMethodMarker}`)
             .replace(promptCallbackMarker, `    handlePromptCallback (input, variableOptions) {
         this.state.prompt.callback(
             input,

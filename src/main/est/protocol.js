@@ -13,6 +13,7 @@ import {
     CAPABILITY_HOLD_POSITION_CONTROL,
     CAPABILITY_INPUT_SENSOR,
     CAPABILITY_KEYS,
+    CAPABILITY_LARGE_PYTHON_PROGRAM,
     CAPABILITY_MICROPYTHON,
     CAPABILITY_MOTOR_CONTROL,
     CAPABILITY_MOTOR_PAIR_POSITION,
@@ -30,6 +31,7 @@ import {
     CAPABILITY_ZERO_SPEED_MOTOR_CONTROL,
     COMMAND_PERSISTENT_PROGRAM,
     COMMAND_PYTHON_PROGRAM,
+    COMMAND_MOTOR_TYPE,
     DEVICE_DIRECTION,
     EST_ALLOW_ALL_FIRMWARE_VERSIONS,
     EST_MIN_PROTOCOL_MINOR,
@@ -56,7 +58,8 @@ import {
     PYTHON_PROGRAM_ACTION_STATUS,
     PYTHON_PROGRAM_ACTION_STOP,
     PYTHON_PROGRAM_CHUNK_SIZE,
-    PYTHON_PROGRAM_MAX_SIZE,
+    PYTHON_PROGRAM_LEGACY_MAX_SIZE,
+    PYTHON_PROGRAM_PROTOCOL_MAX_SIZE,
     PYTHON_PROGRAM_MAX_TIMEOUT_MS,
     PYTHON_PROGRAM_MIN_TIMEOUT_MS,
     PYTHON_PROGRAM_NO_TIMEOUT_MS
@@ -164,6 +167,7 @@ const EST_PROGRAM_COOPERATIVE_PROTOCOL_MINOR = 25;
 const EST_PROGRAM_BASIC_EVENT_HATS_PROTOCOL_MINOR = 25;
 const EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR = 26;
 const EST_PROGRAM_BROADCAST_PROTOCOL_MINOR = 28;
+const EST_PROGRAM_LARGE_SOURCE_PROTOCOL_MINOR = 29;
 export const EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION = 'M1.22E';
 export const EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION = 'M1.22I';
 export const EST_PROGRAM_DUAL_SPEED_API_MIN_FIRMWARE_VERSION = 'M1.22L';
@@ -172,6 +176,10 @@ export const EST_PROGRAM_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION = 'M1.22V';
 export const EST_PROGRAM_AUDIO_API_MIN_FIRMWARE_VERSION = 'M1.23D';
 export const EST_PROGRAM_AUDIO_RESOURCE_API_MIN_FIRMWARE_VERSION = 'M1.24B';
 export const EST_PROGRAM_BROADCAST_API_MIN_FIRMWARE_VERSION = 'M1.25A';
+export const EST_PROGRAM_SENSOR_COOPERATIVE_API_MIN_FIRMWARE_VERSION = 'M1.25C';
+export const EST_PROGRAM_ASYNC_SENSOR_CONDITION_API_MIN_FIRMWARE_VERSION = 'M1.25E';
+export const EST_PROGRAM_DISPLAY_DRAW_API_MIN_FIRMWARE_VERSION = 'M1.25F';
+export const EST_PROGRAM_LARGE_SOURCE_MIN_FIRMWARE_VERSION = 'M1.26A';
 const EST_PROGRAM_SENSOR_WAIT_RUNTIME_PATTERN =
     /\brt\.wait_(?:brick_button|color|touch|ultrasonic|ir_proximity|ir_beacon_button|gyro)\s*\(/;
 const EST_AUDIO_PLAY_LITERAL_PATTERN = /\best\.audio\.play\s*\(\s*(['"])([^'"]+)\1/g;
@@ -200,7 +208,8 @@ const EST_PROGRAM_CAPABILITY_PROTOCOL_MINOR_REQUIREMENTS = Object.freeze([
     [CAPABILITY_RUNTIME_BASIC_EVENT_HATS, EST_PROGRAM_BASIC_EVENT_HATS_PROTOCOL_MINOR],
     [CAPABILITY_MOTOR_STALL_DETECTION, EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR],
     [CAPABILITY_AUDIO_PLAYBACK, EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR],
-    [CAPABILITY_RUNTIME_BROADCAST, EST_PROGRAM_BROADCAST_PROTOCOL_MINOR]
+    [CAPABILITY_RUNTIME_BROADCAST, EST_PROGRAM_BROADCAST_PROTOCOL_MINOR],
+    [CAPABILITY_LARGE_PYTHON_PROGRAM, EST_PROGRAM_LARGE_SOURCE_PROTOCOL_MINOR]
 ]);
 export const EST_CAPABILITY_NAMES = Object.freeze([
     [CAPABILITY_FIRMWARE_UPDATE, 'firmware-update'],
@@ -231,7 +240,8 @@ export const EST_CAPABILITY_NAMES = Object.freeze([
     [CAPABILITY_MOTOR_STALL_DETECTION, 'motor-stall-detection'],
     [CAPABILITY_AUDIO_PLAYBACK, 'audio-playback'],
     [CAPABILITY_AUDIO_RESOURCE_FLASH, 'audio-resource-flash'],
-    [CAPABILITY_RUNTIME_BROADCAST, 'runtime-broadcast']
+    [CAPABILITY_RUNTIME_BROADCAST, 'runtime-broadcast'],
+    [CAPABILITY_LARGE_PYTHON_PROGRAM, 'large-python-program']
 ]);
 
 export const capabilityNamesFor = capabilities => EST_CAPABILITY_NAMES
@@ -303,7 +313,7 @@ export const programRequiredCapabilitiesForSource = source => {
     if (sourceUsesExternalAudioResource(text)) {
         capabilities |= CAPABILITY_AUDIO_RESOURCE_FLASH;
     }
-    if (/^@rt\.on_(?:brick_button|condition|timer_gt)\b/gm.test(text)) {
+    if (/^@rt\.on_(?:brick_button|condition(?:_async)?|timer_gt)\b/gm.test(text)) {
         capabilities |= CAPABILITY_RUNTIME_BASIC_EVENT_HATS;
     }
     if (/\brt\.broadcast\s*\(|^@rt\.on_broadcast\s*\(/m.test(text)) {
@@ -326,6 +336,15 @@ export const programRequiredCapabilitiesForSource = source => {
 
 export const programMinimumFirmwareVersionForSource = source => {
     const text = typeof source === 'string' ? source : Buffer.from(source || '').toString('utf8');
+    if (/\best\.display\.bitmap\s*\([^\n]*\bbytes\.fromhex\s*\(/.test(text)) {
+        return EST_PROGRAM_DISPLAY_DRAW_API_MIN_FIRMWARE_VERSION;
+    }
+    if (/\brt\.(?:on_condition_async|wait_until_async)\s*\(/.test(text)) {
+        return EST_PROGRAM_ASYNC_SENSOR_CONDITION_API_MIN_FIRMWARE_VERSION;
+    }
+    if (/\brt\.sensor_(?:color_|temperature|touch_|ultrasonic_|infrared_|gyro_)/.test(text)) {
+        return EST_PROGRAM_SENSOR_COOPERATIVE_API_MIN_FIRMWARE_VERSION;
+    }
     if (/\brt\.broadcast\s*\(|^@rt\.on_broadcast\s*\(/m.test(text)) {
         return EST_PROGRAM_BROADCAST_API_MIN_FIRMWARE_VERSION;
     }
@@ -385,8 +404,8 @@ export const buildPythonProgramStatusFrame = () => buildFrame(
 );
 
 export const buildPythonProgramBeginFrame = (length, sourceCrc32) => {
-    if (!Number.isInteger(length) || length < 1 || length > PYTHON_PROGRAM_MAX_SIZE) {
-        throw new RangeError(`Python program length must be 1..${PYTHON_PROGRAM_MAX_SIZE} bytes`);
+    if (!Number.isInteger(length) || length < 1 || length > PYTHON_PROGRAM_PROTOCOL_MAX_SIZE) {
+        throw new RangeError(`Python program length must be 1..${PYTHON_PROGRAM_PROTOCOL_MAX_SIZE} bytes`);
     }
     assertUint32(sourceCrc32, 'Python program CRC32');
     const payload = new Uint8Array(7);
@@ -398,14 +417,14 @@ export const buildPythonProgramBeginFrame = (length, sourceCrc32) => {
 
 export const buildPythonProgramChunkFrame = (offset, chunk) => {
     const chunkBytes = Uint8Array.from(chunk);
-    if (!Number.isInteger(offset) || offset < 0 || offset >= PYTHON_PROGRAM_MAX_SIZE) {
-        throw new RangeError(`Python program offset must be 0..${PYTHON_PROGRAM_MAX_SIZE - 1}`);
+    if (!Number.isInteger(offset) || offset < 0 || offset >= PYTHON_PROGRAM_PROTOCOL_MAX_SIZE) {
+        throw new RangeError(`Python program offset must be 0..${PYTHON_PROGRAM_PROTOCOL_MAX_SIZE - 1}`);
     }
     if (chunkBytes.length < 1 || chunkBytes.length > PYTHON_PROGRAM_CHUNK_SIZE) {
         throw new RangeError(`Python program chunk must be 1..${PYTHON_PROGRAM_CHUNK_SIZE} bytes`);
     }
-    if (offset + chunkBytes.length > PYTHON_PROGRAM_MAX_SIZE) {
-        throw new RangeError(`Python program chunk exceeds ${PYTHON_PROGRAM_MAX_SIZE} bytes`);
+    if (offset + chunkBytes.length > PYTHON_PROGRAM_PROTOCOL_MAX_SIZE) {
+        throw new RangeError(`Python program chunk exceeds ${PYTHON_PROGRAM_PROTOCOL_MAX_SIZE} bytes`);
     }
     const payload = new Uint8Array(3 + chunkBytes.length);
     payload[0] = PYTHON_PROGRAM_ACTION_CHUNK;
@@ -526,12 +545,15 @@ export const parsePythonProgramResponse = report => {
 
 export const parsePersistentProgramResponse = report => {
     const parsed = parseFrame(report, COMMAND_PERSISTENT_PROGRAM);
-    if (!parsed || ![28, 40, 76].includes(parsed.payload.length)) {
+    if (!parsed || ![28, 40, 76, 84].includes(parsed.payload.length)) {
         return null;
     }
     const payload = parsed.payload;
-    if (payload.length === 76) {
+    if (payload.length === 76 || payload.length === 84) {
+        const currentSchema = payload.length === 84;
         const nameLength = Math.min(payload[14], PERSISTENT_PROGRAM_NAME_MAX_BYTES);
+        const maskOffset = 39;
+        const nameOffset = currentSchema ? 47 : 41;
         return {
             schemaVersion: payload[0],
             result: payload[1],
@@ -543,7 +565,7 @@ export const parsePersistentProgramResponse = report => {
             recordType: payload[7],
             generation: readUint32LE(payload, 8),
             sourceLength: readUint16LE(payload, 12),
-            programName: Buffer.from(payload.slice(41, 41 + nameLength)).toString('utf8'),
+            programName: Buffer.from(payload.slice(nameOffset, nameOffset + nameLength)).toString('utf8'),
             lastError: payload[15],
             sourceCrc32: readUint32LE(payload, 16),
             regionStart: readUint32LE(payload, 20),
@@ -551,10 +573,11 @@ export const parsePersistentProgramResponse = report => {
             slotSize: readUint32LE(payload, 28),
             flashSize: readUint32LE(payload, 32),
             jedecId: Array.from(payload.slice(36, 39)),
-            erasedSectorMask: payload[39],
-            occupiedSectorMask: payload[40],
-            slotCount: payload[72],
-            sectorsPerSlot: payload[73]
+            erasedSectorMask: currentSchema ? readUint32LE(payload, maskOffset) : payload[39],
+            occupiedSectorMask: currentSchema ? readUint32LE(payload, maskOffset + 4) : payload[40],
+            slotCount: currentSchema ? payload[78] : payload[72],
+            sectorsPerSlot: currentSchema ? payload[79] : payload[73],
+            maxProgramBytes: currentSchema ? readUint32LE(payload, 80) : PYTHON_PROGRAM_LEGACY_MAX_SIZE
         };
     }
     return {
@@ -579,7 +602,8 @@ export const parsePersistentProgramResponse = report => {
         sourceCrc32: payload.length === 40 ? readUint32LE(payload, 36) : 0,
         programSlotId: 0,
         programSlotCount: 1,
-        programName: ''
+        programName: '',
+        maxProgramBytes: PYTHON_PROGRAM_LEGACY_MAX_SIZE
     };
 };
 
@@ -589,6 +613,43 @@ export const parseHeartbeatResponse = report => {
         return null;
     }
     return String.fromCharCode(...parsed.payload);
+};
+
+export const buildMotorTypeFrame = (action = null, motorPort = null) => {
+    if (action === null && motorPort === null) {
+        return buildFrame(COMMAND_MOTOR_TYPE);
+    }
+    if (!Number.isInteger(action) || action < 0 || action > 0xff) {
+        throw new RangeError('EST motor type action must fit uint8');
+    }
+    if (!Number.isInteger(motorPort) || motorPort < 0 || motorPort > 3) {
+        throw new RangeError('EST motor port must be 0, 1, 2, or 3');
+    }
+    return buildFrame(COMMAND_MOTOR_TYPE, Uint8Array.from([action, motorPort]));
+};
+
+export const parseMotorTypeResponse = report => {
+    const parsed = parseFrame(report, COMMAND_MOTOR_TYPE);
+    if (!parsed || ![21, 53, 57].includes(parsed.payload.length)) {
+        return null;
+    }
+    const payload = parsed.payload;
+    const entrySize = {21: 5, 53: 13, 57: 14}[payload.length];
+    const motors = [];
+    for (let index = 0; index < 4; index++) {
+        const offset = 1 + (index * entrySize);
+        motors.push({
+            motorType: payload[offset],
+            adcRaw: readUint16LE(payload, offset + 1),
+            millivolts: readUint16LE(payload, offset + 3),
+            pin6LowAdcRaw: entrySize >= 13 ? readUint16LE(payload, offset + 5) : 0,
+            pin6LowMillivolts: entrySize >= 13 ? readUint16LE(payload, offset + 7) : 0,
+            pin5PullupAdcRaw: entrySize >= 13 ? readUint16LE(payload, offset + 9) : 0,
+            pin5PullupMillivolts: entrySize >= 13 ? readUint16LE(payload, offset + 11) : 0,
+            pin5PullupHigh: entrySize === 14 ? payload[offset + 13] !== 0 : false
+        });
+    }
+    return {result: payload[0], motors};
 };
 
 const BATTERY_SOC_CURVE = Object.freeze([
@@ -637,7 +698,7 @@ export const batteryPercentFromSampleMv = sampleMv => {
 
 export const parseDeviceStatusResponse = report => {
     const parsed = parseFrame(report, 0x19);
-    if (!parsed || parsed.payload.length !== 72) {
+    if (!parsed || ![72, 76].includes(parsed.payload.length)) {
         return null;
     }
     const payload = parsed.payload;
@@ -687,7 +748,8 @@ export const parseDeviceStatusResponse = report => {
         capabilities: readUint32(16),
         uptimeMs: readUint32(20),
         motors,
-        sensors
+        sensors,
+        maxProgramBytes: payload.length === 76 ? readUint32(72) : PYTHON_PROGRAM_LEGACY_MAX_SIZE
     };
 };
 

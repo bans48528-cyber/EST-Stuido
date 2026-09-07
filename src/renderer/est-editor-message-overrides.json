@@ -9,7 +9,8 @@
     "gui.alerts.creating": "Creating new project...",
     "gui.alerts.savingError": "Project could not be saved.",
     "gui.alerts.savesuccess": "Project saved.",
-    "gui.projectLoader.loadError": "The selected EST Studio project could not be opened."
+    "gui.projectLoader.loadError": "The selected EST Studio project could not be opened.",
+    "gui.crashMessage.description": "We are so sorry, but it looks like EST Studio has crashed. This bug has been automatically reported to the EST Studio Team. Please refresh your page to try again."
   },
   "ru": {
     "gui.menuBar.LanguageSelector": "Язык",
@@ -21,7 +22,8 @@
     "gui.alerts.creating": "Создание нового проекта...",
     "gui.alerts.savingError": "Не удалось сохранить проект.",
     "gui.alerts.savesuccess": "Проект сохранен.",
-    "gui.projectLoader.loadError": "Не удалось открыть выбранный проект EST Studio."
+    "gui.projectLoader.loadError": "Не удалось открыть выбранный проект EST Studio.",
+    "gui.crashMessage.description": "К сожалению, в работе EST Studio произошел сбой. Этот сбой был автоматически отправлен команде EST Studio. Перезагрузите страницу и повторите попытку."
   },
   "zh-cn": {
     "gui.menuBar.LanguageSelector": "语言菜单",
@@ -33,7 +35,8 @@
     "gui.alerts.creating": "正在创建新作品...",
     "gui.alerts.savingError": "作品无法保存。",
     "gui.alerts.savesuccess": "作品已保存。",
-    "gui.projectLoader.loadError": "无法打开所选 EST Studio 工程。"
+    "gui.projectLoader.loadError": "无法打开所选 EST Studio 工程。",
+    "gui.crashMessage.description": "很抱歉，EST Studio 出故障了。这个问题已经自动报告给 EST Studio 开发团队。请刷新页面再试试。"
   },
   "zh-tw": {
     "gui.menuBar.LanguageSelector": "語言選單",
@@ -45,7 +48,8 @@
     "gui.alerts.creating": "正在建立新專案...",
     "gui.alerts.savingError": "專案無法儲存。",
     "gui.alerts.savesuccess": "專案已儲存。",
-    "gui.projectLoader.loadError": "無法打開所選 EST Studio 專案。"
+    "gui.projectLoader.loadError": "無法打開所選 EST Studio 專案。",
+    "gui.crashMessage.description": "很抱歉，EST Studio 發生故障。這個問題已經自動報告給 EST Studio 開發團隊。請重新載入頁面再試一次。"
   },
   "pt-br": {
     "gui.menuBar.LanguageSelector": "Idioma",
@@ -57,6 +61,7 @@
     "gui.alerts.creating": "Criando novo projeto...",
     "gui.alerts.savingError": "Nao foi possivel salvar o projeto.",
     "gui.alerts.savesuccess": "Projeto salvo.",
-    "gui.projectLoader.loadError": "Nao foi possivel abrir o projeto EST Studio selecionado."
+    "gui.projectLoader.loadError": "Nao foi possivel abrir o projeto EST Studio selecionado.",
+    "gui.crashMessage.description": "Lamentamos, mas o EST Studio apresentou uma falha. O problema foi informado automaticamente a equipe do EST Studio. Recarregue a pagina e tente novamente."
   }
 }

@@ -1,0 +1,85 @@
+.mascot {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 60px;
+    height: 60px;
+    pointer-events: none;
+    user-select: none;
+    isolation: isolate;
+    contain: layout paint;
+}
+.mascot > svg { display: block; width: 100%; height: 100%; overflow: hidden; }
+.mascot svg * { transform-box: fill-box; transform-origin: center; }
+.face, .effect { display: none; }
+.mascot[data-state="idle"] .idleFace,
+.mascot[data-state="thinking"] .thinkingFace,
+.mascot[data-state="replying"] .replyingFace,
+.mascot[data-state="success"] .successFace,
+.mascot[data-state="error"] .errorFace,
+.mascot[data-state="thinking"] .thinkingEffect,
+.mascot[data-state="replying"] .replyingEffect,
+.mascot[data-state="success"] .successEffect,
+.mascot[data-state="error"] .errorEffect { display: block; }
+
+.mascot[data-state="idle"] .body { animation: float 3.2s ease-in-out infinite; }
+.mascot[data-state="idle"] .eye { animation: blink 5.8s ease-in-out infinite; }
+.mascot[data-state="idle"] .antennaTip { animation: breathe 2.6s ease-in-out infinite; }
+.mascot[data-state="idle"] .shadow { animation: shadowBreathe 3.2s ease-in-out infinite; }
+.mascot[data-state="thinking"] .body { animation: lean 1.8s ease-in-out infinite; }
+.mascot[data-state="thinking"] .antenna { animation: antennaThink 1.8s ease-in-out infinite; }
+.antenna { transform-origin: 50% 100% !important; }
+.mascot[data-state="thinking"] .orbit { animation: orbit 2s linear infinite; }
+.mascot[data-state="thinking"] .loading { animation: orbit 1.15s linear infinite; }
+.mascot[data-state="thinking"] .leftEar { animation: sidePulse 1.1s ease-in-out infinite alternate; }
+.mascot[data-state="thinking"] .rightEar { animation: sidePulse 1.1s -.55s ease-in-out infinite alternate; }
+.mascot[data-state="replying"] .body { animation: speak .8s ease-in-out infinite; }
+.mascot[data-state="replying"] .screenGloss { animation: screenBreathe 1.5s ease-in-out infinite; }
+.mascot[data-state="replying"] .waveOne { animation: wave 1.2s ease-out infinite; }
+.mascot[data-state="replying"] .waveTwo { animation: wave 1.2s -.35s ease-out infinite; }
+.mascot[data-state="replying"] .eqBar { animation: equalize .46s ease-in-out infinite alternate; }
+.mascot[data-state="replying"] .eqBar:nth-child(even) { animation-delay: -.23s; animation-direction: alternate-reverse; }
+.mascot[data-state="success"] .body { animation: hop 1.35s cubic-bezier(.24,.8,.32,1) both; }
+.mascot[data-state="success"] .spark { animation: sparkle 1.35s ease-out both; }
+.mascot[data-state="success"] .sparkTwo { animation-delay: .12s; animation-duration: 1.2s; }
+.mascot[data-state="success"] .trail { animation: trail 1.35s ease-out both; }
+.mascot[data-state="success"] .shadow { animation: hopShadow 1.35s ease-out both; }
+.mascot[data-state="error"] .body { animation: sink 1.5s ease-in-out both; }
+.mascot[data-state="error"] .antenna { transform: rotate(42deg); }
+.mascot[data-state="error"] .antennaTip { opacity: .5; }
+.mascot[data-state="error"] .sideLight { opacity: .45; }
+.mascot[data-state="error"] .errorEffect { opacity: .6; }
+
+.mascot[data-compact="true"] { width: 34px; height: 36px; }
+.mascot[data-compact="true"] .shadow,
+.mascot[data-compact="true"] .effect { display: none; }
+.mascot[data-compact="true"] .body { animation-name: compactFloat; }
+.mascot[data-animated="false"] *,
+.mascot[data-animated="false"] *::before,
+.mascot[data-animated="false"] *::after { animation-play-state: paused !important; }
+
+@keyframes float { 0%,100% { transform: translateY(1px); } 50% { transform: translateY(-5px) rotate(1deg); } }
+@keyframes compactFloat { 0%,100% { transform: translateY(1px); } 50% { transform: translateY(-3px); } }
+@keyframes blink { 0%,43%,47%,100% { transform: scaleY(1); } 45% { transform: scaleY(.08); } }
+@keyframes breathe { 0%,100% { opacity: .76; transform: scale(.94); } 50% { opacity: 1; transform: scale(1.07); } }
+@keyframes shadowBreathe { 0%,100% { opacity: .8; } 50% { opacity: .5; transform: scaleX(.85); } }
+@keyframes lean { 0%,100% { transform: translate(-3px,2px) rotate(-12deg); } 50% { transform: translate(3px,-4px) rotate(-7deg); } }
+@keyframes antennaThink { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(12deg); } }
+@keyframes orbit { to { transform: rotate(360deg); } }
+@keyframes sidePulse { from { opacity: .6; transform: scale(.95); } to { opacity: 1; transform: scale(1.05); } }
+@keyframes speak { 0%,100% { transform: translateY(2px) rotate(2deg); } 50% { transform: translateY(-4px) rotate(4deg) scale(1.025); } }
+@keyframes screenBreathe { 0%,100% { opacity: .45; } 50% { opacity: 1; } }
+@keyframes wave { 0% { opacity: 0; transform: scale(.8); } 45% { opacity: .7; } 100% { opacity: 0; transform: scale(1.08); } }
+@keyframes equalize { from { transform: scaleY(.4); } to { transform: scaleY(1); } }
+@keyframes hop { 0%,100% { transform: translateY(1px); } 20% { transform: translateY(7px) scaleY(.97); } 42% { transform: translateY(-25px) rotate(12deg); } 65% { transform: translateY(-18px) rotate(-7deg); } 85% { transform: translateY(3px); } }
+@keyframes sparkle { 0%,15%,100% { opacity: 0; transform: scale(.3); } 40%,65% { opacity: 1; transform: scale(1) rotate(20deg); } }
+@keyframes trail { 0%,20%,100% { opacity: 0; } 40%,65% { opacity: .65; } }
+@keyframes hopShadow { 0%,100% { opacity: .8; } 42%,65% { opacity: .3; transform: scaleX(.7); } }
+@keyframes sink { 0% { transform: translateY(0); } 25%,100% { transform: translateY(13px) rotate(-5deg); } 42%,62% { transform: translate(3px,14px) rotate(-2deg); } 52%,72% { transform: translate(-3px,14px) rotate(-6deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .mascot *, .mascot *::before, .mascot *::after { animation: none !important; transition: none !important; }
+    .mascot[data-state="thinking"] .body { transform: rotate(-8deg); }
+    .mascot[data-state="replying"] .body { transform: rotate(3deg); }
+    .mascot[data-state="success"] .body { transform: rotate(5deg); }
+    .mascot[data-state="error"] .body { transform: translateY(8px) rotate(-4deg); }
+}

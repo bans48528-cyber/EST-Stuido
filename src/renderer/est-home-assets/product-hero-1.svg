@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">EST product placeholder one</title>
+  <desc id="desc">A clean product image placeholder for the EST home page carousel.</desc>
+  <rect width="1200" height="520" fill="#dfeaf5"/>
+  <rect x="0" y="390" width="1200" height="130" fill="#c9d8e8"/>
+  <circle cx="980" cy="118" r="88" fill="#ffe2a8"/>
+  <circle cx="1028" cy="150" r="44" fill="#f3b853"/>
+  <rect x="548" y="142" width="318" height="206" rx="28" fill="#243d59"/>
+  <rect x="585" y="176" width="148" height="92" rx="14" fill="#172838"/>
+  <circle cx="770" cy="220" r="18" fill="#41d6dc"/>
+  <circle cx="818" cy="220" r="18" fill="#f5c34d"/>
+  <rect x="604" y="292" width="224" height="18" rx="9" fill="#8aa5be"/>
+  <circle cx="620" cy="374" r="58" fill="#162532"/>
+  <circle cx="620" cy="374" r="30" fill="#6f879f"/>
+  <circle cx="794" cy="374" r="58" fill="#162532"/>
+  <circle cx="794" cy="374" r="30" fill="#6f879f"/>
+  <rect x="290" y="210" width="174" height="138" rx="22" fill="#2f7df6"/>
+  <rect x="322" y="240" width="110" height="54" rx="11" fill="#eaf4ff"/>
+  <rect x="314" y="322" width="126" height="16" rx="8" fill="#9fc7ff"/>
+  <rect x="370" y="160" width="28" height="54" rx="12" fill="#1f314a"/>
+  <circle cx="346" cy="382" r="44" fill="#172838"/>
+  <circle cx="410" cy="382" r="44" fill="#172838"/>
+  <rect x="146" y="312" width="80" height="82" rx="16" fill="#00a9b8"/>
+  <rect x="176" y="248" width="22" height="72" rx="11" fill="#1f314a"/>
+  <circle cx="187" cy="228" r="22" fill="#ffffff"/>
+  <rect x="915" y="276" width="126" height="74" rx="18" fill="#ffffff"/>
+  <path d="M952 276v-54h52v54" fill="none" stroke="#1f314a" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="930" y="302" width="94" height="15" rx="7.5" fill="#d8e0eb"/>
+  <path d="M84 418c144-36 263-36 408 0s277 36 430 0" fill="none" stroke="#ffffff" stroke-width="10" opacity=".7"/>
+</svg>

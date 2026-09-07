@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">EST product placeholder three</title>
+  <desc id="desc">A product kit components placeholder for the EST home page carousel.</desc>
+  <rect width="1200" height="520" fill="#eef3f8"/>
+  <rect x="0" y="384" width="1200" height="136" fill="#d5e0ea"/>
+  <rect x="220" y="132" width="188" height="152" rx="28" fill="#2f7df6"/>
+  <rect x="256" y="164" width="116" height="54" rx="12" fill="#eaf4ff"/>
+  <circle cx="278" cy="246" r="14" fill="#ffffff"/>
+  <circle cx="322" cy="246" r="14" fill="#ffffff"/>
+  <circle cx="366" cy="246" r="14" fill="#ffffff"/>
+  <rect x="478" y="150" width="154" height="112" rx="24" fill="#1f314a"/>
+  <circle cx="524" cy="206" r="20" fill="#41d6dc"/>
+  <circle cx="586" cy="206" r="20" fill="#f5c34d"/>
+  <rect x="708" y="126" width="128" height="142" rx="24" fill="#ffffff"/>
+  <path d="M734 170h76M734 204h76M734 238h48" stroke="#7f97ac" stroke-width="14" stroke-linecap="round"/>
+  <rect x="862" y="176" width="118" height="96" rx="22" fill="#00a9b8"/>
+  <rect x="890" y="204" width="62" height="18" rx="9" fill="#e8fbfd"/>
+  <rect x="162" y="336" width="160" height="72" rx="20" fill="#ffffff"/>
+  <circle cx="204" cy="372" r="18" fill="#e75d48"/>
+  <circle cx="248" cy="372" r="18" fill="#f39a21"/>
+  <circle cx="292" cy="372" r="18" fill="#1eaa5e"/>
+  <rect x="402" y="322" width="164" height="92" rx="22" fill="#ffffff"/>
+  <path d="M442 368h82" stroke="#2f7df6" stroke-width="18" stroke-linecap="round"/>
+  <path d="M704 334h164v74H704z" fill="#ffffff"/>
+  <path d="M738 370h96" stroke="#1f314a" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="958" cy="372" r="48" fill="#18293b"/>
+  <circle cx="958" cy="372" r="22" fill="#85a2b8"/>
+  <path d="M74 430h1048" stroke="#ffffff" stroke-width="10" stroke-linecap="round" opacity=".75"/>
+  <path d="M120 452h740" stroke="#becbda" stroke-width="10" stroke-linecap="round" opacity=".8"/>
+</svg>

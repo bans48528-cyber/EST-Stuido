@@ -1,0 +1,37 @@
+{
+  "en": {
+    "index.cameraPermissionDeniedMessage": "Permission to use the camera has been denied. EST Studio will not be able to take a photo or use video sensing blocks.",
+    "index.darwinPermissionDeniedInstructions": "To change EST Studio permissions, please check \"Security & Privacy\" in System Preferences.",
+    "index.microphonePermissionDeniedMessage": "Permission to use the microphone has been denied. EST Studio will not be able to record sounds or detect loudness.",
+    "index.permissionDeniedInstructions": "To change EST Studio permissions, please check your system settings and restart EST Studio.",
+    "index.questionLeave": "Leave EST Studio?"
+  },
+  "ru": {
+    "index.cameraPermissionDeniedMessage": "Отказано в разрешении на использование камеры. EST Studio не сможет делать фото или использовать блоки распознавания видео.",
+    "index.darwinPermissionDeniedInstructions": "Чтобы изменить разрешения EST Studio, откройте раздел «Безопасность и конфиденциальность» в Системных настройках.",
+    "index.microphonePermissionDeniedMessage": "Отказано в разрешении на использование микрофона. EST Studio не сможет записывать звуки или определять громкость.",
+    "index.permissionDeniedInstructions": "Чтобы изменить разрешения EST Studio, проверьте настройки системы и перезапустите EST Studio.",
+    "index.questionLeave": "Выйти из EST Studio?"
+  },
+  "zh-cn": {
+    "index.cameraPermissionDeniedMessage": "使用摄像头的权限已被拒绝。EST Studio 将无法拍照或使用视频侦测块。",
+    "index.darwinPermissionDeniedInstructions": "要更改 EST Studio 的权限，请检查“系统设置”中的“隐私与安全性”设置。",
+    "index.microphonePermissionDeniedMessage": "使用麦克风的权限已被拒绝。EST Studio 将无法录制声音或检测响度。",
+    "index.permissionDeniedInstructions": "要更改 EST Studio 的权限，请检查系统设置并重新启动 EST Studio。",
+    "index.questionLeave": "离开 EST Studio？"
+  },
+  "zh-tw": {
+    "index.cameraPermissionDeniedMessage": "使用攝像頭的權限已被拒絕。EST Studio 將無法拍照或使用視頻偵測塊。",
+    "index.darwinPermissionDeniedInstructions": "要更改 EST Studio 的權限，請檢查「系統設定」中的「隱私權與安全性」設定。",
+    "index.microphonePermissionDeniedMessage": "使用麥克風的權限已被拒絕。EST Studio 將無法錄製聲音或檢測音量。",
+    "index.permissionDeniedInstructions": "要更改 EST Studio 的權限，請檢查系統設定並重新啟動 EST Studio。",
+    "index.questionLeave": "離開 EST Studio？"
+  },
+  "pt-br": {
+    "index.cameraPermissionDeniedMessage": "A permissão para usar a câmera foi negada. O EST Studio não poderá tirar fotos nem usar blocos de detecção de vídeo.",
+    "index.darwinPermissionDeniedInstructions": "Para alterar as permissões do EST Studio, verifique Privacidade e Segurança nos Ajustes do Sistema.",
+    "index.microphonePermissionDeniedMessage": "A permissão para usar o microfone foi negada. O EST Studio não poderá gravar sons nem detectar o volume.",
+    "index.permissionDeniedInstructions": "Para alterar as permissões do EST Studio, verifique as configurações do sistema e reinicie o EST Studio.",
+    "index.questionLeave": "Sair do EST Studio?"
+  }
+}

@@ -8,6 +8,7 @@ import {connect} from 'react-redux';
 
 import {
     EST_CONNECTION_STATUS_EVENT,
+    EST_LEGACY_PROGRAM_MAX_BYTES,
     EST_PROGRAM_ACTIVITY_EVENT
 } from './est-connection-status';
 import {getEstText} from './est-i18n';
@@ -58,6 +59,7 @@ class EstProgramControls extends React.Component {
             isEstConnected: false,
             isSlotMenuOpen: false,
             operationMessage: null,
+            programMaxBytes: EST_LEGACY_PROGRAM_MAX_BYTES,
             programActionsAllowed: false,
             selectedSlot: readStoredSlot()
         };
@@ -90,9 +92,12 @@ class EstProgramControls extends React.Component {
 
     handleConnectionStatus (event) {
         const status = event && event.detail;
+        const reportedLimit = Number(status && status.maxProgramBytes);
         this.setState({
             isEstConnected: Boolean(status && status.isConnected),
-            programActionsAllowed: Boolean(status && status.isConnected && status.isCompatible)
+            programActionsAllowed: Boolean(status && status.isConnected && status.isCompatible),
+            programMaxBytes: Number.isInteger(reportedLimit) && reportedLimit > 0 ?
+                reportedLimit : EST_LEGACY_PROGRAM_MAX_BYTES
         });
     }
 
@@ -213,9 +218,12 @@ class EstProgramControls extends React.Component {
             isSlotMenuOpen,
             operationMessage,
             programActionsAllowed,
+            programMaxBytes,
             selectedSlot
         } = this.state;
         const controlsBusy = Boolean(busyAction);
+        const programBytes = new TextEncoder().encode(this.props.codeEditorValue).length;
+        const programTooLarge = programBytes > programMaxBytes;
         return (
             <div
                 aria-label={getEstText('programControls.group', locale)}
@@ -309,10 +317,11 @@ class EstProgramControls extends React.Component {
                         aria-busy={busyAction === 'run'}
                         className={`${styles.controlButton} ${styles.runButton}`}
                         data-action="run"
-                        disabled={controlsBusy || !programActionsAllowed}
-                        title={programActionsAllowed ?
-                            getEstText('programControls.runProgram', locale) :
-                            getEstText('programControls.runNeedsFirmware', locale)}
+                        disabled={controlsBusy || !programActionsAllowed || programTooLarge}
+                        title={programTooLarge ?
+                            getEstText('programControls.programSizeExceeded', locale) : (programActionsAllowed ?
+                                getEstText('programControls.runProgram', locale) :
+                                getEstText('programControls.runNeedsFirmware', locale))}
                         type="button"
                         onClick={this.handleAction}
                     >
@@ -329,10 +338,11 @@ class EstProgramControls extends React.Component {
                         aria-busy={busyAction === 'download'}
                         className={`${styles.controlButton} ${styles.downloadButton}`}
                         data-action="download"
-                        disabled={controlsBusy || !programActionsAllowed}
-                        title={programActionsAllowed ?
-                            getEstText('programControls.downloadProgram', locale) :
-                            getEstText('programControls.downloadNeedsFirmware', locale)}
+                        disabled={controlsBusy || !programActionsAllowed || programTooLarge}
+                        title={programTooLarge ?
+                            getEstText('programControls.programSizeExceeded', locale) : (programActionsAllowed ?
+                                getEstText('programControls.downloadProgram', locale) :
+                                getEstText('programControls.downloadNeedsFirmware', locale))}
                         type="button"
                         onClick={this.handleAction}
                     >

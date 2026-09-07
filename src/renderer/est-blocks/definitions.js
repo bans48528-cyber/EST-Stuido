@@ -1,4 +1,9 @@
 import displayBlockIcon from './est-display-icon.svg';
+import {
+    EST_DISPLAY_BITMAP_FIELD_TYPE,
+    makeEstDisplayBitmapField,
+    registerEstDisplayBitmapField
+} from './display-bitmap-field';
 import displayImageThumbnails from './display-image-thumbnails';
 import driveBlockIcon from './est-drive-icon.svg';
 import eventHatBlockIcon from './est-event-hat-icon.svg';
@@ -84,6 +89,7 @@ const CATEGORY_BLOCK_IDS = {
     display: [
         'display_image_for',
         'display_image',
+        'display_draw',
         'display_text_line',
         'display_text_xy',
         'display_clear',
@@ -843,6 +849,9 @@ const makeDisplayDefinitions = (locale = getCurrentEstLocale()) => {
         commandWithIcon('display', 'display_image', displayIcon, getEstText('block.display.image', locale), [
             dropdown('IMAGE', IMAGE_OPTIONS)
         ]),
+        commandWithIcon('display', 'display_draw', displayIcon, getEstText('block.display.draw', locale), [
+            makeEstDisplayBitmapField('BITMAP')
+        ]),
         commandWithIcon('display', 'display_text_line', displayIcon, getEstText('block.display.textLine', locale), [
             valueInput('LINE', 'Number'),
             valueInput('TEXT')
@@ -1431,6 +1440,7 @@ export const registerEstBlocks = ScratchBlocks => {
     configureEstPianoNotePicker(ScratchBlocks);
     if (registeredTargets.has(ScratchBlocks)) return;
     registerEstSteeringField(ScratchBlocks);
+    registerEstDisplayBitmapField(ScratchBlocks);
     registerEstInfraredChannelMigrationExtension(ScratchBlocks);
     defineEstBlocksWithLocale(ScratchBlocks);
     registerEstLocaleListener(ScratchBlocks);
@@ -1450,6 +1460,7 @@ export {
     DRIVE_BLOCK_IDS,
     DRIVE_COLOURS,
     DRIVE_DIRECTION_OPTIONS,
+    EST_DISPLAY_BITMAP_FIELD_TYPE,
     EST_STEERING_FIELD_TYPE,
     displayImageThumbnails as DISPLAY_IMAGE_THUMBNAILS,
     EST_STEERING_DIAL_COLOURS,

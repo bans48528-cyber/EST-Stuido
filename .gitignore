@@ -10,6 +10,10 @@ npm-*
 /*.tgz
 /*.tar.gz
 
+# Python
+__pycache__/
+*.pyc
+
 # Testing
 /.nyc_output
 /coverage

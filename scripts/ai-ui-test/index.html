@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-cn">
+<head><meta charset="UTF-8"><title>EST AI UI isolated test</title>
+<style>
+body {margin:0;background:#f6f7f9;font-family:"Segoe UI","Microsoft YaHei",sans-serif}
+#menu {height:64px;position:fixed;inset:0 0 auto;background:white;z-index:1000;
+border-bottom:1px solid #e7eaf0;padding:0 30px;display:flex;align-items:stretch;color:#74818d}
+#menu .menu-bar_main-menu_fixture,#menu .menu-bar_tail-menu_fixture {display:flex;align-items:center;gap:22px}
+#menu .menu-bar_tail-menu_fixture {margin-left:auto}
+#menu .menu-bar_file-menu_fixture {flex:1}
+#menu strong {color:#239dc5;font-size:18px}
+.est-menu-bar-home-button {width:48px;height:48px;padding:0;border:0;border-radius:14px;background:transparent}
+.est-menu-bar-home-icon {width:48px;height:48px;object-fit:contain}
+#workspace {position:absolute;inset:84px 500px 24px 24px;border:1px solid #e2e7ed;border-radius:16px;overflow:hidden}
+#run-controls {position:fixed;right:20px;bottom:20px;width:360px;height:72px;border:1px solid #dfe4e8;
+border-radius:36px;background:#fff;box-shadow:0 6px 24px #28344216}
+</style></head>
+<body><div id="menu" class="menu-bar_menu-bar_fixture">
+<div class="menu-bar_main-menu_fixture"><strong>EST Studio</strong><span>文件</span><span>编辑</span></div>
+<div class="menu-bar_file-menu_fixture"></div>
+<div class="menu-bar_tail-menu_fixture"><span>EST 已连接</span><span>语言</span></div>
+</div><div id="workspace"></div><div id="run-controls"></div><div id="root"></div><script src="renderer.js"></script></body>
+</html>

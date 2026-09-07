@@ -119,6 +119,7 @@ const movementCategory = locale => category(getEstText('category.movement', loca
 const displayCategory = locale => category(getEstText('category.display', locale), 'display', 'display', [
     block('display_image_for', `${field('IMAGE', 'Eyes/Neutral')}${numberShadow('SECONDS', 2)}`),
     block('display_image', field('IMAGE', 'Eyes/Neutral')),
+    block('display_draw'),
     block('display_text_line', `${numberShadow('LINE', 1)}${textShadow('TEXT', 'EST')}`),
     block('display_text_xy', `${field('FONT', 'regular_black')}${numberShadow('X', 1)}${numberShadow('Y', 1)}${textShadow('TEXT', 'EST')}`),
     block('display_clear'),

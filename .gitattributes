@@ -5,6 +5,12 @@
 # People who (for example) rsync between Windows and Linux need this.
 
 # File types which we know are binary
+*.bin binary
+*.exe binary
+*.jpg binary
+*.mp3 binary
+*.pdf binary
+*.png binary
 
 # Prefer LF for most file types
 *.css text eol=lf

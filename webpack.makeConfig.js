@@ -59,6 +59,7 @@ const EST_VM_BLOCKS = path.resolve(__dirname, './src/renderer/est-blocks/runtime
 const EST_PYTHON_GENERATOR = path.resolve(__dirname, './src/renderer/est-blocks/python-generator.js');
 const EST_EXTENSION_LIBRARY = path.resolve(__dirname, './src/renderer/est-extensions/library.js');
 const EST_DEFAULT_PROJECT = path.resolve(__dirname, './src/renderer/est-project/default-project.js');
+const EST_AI_WORKSPACE = path.resolve(__dirname, './src/renderer/est-ai/est-ai-workspace.js');
 
 // PostCss
 const autoprefixer = require('autoprefixer');
@@ -334,7 +335,8 @@ const makeConfig = function (defaultConfig, options) {
                 'est-vm-blocks$': EST_VM_BLOCKS,
                 'est-python-generator$': EST_PYTHON_GENERATOR,
                 'est-extension-library$': EST_EXTENSION_LIBRARY,
-                'est-default-project$': EST_DEFAULT_PROJECT
+                'est-default-project$': EST_DEFAULT_PROJECT,
+                'est-ai-workspace$': EST_AI_WORKSPACE
             }
         }
     });

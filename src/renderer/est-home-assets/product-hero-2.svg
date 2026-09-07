@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">EST product placeholder two</title>
+  <desc id="desc">A classroom robot build placeholder for the EST home page carousel.</desc>
+  <rect width="1200" height="520" fill="#e7f2f2"/>
+  <rect x="0" y="372" width="1200" height="148" fill="#c7e1df"/>
+  <path d="M84 424c128-70 226-70 354 0s226 70 354 0 226-70 354 0" fill="none" stroke="#24435d" stroke-width="18" stroke-linecap="round" opacity=".18"/>
+  <rect x="416" y="198" width="372" height="132" rx="28" fill="#ffffff"/>
+  <rect x="452" y="152" width="118" height="86" rx="18" fill="#2f7df6"/>
+  <rect x="476" y="176" width="70" height="28" rx="8" fill="#dcefff"/>
+  <rect x="626" y="144" width="126" height="88" rx="18" fill="#1f314a"/>
+  <circle cx="664" cy="188" r="14" fill="#41d6dc"/>
+  <circle cx="714" cy="188" r="14" fill="#41d6dc"/>
+  <rect x="530" y="288" width="160" height="22" rx="11" fill="#d8e0eb"/>
+  <circle cx="464" cy="354" r="70" fill="#18293b"/>
+  <circle cx="464" cy="354" r="34" fill="#85a2b8"/>
+  <circle cx="742" cy="354" r="70" fill="#18293b"/>
+  <circle cx="742" cy="354" r="34" fill="#85a2b8"/>
+  <rect x="258" y="260" width="96" height="98" rx="18" fill="#f39a21"/>
+  <rect x="846" y="244" width="98" height="114" rx="20" fill="#1eaa5e"/>
+  <path d="M306 260v-48h588v32" fill="none" stroke="#24435d" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+  <circle cx="306" cy="210" r="18" fill="#24435d"/>
+  <circle cx="894" cy="242" r="18" fill="#24435d"/>
+  <rect x="140" y="112" width="116" height="82" rx="18" fill="#ffffff" opacity=".92"/>
+  <rect x="166" y="138" width="64" height="12" rx="6" fill="#2f7df6"/>
+  <rect x="166" y="162" width="44" height="12" rx="6" fill="#00a9b8"/>
+  <rect x="960" y="116" width="104" height="104" rx="22" fill="#ffffff" opacity=".92"/>
+  <circle cx="1012" cy="168" r="30" fill="#e75d48"/>
+</svg>

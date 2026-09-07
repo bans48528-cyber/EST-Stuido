@@ -24,10 +24,26 @@ import {
     openUpdateModal
 } from 'openblock-gui/src/reducers/modals';
 import {setUpdate} from 'openblock-gui/src/reducers/update';
+import {setProjectUnchanged} from 'openblock-gui/src/reducers/project-changed';
+import {setProjectTitle} from 'openblock-gui/src/reducers/project-title';
+import {selectLocale} from 'openblock-gui/src/reducers/locales';
 
 import MessageBoxType from 'openblock-gui/src/lib/message-box.js';
 
 import showPrivacyPolicy from './showPrivacyPolicy';
+import {getEstText} from './est-i18n';
+import {
+    canLoadHomeProject,
+    normalizeHomeProjectData
+} from './est-home-project';
+import {
+    EST_HOME_NEW_PROJECT_EVENT,
+    EST_HOME_OPEN_PROJECT_EVENT,
+    EST_HOME_PROJECT_FAILED_EVENT,
+    EST_HOME_PROJECT_OPENED_EVENT,
+    EST_HOME_SET_LOCALE_EVENT,
+    dispatchEstHomeEvent
+} from './est-home-events';
 
 const ignoreStorageInit = () => {};
 
@@ -41,10 +57,18 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
         constructor (props) {
             super(props);
             bindAll(this, [
+                'handleHomeLocaleChange',
+                'handleHomeNewProject',
+                'handleHomeOpenProject',
+                'handleHomeProjectLoad',
+                'prepareHomeProjectLoad',
+                'homeProjectCanReplaceCurrent',
                 'handleSetTitleFromSave',
                 'handleShowMessageBox',
                 'handleUpdateProjectTitle'
             ]);
+            this.pendingHomeProject = null;
+            this.homeProjectLoadInProgress = false;
             this.props.onLoadingStarted();
             ipcRenderer.invoke('get-initial-project-data').then(initialProjectData => {
                 const hasInitialProject = initialProjectData && (initialProjectData.length > 0);
@@ -93,9 +117,80 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
             ipcRenderer.on('setPlatform', (event, args) => {
                 this.platform = args;
             });
+            window.addEventListener(EST_HOME_NEW_PROJECT_EVENT, this.handleHomeNewProject);
+            window.addEventListener(EST_HOME_OPEN_PROJECT_EVENT, this.handleHomeOpenProject);
+            window.addEventListener(EST_HOME_SET_LOCALE_EVENT, this.handleHomeLocaleChange);
+        }
+        componentDidUpdate (prevProps) {
+            if (this.pendingHomeProject && this.props.loadingState !== prevProps.loadingState) {
+                this.prepareHomeProjectLoad();
+            }
         }
         componentWillUnmount () {
             ipcRenderer.removeListener('setTitleFromSave', this.handleSetTitleFromSave);
+            window.removeEventListener(EST_HOME_NEW_PROJECT_EVENT, this.handleHomeNewProject);
+            window.removeEventListener(EST_HOME_OPEN_PROJECT_EVENT, this.handleHomeOpenProject);
+            window.removeEventListener(EST_HOME_SET_LOCALE_EVENT, this.handleHomeLocaleChange);
+        }
+        handleHomeNewProject () {
+            if (!this.homeProjectCanReplaceCurrent()) return;
+            this.props.onRequestNewProject();
+            dispatchEstHomeEvent(EST_HOME_PROJECT_OPENED_EVENT);
+        }
+        handleHomeOpenProject (event) {
+            if (!event.detail || !event.detail.data) {
+                dispatchEstHomeEvent(EST_HOME_PROJECT_FAILED_EVENT);
+                return;
+            }
+            if (!this.homeProjectCanReplaceCurrent()) return;
+            this.pendingHomeProject = Object.assign({}, event.detail, {
+                data: normalizeHomeProjectData(event.detail.data)
+            });
+            this.prepareHomeProjectLoad();
+        }
+        prepareHomeProjectLoad () {
+            if (!this.pendingHomeProject || this.homeProjectLoadInProgress ||
+                !canLoadHomeProject(this.props.loadingState)) {
+                return;
+            }
+            this.handleHomeProjectLoad();
+        }
+        handleHomeProjectLoad () {
+            const project = this.pendingHomeProject;
+            if (!project) return;
+            this.pendingHomeProject = null;
+            this.homeProjectLoadInProgress = true;
+            this.props.onLoadingStarted();
+            this.props.vm.loadProject(project.data)
+                .then(() => {
+                    this.props.onSetProjectTitle(project.title);
+                    this.props.onFinishHomeProject(true);
+                    dispatchEstHomeEvent(EST_HOME_PROJECT_OPENED_EVENT, {path: project.path});
+                    window.setTimeout(() => {
+                        ipcRenderer.invoke('est-home-capture-thumbnail', project.path).catch(() => {});
+                    }, 300);
+                })
+                .catch(error => {
+                    this.props.onFinishHomeProject(false);
+                    dispatchEstHomeEvent(EST_HOME_PROJECT_FAILED_EVENT, {
+                        message: error && error.message
+                    });
+                })
+                .then(() => {
+                    this.homeProjectLoadInProgress = false;
+                });
+        }
+        handleHomeLocaleChange (event) {
+            if (event.detail && event.detail.locale) {
+                this.props.onSelectLocale(event.detail.locale);
+            }
+        }
+        homeProjectCanReplaceCurrent () {
+            if (!this.props.projectChanged) return true;
+            return this.handleShowMessageBox(
+                MessageBoxType.confirm,
+                getEstText('home.replaceWarning', this.props.locale)
+            );
         }
         handleClickAbout () {
             ipcRenderer.send('open-about-window');
@@ -193,13 +288,17 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
     ScratchDesktopGUIComponent.propTypes = {
         loadingState: PropTypes.oneOf(LoadingStates),
         locale: PropTypes.string.isRequired,
+        onFinishHomeProject: PropTypes.func,
         onFetchedInitialProjectData: PropTypes.func,
         onHasInitialProject: PropTypes.func,
         onLoadedProject: PropTypes.func,
         onLoadingCompleted: PropTypes.func,
         onLoadingStarted: PropTypes.func,
         onRequestNewProject: PropTypes.func,
+        onSelectLocale: PropTypes.func,
+        onSetProjectTitle: PropTypes.func,
         onSetUpdate: PropTypes.func,
+        projectChanged: PropTypes.bool,
         // using PropTypes.instanceOf(VM) here will cause prop type warnings due to VM mismatch
         vm: GUIComponent.WrappedComponent.propTypes.vm
     };
@@ -208,6 +307,7 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
         return {
             loadingState: loadingState,
             locale: state.locales.locale,
+            projectChanged: state.scratchGui.projectChanged,
             vm: state.scratchGui.vm
         };
     };
@@ -231,6 +331,14 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
             return dispatch(onLoadedProject(loadingState, canSaveToServer, loadSuccess));
         },
         onRequestNewProject: () => dispatch(requestNewProject(false)),
+        onFinishHomeProject: success => {
+            if (success) {
+                window.setTimeout(() => dispatch(setProjectUnchanged()));
+            }
+            dispatch(closeLoadingProject());
+        },
+        onSelectLocale: locale => dispatch(selectLocale(locale)),
+        onSetProjectTitle: title => dispatch(setProjectTitle(title)),
         onSetUpdate: arg => {
             dispatch(setUpdate(arg));
             dispatch(openUpdateModal());

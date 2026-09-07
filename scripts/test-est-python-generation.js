@@ -32,6 +32,15 @@ const {
     registerEstPythonGenerator
 } = require(path.join(estBlocksRoot, 'python-generator.js'));
 const {
+    createEmptyEstDisplayBitmap,
+    decodeEstDisplayBitmap,
+    drawEstDisplayBitmapCircle,
+    drawEstDisplayBitmapRectangle,
+    encodeEstDisplayBitmap,
+    getEstDisplayBitmapPixel,
+    setEstDisplayBitmapPixel
+} = require(path.join(estBlocksRoot, 'display-bitmap.js'));
+const {
     isValidEstPythonIdentifier,
     toEstPythonIdentifier
 } = require(path.join(estBlocksRoot, 'python-names.js'));
@@ -616,6 +625,68 @@ assert.strictEqual(
     "est.display.image('Eyes/Neutral')\nest.display.refresh()\n"
 );
 
+const drawingPixels = createEmptyEstDisplayBitmap();
+setEstDisplayBitmapPixel(drawingPixels, 10, 20, true);
+setEstDisplayBitmapPixel(drawingPixels, 11, 20, true);
+setEstDisplayBitmapPixel(drawingPixels, 10, 21, true);
+const serializedDrawing = encodeEstDisplayBitmap(drawingPixels);
+assert.ok(serializedDrawing.startsWith('v1:'));
+assert.strictEqual(getEstDisplayBitmapPixel(decodeEstDisplayBitmap(serializedDrawing), 10, 20), true);
+assert.strictEqual(getEstDisplayBitmapPixel(decodeEstDisplayBitmap(serializedDrawing), 12, 20), false);
+
+const outlineRectangle = createEmptyEstDisplayBitmap();
+drawEstDisplayBitmapRectangle(outlineRectangle, {x: 2, y: 3}, {x: 6, y: 7}, false, 1);
+assert.strictEqual(getEstDisplayBitmapPixel(outlineRectangle, 2, 3), true);
+assert.strictEqual(getEstDisplayBitmapPixel(outlineRectangle, 4, 5), false);
+const filledRectangle = createEmptyEstDisplayBitmap();
+drawEstDisplayBitmapRectangle(filledRectangle, {x: 2, y: 3}, {x: 6, y: 7}, true, 1);
+assert.strictEqual(getEstDisplayBitmapPixel(filledRectangle, 4, 5), true);
+drawEstDisplayBitmapRectangle(filledRectangle, {x: 2, y: 3}, {x: 6, y: 7}, false, 1, false);
+assert.strictEqual(getEstDisplayBitmapPixel(filledRectangle, 2, 3), false);
+assert.strictEqual(getEstDisplayBitmapPixel(filledRectangle, 4, 5), true);
+drawEstDisplayBitmapRectangle(filledRectangle, {x: 2, y: 3}, {x: 6, y: 7}, true, 1, false);
+assert.strictEqual(getEstDisplayBitmapPixel(filledRectangle, 4, 5), false);
+
+const outlineCircle = createEmptyEstDisplayBitmap();
+drawEstDisplayBitmapCircle(outlineCircle, {x: 20, y: 20}, {x: 24, y: 20}, false, 1);
+assert.strictEqual(getEstDisplayBitmapPixel(outlineCircle, 20, 20), false);
+assert.strictEqual(getEstDisplayBitmapPixel(outlineCircle, 24, 20), true);
+const filledCircle = createEmptyEstDisplayBitmap();
+drawEstDisplayBitmapCircle(filledCircle, {x: 20, y: 20}, {x: 24, y: 20}, true, 1);
+assert.strictEqual(getEstDisplayBitmapPixel(filledCircle, 20, 20), true);
+drawEstDisplayBitmapCircle(filledCircle, {x: 20, y: 20}, {x: 24, y: 20}, false, 1, false);
+assert.strictEqual(getEstDisplayBitmapPixel(filledCircle, 24, 20), false);
+assert.strictEqual(getEstDisplayBitmapPixel(filledCircle, 20, 20), true);
+drawEstDisplayBitmapCircle(filledCircle, {x: 20, y: 20}, {x: 24, y: 20}, true, 1, false);
+assert.strictEqual(getEstDisplayBitmapPixel(filledCircle, 20, 20), false);
+resetGenerator();
+const displayDrawing = generator.display_draw({
+    values: {},
+    getFieldValue: name => (name === 'BITMAP' ? serializedDrawing : null)
+});
+assert.strictEqual(
+    displayDrawing,
+    "est.display.clear()\nest.display.bitmap(10, 20, 2, 2, bytes.fromhex('c080'))\nest.display.refresh()\n"
+);
+addSyntaxCase('display_custom_drawing', `${programPreamble()}\ndef generated_statement():\n${
+    indentCode(displayDrawing)
+}`);
+resetGenerator();
+assert.strictEqual(
+    generator.display_draw({values: {}, getFieldValue: () => 'v1:'}),
+    'est.display.clear()\nest.display.refresh()\n'
+);
+
+const fullScreenDrawing = createEmptyEstDisplayBitmap();
+fullScreenDrawing.fill(0xff);
+resetGenerator();
+const fullScreenDrawingCode = generator.display_draw({
+    values: {},
+    getFieldValue: name => (name === 'BITMAP' ? encodeEstDisplayBitmap(fullScreenDrawing) : null)
+});
+assert.match(fullScreenDrawingCode, /est\.display\.bitmap\(0, 0, 180, 128, bytes\.fromhex\('/);
+assert.ok(Buffer.byteLength(`${programPreamble()}\n${fullScreenDrawingCode}`, 'utf8') <= 8192);
+
 resetGenerator();
 const displayImageForWithSpace = generator.display_image_for({
     values: {SECONDS: '2'},
@@ -868,24 +939,24 @@ const sensorPortBlock = ({values = {}, fields = {}} = {}) => ({
     getFieldValue: name => fields[name]
 });
 [
-    ['sensor_color_reflection', {}, 'rt.color(port_var).reflection()'],
+    ['sensor_color_reflection', {}, 'rt.sensor_color_reflection(port_var)'],
     ['sensor_color_reflection_compare', {
         values: {VALUE: '50'},
         fields: {COMPARATOR: 'less'}
-    }, "rt.compare(rt.color(port_var).reflection(), 'less', 50)"],
+    }, "rt.compare(rt.sensor_color_reflection(port_var), 'less', 50)"],
     ['sensor_temperature', {
         fields: {UNIT: 'celsius'}
-    }, 'rt.temperature(port_var).celsius()'],
+    }, "rt.sensor_temperature(port_var, 'celsius')"],
     ['sensor_temperature', {
         fields: {UNIT: 'fahrenheit'}
-    }, 'rt.temperature(port_var).fahrenheit()'],
-    ['sensor_touch_pressed', {}, 'rt.touch(port_var).pressed()'],
+    }, "rt.sensor_temperature(port_var, 'fahrenheit')"],
+    ['sensor_touch_pressed', {}, 'rt.sensor_touch_pressed(port_var)'],
     ['sensor_ultrasonic_distance', {
         fields: {UNIT: 'centimeters'}
-    }, "rt.ultrasonic(port_var).distance('centimeters')"],
-    ['sensor_ir_proximity', {}, 'rt.infrared(port_var).proximity()'],
-    ['sensor_gyro_angle', {}, 'rt.gyro(port_var).angle()'],
-    ['sensor_gyro_reset', {}, 'rt.gyro(port_var).reset_angle()\n']
+    }, "rt.sensor_ultrasonic_distance(port_var, 'centimeters')"],
+    ['sensor_ir_proximity', {}, 'rt.sensor_infrared_proximity(port_var)'],
+    ['sensor_gyro_angle', {}, 'rt.sensor_gyro_angle(port_var)'],
+    ['sensor_gyro_reset', {}, 'rt.sensor_gyro_reset(port_var)\n']
 ].forEach(([blockId, blockOptions, expectedCode]) => {
     resetGenerator();
     const output = generator[blockId](sensorPortBlock(blockOptions));
@@ -898,59 +969,40 @@ const sensorDefaultPortBlock = ({values = {}, fields = {}} = {}) => ({
     getFieldValue: name => fields[name]
 });
 [
-    ['sensor_color_reflection', {}, '_est_device_color_1.reflection()',
-        'estDevice_color_1',
-        '_est_device_color_1 = rt.color(1)\n_est_device_color_1.reflection()\n'],
-    ['sensor_temperature', {}, '_est_device_temperature_1.celsius()',
-        'estDevice_temperature_1',
-        '_est_device_temperature_1 = rt.temperature(1)\n_est_device_temperature_1.celsius()\n'],
-    ['sensor_touch_pressed', {}, '_est_device_touch_1.pressed()',
-        'estDevice_touch_1',
-        '_est_device_touch_1 = rt.touch(1)\n_est_device_touch_1.pressed()\n'],
+    ['sensor_color_reflection', {}, "rt.sensor_color_reflection('1')"],
+    ['sensor_temperature', {}, "rt.sensor_temperature('1', 'celsius')"],
+    ['sensor_touch_pressed', {}, "rt.sensor_touch_pressed('1')"],
     ['sensor_ultrasonic_distance', {
         fields: {UNIT: 'centimeters'}
-    }, "_est_device_ultrasonic_1.distance('centimeters')",
-    'estDevice_ultrasonic_1',
-    "_est_device_ultrasonic_1 = rt.ultrasonic(1)\n_est_device_ultrasonic_1.distance('centimeters')\n"],
-    ['sensor_ir_proximity', {}, '_est_device_infrared_1.proximity()',
-        'estDevice_infrared_1',
-        '_est_device_infrared_1 = rt.infrared(1)\n_est_device_infrared_1.proximity()\n'],
-    ['sensor_gyro_angle', {}, '_est_device_gyro_1.angle()',
-        'estDevice_gyro_1',
-        '_est_device_gyro_1 = rt.gyro(1)\n_est_device_gyro_1.angle()\n']
-].forEach(([blockId, blockOptions, expectedCode, expectedKey, expectedSetup]) => {
+    }, "rt.sensor_ultrasonic_distance('1', 'centimeters')"],
+    ['sensor_ir_proximity', {}, "rt.sensor_infrared_proximity('1')"],
+    ['sensor_gyro_angle', {}, "rt.sensor_gyro_angle('1')"]
+].forEach(([blockId, blockOptions, expectedCode]) => {
     resetGenerator();
     const output = generator[blockId](sensorDefaultPortBlock(blockOptions));
     const code = Array.isArray(output) ? output[0] : output;
     assert.strictEqual(code, expectedCode, `${blockId} default port`);
-    assert.strictEqual(generator.libraries_[expectedKey], expectedSetup);
+    assert.deepStrictEqual(Object.keys(generator.libraries_), []);
 });
 
 resetGenerator();
 const fixedColorBlock = sensorDefaultPortBlock();
 assert.strictEqual(
     generator.sensor_color_reflection(fixedColorBlock)[0],
-    '_est_device_color_1.reflection()'
+    "rt.sensor_color_reflection('1')"
 );
 assert.strictEqual(
     generator.sensor_color_ambient(fixedColorBlock)[0],
-    '_est_device_color_1.ambient()'
+    "rt.sensor_color_ambient('1')"
 );
-assert.deepStrictEqual(Object.keys(generator.libraries_), ['estDevice_color_1']);
-assert.strictEqual(
-    generator.libraries_.estDevice_color_1,
-    '_est_device_color_1 = rt.color(1)\n_est_device_color_1.reflection()\n'
-);
+assert.deepStrictEqual(Object.keys(generator.libraries_), []);
 
 resetGenerator();
 const waitColorCode = generator.sensor_wait_color(sensorDefaultPortBlock({
     fields: {COLOR_EVENT: 'red'}
 }));
 assert.strictEqual(waitColorCode, "rt.wait_color('1', 'red')\n");
-assert.strictEqual(
-    generator.libraries_.estDevice_color_1,
-    '_est_device_color_1 = rt.color(1)\n_est_device_color_1.color()\n'
-);
+assert.deepStrictEqual(Object.keys(generator.libraries_), []);
 
 resetGenerator();
 const preparedReflection = generator.sensor_color_reflection(sensorDefaultPortBlock())[0];
@@ -965,14 +1017,63 @@ const preparedSensorProgram = [
     dictionaryCode(generator.libraries_),
     dictionaryCode(generator.setups_)
 ].join('\n');
-assert.ok(
-    preparedSensorProgram.indexOf('_est_device_color_1 = rt.color(1)') <
-    preparedSensorProgram.indexOf('@rt.on_start')
+assert.match(preparedSensorProgram, /@rt\.on_start\nasync def stack_1\(\):/);
+assert.match(preparedSensorProgram, /value = await rt\.sensor_color_reflection\('1'\)/);
+assert.doesNotMatch(preparedSensorProgram, /_est_device_/);
+
+resetGenerator();
+const conditionReflection = generator.sensor_color_reflection(sensorDefaultPortBlock())[0];
+assert.strictEqual(generator.event_condition({
+    type: 'event_condition',
+    id: 'sensor-condition-start',
+    values: {CONDITION: `${conditionReflection} < 50`},
+    nextCode: `${generator.INDENT}rt.display_text_line(1, 'ready')\n`,
+    nextConnection: {targetBlock: () => ({type: 'display_text_line'})}
+}), null);
+assert.match(
+    generator.libraries_.est_stack_1,
+    /async def _est_condition_stack_1\(\):\n  return await rt\.sensor_color_reflection\('1'\) < 50/
 );
-assert.ok(
-    preparedSensorProgram.indexOf('_est_device_color_1.reflection()') <
-    preparedSensorProgram.indexOf('rt.run()')
+assert.match(
+    generator.libraries_.est_stack_1,
+    /@rt\.on_condition_async\(_est_condition_stack_1\)\nasync def stack_1\(\):/
 );
+assert.doesNotMatch(generator.libraries_.est_stack_1, /@rt\.on_condition\(lambda:/);
+addSyntaxCase('cooperative_sensor_condition_event', [
+    programPreamble(),
+    dictionaryCode(generator.libraries_),
+    dictionaryCode(generator.setups_)
+].filter(Boolean).join('\n'));
+
+resetGenerator();
+const waitConditionReflection = generator.sensor_color_reflection(sensorDefaultPortBlock())[0];
+const cooperativeWaitCode = generator.control_wait_until({
+    values: {CONDITION: `${waitConditionReflection} < 50`},
+    getFieldValue: () => null
+});
+const cooperativeWaitStart = {
+    type: 'event_program_start',
+    id: 'sensor-wait-start',
+    nextCode: indentCode(cooperativeWaitCode),
+    nextConnection: {targetBlock: () => ({type: 'control_wait_until'})},
+    getFieldValue: () => null
+};
+resetGenerator([cooperativeWaitStart]);
+assert.strictEqual(generator.event_program_start(cooperativeWaitStart), null);
+assert.match(
+    generator.libraries_.est_stack_1,
+    /async def _est_wait_condition_1\(\):\n    return await rt\.sensor_color_reflection\('1'\) < 50/
+);
+assert.match(
+    generator.libraries_.est_stack_1,
+    /await rt\.wait_until_async\(_est_wait_condition_1\)/
+);
+assert.doesNotMatch(generator.libraries_.est_stack_1, /await await/);
+addSyntaxCase('cooperative_sensor_wait_until', [
+    programPreamble(),
+    dictionaryCode(generator.libraries_),
+    dictionaryCode(generator.setups_)
+].filter(Boolean).join('\n'));
 
 const combinedBlocks = allEstGeneratorIds.map(blockId => (
     makeBlockFromDefinition(definitionById.get(blockId), 'combined')

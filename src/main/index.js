@@ -1,7 +1,8 @@
-import {BrowserWindow, Menu, app, dialog, ipcMain, nativeImage, shell, systemPreferences} from 'electron';
+import {BrowserWindow, Menu, app, dialog, ipcMain, nativeImage, net, safeStorage, shell, systemPreferences} from 'electron';
 import * as remote from '@electron/remote/main';
 import fs from 'fs-extra';
 import path from 'path';
+import {createHash} from 'crypto';
 import {URL} from 'url';
 import {promisify} from 'util';
 
@@ -14,11 +15,20 @@ import appIconIco from '../icon/OpenBlockDesktop.ico';
 import appIconPng from '../icon/OpenBlockDesktop.png';
 import {productName, version} from '../../package.json';
 import {EstDeviceService} from './est/device-service';
+import {registerEstAiIpc} from './est/ai-service';
+import {createEstAiKeyStore, getEstAiSettingsPath} from './est/ai-key-store';
+import {
+    EST_BUILD_LIBRARY_REMOTE_SUMMARY,
+    EstBuildLibraryCancelledError,
+    EstBuildLibraryOperation,
+    EstBuildLibraryService
+} from './est/build-library-service';
 import {flashEstFirmware} from './est/firmware-update-service';
 import {createNodeHidEstTransportFactory} from './est/transports/node-hid';
 
 import formatMessage from 'format-message';
-import locales from 'openblock-l10n/locales/desktop-msgs';
+import openBlockDesktopLocales from 'openblock-l10n/locales/desktop-msgs';
+import estDesktopMessageOverrides from './est-desktop-message-overrides.json';
 
 const estDeviceService = new EstDeviceService({
     transportFactory: createNodeHidEstTransportFactory()
@@ -27,8 +37,41 @@ const estStudioAppId = 'com.eststudio.desktop';
 const estFirmwareUpdateState = {
     inProgress: false
 };
+const EST_RECENT_PROJECTS_FILE = 'est-recent-projects.json';
+const EST_RECENT_PROJECT_LIMIT = 16;
+const EST_PROJECT_THUMBNAILS_DIRECTORY = 'est-home-thumbnails';
+const EST_PROJECT_THUMBNAIL_WIDTH = 480;
+const EST_BUILD_LIBRARY_CACHE_DIRECTORY = 'est-build-library';
+const EST_HOME_BUILD_ITEM_IDS = [
+    'basic-01',
+    'basic-02',
+    'basic-04',
+    'basic-13',
+    'pbl-01',
+    'pbl-04',
+    'pbl-07',
+    'pbl-14'
+];
+const EST_BUILD_LIBRARY_ALLOWED_HOSTS = [
+    'github.com'
+];
+const EST_BUILD_LIBRARY_ALLOWED_HOST_SUFFIXES = [
+    '.githubusercontent.com'
+];
+const EST_BUILD_LIBRARY_MAX_REDIRECTS = 8;
+let estBuildLibraryService = null;
+let estBuildLibraryInstallPromise = null;
+let estBuildLibraryInstallOperation = null;
+let estBuildLibraryLastProgress = null;
+let estBuildLibraryProgressPublisher = null;
 
-formatMessage.setup({translations: locales});
+const estDesktopLocales = Object.keys(estDesktopMessageOverrides).reduce((messages, locale) => {
+    const baseMessages = messages[locale] || messages.en || {};
+    messages[locale] = Object.assign({}, baseMessages, estDesktopMessageOverrides[locale]);
+    return messages;
+}, Object.assign({}, openBlockDesktopLocales));
+
+formatMessage.setup({translations: estDesktopLocales});
 
 // suppress deprecation warning; this will be the default in Electron 9
 app.allowRendererProcessReuse = true;
@@ -47,6 +90,201 @@ app.commandLine.hasSwitch('ignore-gpu-blacklist');
 const defaultSize = {width: 1620, height: 900};
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
+
+const getRecentProjectsPath = () => path.join(app.getPath('userData'), EST_RECENT_PROJECTS_FILE);
+
+const normalizeProjectPath = projectPath => path.resolve(String(projectPath || ''));
+
+const projectPathKey = projectPath => {
+    const normalized = normalizeProjectPath(projectPath);
+    return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+};
+
+const getProjectThumbnailPath = projectPath => {
+    const thumbnailKey = createHash('sha256')
+        .update(projectPathKey(projectPath))
+        .digest('hex');
+    return path.join(
+        app.getPath('userData'),
+        EST_PROJECT_THUMBNAILS_DIRECTORY,
+        `${thumbnailKey}.png`
+    );
+};
+
+const readProjectThumbnail = async projectPath => {
+    try {
+        const thumbnail = await fs.readFile(getProjectThumbnailPath(projectPath));
+        return `data:image/png;base64,${thumbnail.toString('base64')}`;
+    } catch (error) {
+        return null;
+    }
+};
+
+const moveProjectThumbnail = async (sourcePath, destinationPath, copy = false) => {
+    try {
+        const sourceThumbnailPath = getProjectThumbnailPath(sourcePath);
+        if (!await fs.pathExists(sourceThumbnailPath)) return;
+        const destinationThumbnailPath = getProjectThumbnailPath(destinationPath);
+        if (copy) {
+            await fs.copy(sourceThumbnailPath, destinationThumbnailPath, {overwrite: true});
+            return;
+        }
+        await fs.move(sourceThumbnailPath, destinationThumbnailPath, {overwrite: true});
+    } catch (error) {
+        log.warn(`Unable to transfer EST project thumbnail: ${error.message}`);
+    }
+};
+
+const captureProjectThumbnail = async (webContents, projectPath) => {
+    try {
+        const normalizedPath = normalizeProjectPath(projectPath);
+        if (!webContents || webContents.isDestroyed() ||
+            path.extname(normalizedPath).toLowerCase() !== '.ests' ||
+            !await fs.pathExists(normalizedPath)) {
+            return null;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 240));
+        const captureBounds = await webContents.executeJavaScript(`(() => {
+            const menuBar = document.querySelector('[class*="menu-bar_menu-bar_"]');
+            const top = menuBar ? Math.ceil(menuBar.getBoundingClientRect().bottom) : 0;
+            return {
+                x: 0,
+                y: Math.max(0, top),
+                width: Math.max(1, Math.floor(window.innerWidth)),
+                height: Math.max(1, Math.floor(window.innerHeight - top))
+            };
+        })()`, true);
+        const screenshot = await webContents.capturePage(captureBounds);
+        if (screenshot.isEmpty()) return null;
+        const thumbnail = screenshot.resize({
+            width: EST_PROJECT_THUMBNAIL_WIDTH,
+            quality: 'good'
+        });
+        await fs.outputFile(getProjectThumbnailPath(normalizedPath), thumbnail.toPNG());
+        return readProjectThumbnail(normalizedPath);
+    } catch (error) {
+        log.warn(`Unable to capture EST project thumbnail: ${error.message}`);
+        return null;
+    }
+};
+
+const readRecentProjectPaths = async () => {
+    try {
+        const stored = await fs.readJson(getRecentProjectsPath());
+        return Array.isArray(stored) ? stored.filter(value => typeof value === 'string') : [];
+    } catch (error) {
+        return [];
+    }
+};
+
+const writeRecentProjectPaths = paths => fs.outputJson(getRecentProjectsPath(), paths, {spaces: 2});
+
+const getRecentProjectInfo = async projectPath => {
+    const normalizedPath = normalizeProjectPath(projectPath);
+    if (path.extname(normalizedPath).toLowerCase() !== '.ests') return null;
+    try {
+        const stats = await fs.stat(normalizedPath);
+        if (!stats.isFile()) return null;
+        return {
+            modifiedAt: stats.mtime.toISOString(),
+            name: path.basename(normalizedPath, path.extname(normalizedPath)),
+            path: normalizedPath,
+            thumbnail: await readProjectThumbnail(normalizedPath)
+        };
+    } catch (error) {
+        return null;
+    }
+};
+
+const rememberRecentProject = async projectPath => {
+    const project = await getRecentProjectInfo(projectPath);
+    if (!project) return null;
+    const currentPaths = await readRecentProjectPaths();
+    const projectKey = projectPathKey(project.path);
+    const nextPaths = [project.path]
+        .concat(currentPaths.filter(value => projectPathKey(value) !== projectKey))
+        .slice(0, EST_RECENT_PROJECT_LIMIT);
+    await writeRecentProjectPaths(nextPaths);
+    if (app.isReady()) {
+        app.addRecentDocument(project.path);
+    }
+    return project;
+};
+
+const listRecentProjects = async () => {
+    const currentPaths = await readRecentProjectPaths();
+    const projects = (await Promise.all(currentPaths.map(getRecentProjectInfo))).filter(Boolean);
+    const validPaths = projects.map(project => project.path);
+    if (validPaths.length !== currentPaths.length) {
+        await writeRecentProjectPaths(validPaths);
+    }
+    return projects;
+};
+
+const removeRecentProject = async (projectPath, removeThumbnail = true) => {
+    const removeKey = projectPathKey(projectPath);
+    const currentPaths = await readRecentProjectPaths();
+    await writeRecentProjectPaths(currentPaths.filter(value => projectPathKey(value) !== removeKey));
+    if (removeThumbnail) {
+        await fs.remove(getProjectThumbnailPath(projectPath));
+    }
+};
+
+const validateProjectName = value => {
+    const projectName = String(value || '')
+        .trim()
+        .replace(/\.ests$/i, '');
+    if (!projectName || /[\\/:*?"<>|\0]/.test(projectName) || /[. ]$/.test(projectName)) {
+        throw new Error('请输入有效的文件名。');
+    }
+    return projectName;
+};
+
+const openProjectForHome = async projectPath => {
+    const project = await getRecentProjectInfo(projectPath);
+    if (!project) throw new Error('项目文件不存在或无法读取。');
+    const data = await fs.readFile(project.path);
+    await rememberRecentProject(project.path);
+    return {
+        data,
+        path: project.path,
+        title: project.name
+    };
+};
+
+const renameHomeProject = async request => {
+    const sourcePath = normalizeProjectPath(request && request.path);
+    const projectName = validateProjectName(request && request.name);
+    const destinationPath = path.join(path.dirname(sourcePath), `${projectName}.ests`);
+    if (projectPathKey(sourcePath) !== projectPathKey(destinationPath) && await fs.pathExists(destinationPath)) {
+        throw new Error('同名项目已存在。');
+    }
+    if (sourcePath !== destinationPath) {
+        await fs.move(sourcePath, destinationPath);
+        await moveProjectThumbnail(sourcePath, destinationPath);
+    }
+    await removeRecentProject(sourcePath, false);
+    return rememberRecentProject(destinationPath);
+};
+
+const copyHomeProject = async projectPath => {
+    const sourcePath = normalizeProjectPath(projectPath);
+    const sourceInfo = await getRecentProjectInfo(sourcePath);
+    if (!sourceInfo) throw new Error('项目文件不存在或无法读取。');
+    const directory = path.dirname(sourcePath);
+    let suffix = ' - 副本';
+    let destinationPath = path.join(directory, `${sourceInfo.name}${suffix}.ests`);
+    let copyIndex = 2;
+    while (await fs.pathExists(destinationPath)) {
+        suffix = ` - 副本 ${copyIndex}`;
+        destinationPath = path.join(directory, `${sourceInfo.name}${suffix}.ests`);
+        copyIndex += 1;
+    }
+    await fs.copy(sourcePath, destinationPath, {overwrite: false});
+    await moveProjectThumbnail(sourcePath, destinationPath, true);
+    return rememberRecentProject(destinationPath);
+};
 
 const resolveBundledAssetPath = assetPath => {
     if (typeof assetPath !== 'string' || !assetPath || assetPath.startsWith('data:')) {
@@ -77,6 +315,236 @@ const resolveBundledAssetPath = assetPath => {
         );
     }
     return candidates.find(candidate => fs.existsSync(candidate)) || null;
+};
+
+const resolveHomeBuildAssetPath = (directory, itemId, extension) => {
+    if (!EST_HOME_BUILD_ITEM_IDS.includes(itemId)) return null;
+    const assetSegments = [directory, `${itemId}.${extension}`];
+    const developmentPath = resolveBundledAssetPath(path.join(
+        'resources',
+        'est-build-library',
+        ...assetSegments
+    ));
+    if (developmentPath) return developmentPath;
+    if (!process.resourcesPath) return null;
+    const packagedPath = path.resolve(process.resourcesPath, 'est-build-library', ...assetSegments);
+    return fs.existsSync(packagedPath) ? packagedPath : null;
+};
+
+const getHomeBuildThumbnails = async () => {
+    const thumbnails = {};
+    await Promise.all(EST_HOME_BUILD_ITEM_IDS.map(async itemId => {
+        const thumbnailPath = resolveHomeBuildAssetPath('thumbnails', itemId, 'jpg');
+        if (!thumbnailPath) return;
+        const thumbnail = await fs.readFile(thumbnailPath);
+        thumbnails[itemId] = `data:image/jpeg;base64,${thumbnail.toString('base64')}`;
+    }));
+    return thumbnails;
+};
+
+const isTrustedBuildLibraryUrl = sourceUrl => {
+    try {
+        const parsedUrl = new URL(sourceUrl);
+        const hostname = parsedUrl.hostname.toLowerCase();
+        return parsedUrl.protocol === 'https:' && (
+            EST_BUILD_LIBRARY_ALLOWED_HOSTS.includes(hostname) ||
+            EST_BUILD_LIBRARY_ALLOWED_HOST_SUFFIXES.some(suffix => hostname.endsWith(suffix))
+        );
+    } catch (error) {
+        return false;
+    }
+};
+
+const getResponseHeader = (headers, name) => {
+    const header = headers[name.toLowerCase()];
+    return Array.isArray(header) ? header[0] : header;
+};
+
+const downloadHomeBuildFile = async (sourceUrl, destinationPath, options = {}) => {
+    if (!isTrustedBuildLibraryUrl(sourceUrl)) {
+        throw new Error('Build library download URL is not trusted.');
+    }
+    await fs.ensureDir(path.dirname(destinationPath));
+    await fs.remove(destinationPath);
+
+    return new Promise((resolve, reject) => {
+        let receivedBytes = 0;
+        let redirectCount = 0;
+        let responseStream = null;
+        let outputStream = null;
+        let request = null;
+        let settled = false;
+        let unsubscribeOperation = null;
+
+        const finishWithError = error => {
+            if (settled) return;
+            settled = true;
+            if (unsubscribeOperation) unsubscribeOperation();
+            if (responseStream && typeof responseStream.destroy === 'function') responseStream.destroy();
+            if (request && typeof request.abort === 'function') request.abort();
+            const removePartialFile = () => fs.remove(destinationPath)
+                .catch(() => {})
+                .then(() => reject(error));
+            if (outputStream) {
+                outputStream.once('close', removePartialFile);
+                outputStream.destroy();
+            } else {
+                removePartialFile();
+            }
+        };
+
+        if (options.operation) {
+            unsubscribeOperation = options.operation.subscribe(state => {
+                if (state.cancelled) {
+                    finishWithError(new EstBuildLibraryCancelledError());
+                } else if (responseStream) {
+                    if (state.paused) responseStream.pause();
+                    else responseStream.resume();
+                }
+            });
+        }
+        if (settled) return;
+
+        request = net.request({
+            method: 'GET',
+            redirect: 'manual',
+            url: sourceUrl
+        });
+
+        request.on('redirect', (statusCode, method, redirectUrl) => {
+            redirectCount += 1;
+            if (redirectCount > EST_BUILD_LIBRARY_MAX_REDIRECTS || !isTrustedBuildLibraryUrl(redirectUrl)) {
+                finishWithError(new Error('Build library download redirect is not trusted.'));
+                return;
+            }
+            request.followRedirect();
+        });
+
+        request.on('response', response => {
+            responseStream = response;
+            if (options.operation && options.operation.snapshot().paused) response.pause();
+            if (response.statusCode < 200 || response.statusCode >= 300) {
+                finishWithError(new Error(`Build library download failed with HTTP ${response.statusCode}.`));
+                return;
+            }
+
+            const contentLengthHeader = getResponseHeader(response.headers, 'content-length');
+            const contentLength = Number(contentLengthHeader);
+            if (Number.isFinite(contentLength)) {
+                if (options.maximumBytes && contentLength > options.maximumBytes) {
+                    finishWithError(new Error('Build library download is too large.'));
+                    return;
+                }
+                if (options.expectedBytes && contentLength !== options.expectedBytes) {
+                    finishWithError(new Error('Build library download size does not match its manifest.'));
+                    return;
+                }
+            }
+
+            outputStream = fs.createWriteStream(destinationPath, {flags: 'wx'});
+            outputStream.on('error', finishWithError);
+            outputStream.on('finish', () => {
+                if (settled) return;
+                if (options.expectedBytes && receivedBytes !== options.expectedBytes) {
+                    finishWithError(new Error('Build library download was incomplete.'));
+                    return;
+                }
+                settled = true;
+                if (unsubscribeOperation) unsubscribeOperation();
+                resolve({receivedBytes});
+            });
+
+            response.on('data', chunk => {
+                if (settled) return;
+                receivedBytes += chunk.length;
+                if (options.maximumBytes && receivedBytes > options.maximumBytes) {
+                    finishWithError(new Error('Build library download is too large.'));
+                    return;
+                }
+                if (!outputStream.write(chunk)) {
+                    response.pause();
+                    outputStream.once('drain', () => {
+                        if (!options.operation || !options.operation.snapshot().paused) response.resume();
+                    });
+                }
+                if (typeof options.onProgress === 'function') {
+                    const totalBytes = options.expectedBytes || (Number.isFinite(contentLength) ? contentLength : null);
+                    options.onProgress({
+                        percent: totalBytes ? Math.min(100, Math.round(receivedBytes * 100 / totalBytes)) : 0,
+                        receivedBytes,
+                        totalBytes
+                    });
+                }
+            });
+            response.on('aborted', () => finishWithError(new Error('Build library download was interrupted.')));
+            response.on('error', finishWithError);
+            response.on('end', () => {
+                if (!settled && outputStream) outputStream.end();
+            });
+        });
+        request.on('error', finishWithError);
+        request.end();
+    });
+};
+
+const getEstBuildLibraryService = () => {
+    if (!estBuildLibraryService) {
+        estBuildLibraryService = new EstBuildLibraryService({
+            cacheRoot: path.join(app.getPath('userData'), EST_BUILD_LIBRARY_CACHE_DIRECTORY),
+            downloadFile: downloadHomeBuildFile
+        });
+    }
+    return estBuildLibraryService;
+};
+
+const readBuildLibraryThumbnails = async items => {
+    const thumbnails = {};
+    await Promise.all(items.map(async item => {
+        const thumbnail = await fs.readFile(item.thumbnailPath);
+        thumbnails[item.id] = `data:image/jpeg;base64,${thumbnail.toString('base64')}`;
+    }));
+    return thumbnails;
+};
+
+const serializeInstalledBuildLibrary = async installed => ({
+    archiveBytes: EST_BUILD_LIBRARY_REMOTE_SUMMARY.archiveBytes,
+    contentVersion: installed.contentVersion,
+    installed: true,
+    itemCount: installed.catalog.itemCount,
+    items: installed.catalog.items.map(item => ({
+        category: item.category,
+        id: item.id,
+        pages: item.pages,
+        title: item.title
+    })),
+    thumbnails: await readBuildLibraryThumbnails(installed.catalog.items),
+    totalItemCount: EST_BUILD_LIBRARY_REMOTE_SUMMARY.itemCount
+});
+
+const getHomeBuildLibraryState = async () => {
+    const installed = await getEstBuildLibraryService().getInstalledLibrary();
+    if (installed) return serializeInstalledBuildLibrary(installed);
+    return {
+        archiveBytes: EST_BUILD_LIBRARY_REMOTE_SUMMARY.archiveBytes,
+        contentVersion: null,
+        installed: false,
+        itemCount: EST_HOME_BUILD_ITEM_IDS.length,
+        items: null,
+        thumbnails: await getHomeBuildThumbnails(),
+        totalItemCount: EST_BUILD_LIBRARY_REMOTE_SUMMARY.itemCount
+    };
+};
+
+const openHomeBuildGuide = async itemId => {
+    const installed = await getEstBuildLibraryService().getInstalledLibrary();
+    const installedItem = installed && installed.catalog.items.find(item => item.id === itemId);
+    const guidePath = installedItem ?
+        installedItem.guidePath :
+        resolveHomeBuildAssetPath('guides', itemId, 'pdf');
+    if (!guidePath) throw new Error('Build guide is unavailable.');
+    const openError = await shell.openPath(guidePath);
+    if (openError) throw new Error(openError);
+    return true;
 };
 
 const createWindowIcon = assetPath => {
@@ -128,7 +596,7 @@ const displayPermissionDeniedWarning = (browserWindow, permissionType) => {
         message = formatMessage({
             id: 'index.cameraPermissionDeniedMessage',
             default: 'Permission to use the camera has been denied. ' +
-                'OpenBlock will not be able to take a photo or use video sensing blocks.',
+                'EST Studio will not be able to take a photo or use video sensing blocks.',
             description: 'message for camera permission denied'
         });
         break;
@@ -141,7 +609,7 @@ const displayPermissionDeniedWarning = (browserWindow, permissionType) => {
         message = formatMessage({
             id: 'index.microphonePermissionDeniedMessage',
             default: 'Permission to use the microphone has been denied. ' +
-                    'OpenBlock will not be able to record sounds or detect loudness.',
+                    'EST Studio will not be able to record sounds or detect loudness.',
             description: 'message for microphone permission denied'
         });
         break;
@@ -163,14 +631,14 @@ const displayPermissionDeniedWarning = (browserWindow, permissionType) => {
     case 'darwin':
         instructions = formatMessage({
             id: 'index.darwinPermissionDeniedInstructions',
-            default: 'To change OpenBlock permissions, please check "Security & Privacy" in System Preferences.',
+            default: 'To change EST Studio permissions, please check "Security & Privacy" in System Preferences.',
             description: 'prompt for fix darwin permission denied instructions'
         });
         break;
     default:
         instructions = formatMessage({
             id: 'index.permissionDeniedInstructions',
-            default: 'To change OpenBlock permissions, please check your system settings and restart OpenBlock.',
+            default: 'To change EST Studio permissions, please check your system settings and restart EST Studio.',
             description: 'prompt for fix permission denied instructions'
         });
         break;
@@ -440,7 +908,8 @@ const createMainWindow = () => {
                     if (isProjectSave) {
                         const newProjectTitle = path.basename(userChosenPath, extName);
                         webContents.send('setTitleFromSave', {title: newProjectTitle});
-
+                        await rememberRecentProject(userChosenPath);
+                        await captureProjectThumbnail(webContents, userChosenPath);
                     }
                 } catch (e) {
                     // don't clean up until after the message box to allow troubleshooting / recovery
@@ -476,13 +945,13 @@ const createMainWindow = () => {
             type: 'question',
             message: formatMessage({
                 id: 'index.questionLeave',
-                default: 'Leave Openblock?',
-                description: 'prompt for leave Openblock'
+                default: 'Leave EST Studio?',
+                description: 'prompt for leaving EST Studio'
             }),
             detail: formatMessage({
                 id: 'index.questionLeaveDetail',
                 default: 'Any unsaved changes will be lost.',
-                description: 'detail prompt for leave Openblock'
+                description: 'detail prompt for leaving EST Studio'
             }),
             buttons: [
                 formatMessage({
@@ -642,6 +1111,115 @@ ipcMain.on('set-locale', (event, arg) => {
     formatMessage.setup({locale: arg});
 });
 
+registerEstAiIpc({
+    ipcMain,
+    isAllowedSender: event => Boolean(_windows.main && event.sender === _windows.main.webContents),
+    keyStore: createEstAiKeyStore({
+        safeStorage,
+        fs,
+        getPath: () => getEstAiSettingsPath(app),
+        getLegacyPath: () => path.join(app.getPath('userData'), 'est-ai-key.bin')
+    })
+});
+
+ipcMain.handle('est-home-get-startup-state', () => ({
+    hasInitialProject: argv._.length > 0,
+    projectPath: argv._.length > 0 ? argv._[argv._.length - 1] : null
+}));
+ipcMain.handle('est-home-list-recent-projects', () => listRecentProjects());
+ipcMain.handle('est-home-remember-project', async (event, projectPath) => {
+    const project = await rememberRecentProject(projectPath);
+    if (project) {
+        await captureProjectThumbnail(event.sender, project.path);
+    }
+    return project;
+});
+ipcMain.handle('est-home-capture-thumbnail', (event, projectPath) => (
+    captureProjectThumbnail(event.sender, projectPath)
+));
+ipcMain.handle('est-home-open-project', (event, projectPath) => openProjectForHome(projectPath));
+ipcMain.handle('est-home-remove-recent-project', (event, projectPath) => removeRecentProject(projectPath));
+ipcMain.handle('est-home-rename-project', (event, request) => renameHomeProject(request));
+ipcMain.handle('est-home-copy-project', (event, projectPath) => copyHomeProject(projectPath));
+ipcMain.handle('est-home-get-build-thumbnails', () => getHomeBuildThumbnails());
+ipcMain.handle('est-home-get-build-library-state', () => getHomeBuildLibraryState());
+ipcMain.handle('est-home-download-build-library', (event) => {
+    if (!estBuildLibraryInstallPromise) {
+        let lastPhase = '';
+        let lastPercent = -1;
+        let lastPaused = false;
+        let lastCancelled = false;
+        let lastSentAt = 0;
+        estBuildLibraryInstallOperation = new EstBuildLibraryOperation();
+        const sendProgress = progress => {
+            const now = Date.now();
+            const operationState = estBuildLibraryInstallOperation.snapshot();
+            const nextProgress = {
+                ...progress,
+                cancelled: operationState.cancelled,
+                paused: operationState.paused
+            };
+            const stateChanged = nextProgress.paused !== lastPaused || nextProgress.cancelled !== lastCancelled;
+            const phaseChanged = nextProgress.phase !== lastPhase;
+            const finished = nextProgress.percent === 100;
+            if (!phaseChanged && !stateChanged && !finished &&
+                nextProgress.percent === lastPercent && now - lastSentAt < 180) return;
+            if (!phaseChanged && !stateChanged && !finished && now - lastSentAt < 180) return;
+            lastPhase = nextProgress.phase;
+            lastPercent = nextProgress.percent;
+            lastPaused = nextProgress.paused;
+            lastCancelled = nextProgress.cancelled;
+            lastSentAt = now;
+            estBuildLibraryLastProgress = nextProgress;
+            if (!event.sender.isDestroyed()) {
+                event.sender.send('est-home-build-download-progress', nextProgress);
+            }
+        };
+        estBuildLibraryProgressPublisher = sendProgress;
+        estBuildLibraryInstallPromise = getEstBuildLibraryService().install(
+            sendProgress,
+            estBuildLibraryInstallOperation
+        )
+            .then(serializeInstalledBuildLibrary)
+            .catch(error => {
+                if (error instanceof EstBuildLibraryCancelledError) return {cancelled: true};
+                throw error;
+            })
+            .finally(() => {
+                estBuildLibraryInstallPromise = null;
+                estBuildLibraryInstallOperation = null;
+                estBuildLibraryLastProgress = null;
+                estBuildLibraryProgressPublisher = null;
+            });
+    }
+    return estBuildLibraryInstallPromise;
+});
+ipcMain.handle('est-home-pause-build-library-download', () => {
+    if (!estBuildLibraryInstallOperation) return {active: false, paused: false};
+    const state = estBuildLibraryInstallOperation.pause();
+    if (estBuildLibraryProgressPublisher && estBuildLibraryLastProgress) {
+        estBuildLibraryProgressPublisher(estBuildLibraryLastProgress);
+    }
+    return {active: true, ...state};
+});
+ipcMain.handle('est-home-resume-build-library-download', () => {
+    if (!estBuildLibraryInstallOperation) return {active: false, paused: false};
+    const state = estBuildLibraryInstallOperation.resume();
+    if (estBuildLibraryProgressPublisher && estBuildLibraryLastProgress) {
+        estBuildLibraryProgressPublisher(estBuildLibraryLastProgress);
+    }
+    return {active: true, ...state};
+});
+ipcMain.handle('est-home-cancel-build-library-download', () => {
+    if (!estBuildLibraryInstallOperation) return {active: false, cancelled: false};
+    const state = estBuildLibraryInstallOperation.cancel();
+    if (estBuildLibraryProgressPublisher && estBuildLibraryLastProgress) {
+        estBuildLibraryProgressPublisher(estBuildLibraryLastProgress);
+    }
+    return {active: true, ...state};
+});
+ipcMain.handle('est-home-open-build-guide', (event, itemId) => openHomeBuildGuide(itemId));
+
 const firmwareUpdateConnectionState = () => ({
     state: 'firmware-updating',
     compatible: false,
@@ -711,6 +1289,7 @@ const initialProjectDataPromise = (async () => {
     const projectPath = argv._[argv._.length - 1];
     try {
         const projectData = await promisify(fs.readFile)(projectPath, null);
+        await rememberRecentProject(projectPath);
         return projectData;
     } catch (e) {
         dialog.showMessageBox(_windows.main, {

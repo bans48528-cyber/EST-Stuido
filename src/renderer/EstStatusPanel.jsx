@@ -5,6 +5,7 @@ import {connect} from 'react-redux';
 
 import {
     EST_CONNECTION_STATUS_EVENT,
+    EST_LEGACY_PROGRAM_MAX_BYTES,
     EST_PROGRAM_ACTIVITY_EVENT
 } from './est-connection-status';
 import {getEstText} from './est-i18n';
@@ -83,14 +84,21 @@ class EstStatusPanel extends React.Component {
                 isCompatible,
                 isConnected
             });
+            const reportedLimit = Number(result.status && result.status.maxProgramBytes);
+            const maxProgramBytes = Number.isInteger(reportedLimit) && reportedLimit > 0 ?
+                reportedLimit : EST_LEGACY_PROGRAM_MAX_BYTES;
             window.dispatchEvent(new CustomEvent(EST_CONNECTION_STATUS_EVENT, {
-                detail: {isCompatible, isConnected}
+                detail: {isCompatible, isConnected, maxProgramBytes}
             }));
         } catch (error) {
             this.programRunning = false;
             this.setState({isCompatible: false, isConnected: false});
             window.dispatchEvent(new CustomEvent(EST_CONNECTION_STATUS_EVENT, {
-                detail: {isCompatible: false, isConnected: false}
+                detail: {
+                    isCompatible: false,
+                    isConnected: false,
+                    maxProgramBytes: EST_LEGACY_PROGRAM_MAX_BYTES
+                }
             }));
         } finally {
             this.refreshInFlight = false;

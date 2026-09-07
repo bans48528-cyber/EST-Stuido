@@ -1,4 +1,5 @@
 const assert = require('assert');
+const crypto = require('crypto');
 const fs = require('fs');
 const Module = require('module');
 const os = require('os');
@@ -46,6 +47,7 @@ const {
     buildPythonProgramRunFrame,
     buildPythonProgramStatusFrame,
     buildPythonProgramStopFrame,
+    buildMotorTypeFrame,
     buildFrame,
     capabilityNamesFor,
     checkDeviceCompatibility,
@@ -56,9 +58,13 @@ const {
     EST_PROGRAM_AUDIO_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_BROADCAST_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_DUAL_SPEED_API_MIN_FIRMWARE_VERSION,
+    EST_PROGRAM_DISPLAY_DRAW_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_DISPLAY_TEXT_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION,
+    EST_PROGRAM_LARGE_SOURCE_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_RUNTIME_API_MIN_FIRMWARE_VERSION,
+    EST_PROGRAM_ASYNC_SENSOR_CONDITION_API_MIN_FIRMWARE_VERSION,
+    EST_PROGRAM_SENSOR_COOPERATIVE_API_MIN_FIRMWARE_VERSION,
     EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION,
     isEstFirmwareVersionAtLeast,
     isEstDevice,
@@ -66,6 +72,7 @@ const {
     parseDeviceStatusResponse,
     parseFrame,
     parseHeartbeatResponse,
+    parseMotorTypeResponse,
     parsePersistentProgramResponse,
     parsePythonProgramResponse,
     programMinimumFirmwareVersionForSource,
@@ -88,6 +95,8 @@ const {
     CAPABILITY_DISPLAY_FONT_STYLES,
     CAPABILITY_FROZEN_EST_RUNTIME,
     CAPABILITY_HOLD_POSITION_CONTROL,
+    CAPABILITY_LARGE_PYTHON_PROGRAM,
+    CAPABILITY_MOTOR_TYPE,
     CAPABILITY_MOTOR_CONTROL,
     CAPABILITY_MOTOR_PAIR_POSITION,
     CAPABILITY_MOTOR_STALL_DETECTION,
@@ -97,19 +106,24 @@ const {
     CAPABILITY_UNLIMITED_PYTHON_RUN,
     CAPABILITY_ZERO_SPEED_MOTOR_CONTROL,
     COMMAND_DEVICE_STATUS,
+    COMMAND_MOTOR_TYPE,
     COMMAND_PERSISTENT_PROGRAM,
     COMMAND_PYTHON_PROGRAM,
     EST_ALLOW_ALL_FIRMWARE_VERSIONS,
     EST_PROGRAM_COMPATIBILITY_TABLE,
+    PYTHON_PROGRAM_LEGACY_MAX_SIZE,
+    PYTHON_PROGRAM_PROTOCOL_MAX_SIZE,
     PYTHON_PROGRAM_NO_TIMEOUT_MS
 } = require(path.join(estRoot, 'constants.js'));
 const {EstDeviceService} = require(path.join(estRoot, 'device-service.js'));
+const {validateMicroPythonSourceSyntax} = require(path.join(estRoot, 'python-syntax-service.js'));
 const {
     ALL_EST_BLOCK_IDS,
     CATEGORY_BLOCK_IDS,
     CATEGORY_COLOURS,
     DISPLAY_IMAGE_THUMBNAILS,
     DRIVE_COLOURS,
+    EST_DISPLAY_BITMAP_FIELD_TYPE,
     EST_STEERING_DIAL_COLOURS,
     EST_STEERING_FIELD_TYPE,
     EST_STEERING_LIMIT,
@@ -339,6 +353,7 @@ assert.deepStrictEqual(deviceStatus.sensors[0], {
     value: 5
 });
 assert.strictEqual(deviceStatus.sensors[2].value, 235);
+assert.strictEqual(deviceStatus.maxProgramBytes, PYTHON_PROGRAM_LEGACY_MAX_SIZE);
 
 const damagedStatusResponse = Uint8Array.from(deviceStatusResponse);
 damagedStatusResponse[77] ^= 0xff;
@@ -394,7 +409,13 @@ assert.deepStrictEqual(Object.keys(EST_PROGRAM_COMPATIBILITY_TABLE), [
     'M1.24A',
     'M1.24B',
     'M1.24C',
-    'M1.25A'
+    'M1.25A',
+    'M1.25B',
+    'M1.25C',
+    'M1.25D',
+    'M1.25E',
+    'M1.25F',
+    'M1.26A'
 ]);
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.22H'], {protocolMajor: 1, protocolMinor: 26});
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.22I'], {protocolMajor: 1, protocolMinor: 26});
@@ -402,6 +423,12 @@ assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.24A'], {protocolMajor
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.24B'], {protocolMajor: 1, protocolMinor: 27});
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.24C'], {protocolMajor: 1, protocolMinor: 27});
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.25A'], {protocolMajor: 1, protocolMinor: 28});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.25B'], {protocolMajor: 1, protocolMinor: 28});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.25C'], {protocolMajor: 1, protocolMinor: 28});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.25D'], {protocolMajor: 1, protocolMinor: 28});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.25E'], {protocolMajor: 1, protocolMinor: 28});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.25F'], {protocolMajor: 1, protocolMinor: 28});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.26A'], {protocolMajor: 1, protocolMinor: 29});
 assert.deepStrictEqual(parseEstFirmwareVersion('M1.22E'), {
     family: 'M',
     major: 1,
@@ -502,6 +529,45 @@ try {
 } finally {
     fs.rmSync(firmwareFixtureRoot, {recursive: true, force: true});
 }
+
+const bundledFirmwareRoot = path.resolve(__dirname, '..', 'resources', 'est-firmware');
+const bundledLatestPackage = resolveLatestEstOsPackage([bundledFirmwareRoot]);
+assert.strictEqual(bundledLatestPackage.targetVersion, 'M1.26A');
+assert.strictEqual(
+    bundledLatestPackage.sha256,
+    'fa75bab689a1a5b5c26e90f2f6bf09615058e845d237598147c22950b1b4fd6b'
+);
+assert.strictEqual(
+    crypto.createHash('sha256')
+        .update(fs.readFileSync(bundledLatestPackage.packagePath))
+        .digest('hex'),
+    bundledLatestPackage.sha256
+);
+assert.ok(fs.existsSync(path.join(
+    bundledFirmwareRoot,
+    'tools',
+    'est_hid_sender',
+    'est_hid_sender.py'
+)));
+assert.ok(fs.existsSync(path.join(
+    bundledFirmwareRoot,
+    'tools',
+    'mpy-cross',
+    process.platform === 'win32' ? 'mpy-cross.exe' : 'mpy-cross'
+)));
+assert.strictEqual(
+    fs.readdirSync(path.join(
+        bundledFirmwareRoot,
+        'firmware',
+        'minimal_upgrade_app',
+        'assets',
+        'audio'
+    ), {recursive: true})
+        .filter(name => name.toLowerCase().endsWith('.mp3'))
+        .length,
+    127
+);
+assert.strictEqual(resolveLegacyEstPackage([bundledFirmwareRoot]).targetVersion, '03.02A');
 assert.deepStrictEqual(
     {
         compatible: checkProgramFirmwareCompatibility(m110AStatus).compatible,
@@ -563,6 +629,33 @@ assert.strictEqual(EST_PROGRAM_DUAL_SPEED_API_MIN_FIRMWARE_VERSION, 'M1.22L');
 assert.strictEqual(EST_PROGRAM_SENSOR_WAIT_API_MIN_FIRMWARE_VERSION, 'M1.22M');
 assert.strictEqual(EST_PROGRAM_LINE_FOLLOW_API_MIN_FIRMWARE_VERSION, 'M1.22V');
 assert.strictEqual(EST_PROGRAM_AUDIO_API_MIN_FIRMWARE_VERSION, 'M1.23D');
+assert.strictEqual(EST_PROGRAM_SENSOR_COOPERATIVE_API_MIN_FIRMWARE_VERSION, 'M1.25C');
+assert.strictEqual(EST_PROGRAM_ASYNC_SENSOR_CONDITION_API_MIN_FIRMWARE_VERSION, 'M1.25E');
+assert.strictEqual(EST_PROGRAM_DISPLAY_DRAW_API_MIN_FIRMWARE_VERSION, 'M1.25F');
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource(
+        "import est\nest.display.bitmap(0, 0, 1, 1, bytes.fromhex('80'))\n"
+    ),
+    'M1.25F'
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource(
+        "import est_runtime as rt\nvalue = await rt.sensor_color_reflection('1')\n"
+    ),
+    'M1.25C'
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource(
+        'import est_runtime as rt\n@rt.on_condition_async(sensor_ready)\ndef stack_1():\n  pass\n'
+    ),
+    'M1.25E'
+);
+assert.strictEqual(
+    programMinimumFirmwareVersionForSource(
+        'import est_runtime as rt\nawait rt.wait_until_async(sensor_ready)\n'
+    ),
+    'M1.25E'
+);
 assert.strictEqual(programMinimumFirmwareVersionForSource('import est_runtime as rt\nvalue = 1\n'), null);
 assert.strictEqual(
     programMinimumFirmwareVersionForSource('import est_runtime as rt\nrt.motor_start_speed("A", speed)\n'),
@@ -672,6 +765,12 @@ assert.strictEqual(
 assert.strictEqual(
     programRequiredCapabilitiesForSource(
         '@rt.on_condition(lambda: ready)\nasync def stack_1():\n  await rt.sleep(1)\nrt.run()\n'
+    ),
+    (CAPABILITY_RUNTIME_BASIC_EVENT_HATS | CAPABILITY_COOPERATIVE_MULTITASK) >>> 0
+);
+assert.strictEqual(
+    programRequiredCapabilitiesForSource(
+        '@rt.on_condition_async(sensor_ready)\nasync def stack_1():\n  pass\nrt.run()\n'
     ),
     (CAPABILITY_RUNTIME_BASIC_EVENT_HATS | CAPABILITY_COOPERATIVE_MULTITASK) >>> 0
 );
@@ -1249,7 +1348,7 @@ assert.strictEqual(zoomTransform, 'translate(800,214)');
 const expectedCategoryCounts = {
     motor: 12,
     movement: 13,
-    display: 6,
+    display: 7,
     sound: 6,
     event: 7,
     control: 9,
@@ -1262,8 +1361,8 @@ assert.deepStrictEqual(
     ])),
     expectedCategoryCounts
 );
-assert.strictEqual(registeredBlockDefinitions.length, 84);
-assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 80);
+assert.strictEqual(registeredBlockDefinitions.length, 85);
+assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 81);
 assert.deepStrictEqual(EST_REPLACED_OPENBLOCK_BLOCK_IDS, [
     'sound_play',
     'event_broadcast',
@@ -1324,6 +1423,10 @@ assert.deepStrictEqual(
 const definitionArguments = definition => Object.keys(definition)
     .filter(key => /^args\d+$/.test(key))
     .reduce((argumentsList, key) => argumentsList.concat(definition[key]), []);
+const displayDrawDefinition = registeredBlockDefinitions.find(definition => definition.type === 'display_draw');
+const displayDrawField = definitionArguments(displayDrawDefinition).find(argument => argument.name === 'BITMAP');
+assert.strictEqual(displayDrawField.type, EST_DISPLAY_BITMAP_FIELD_TYPE);
+assert.strictEqual(displayDrawField.value, 'v1:');
 assert.strictEqual(EST_STEERING_LIMIT, 100);
 assert.deepStrictEqual(EST_STEERING_DIAL_COLOURS, {
     fill: '#d8009b',
@@ -2337,18 +2440,14 @@ assert.deepStrictEqual(fakePythonGenerator.sensor_ultrasonic_compare(
         values: {VALUE: '15'},
         fields: {COMPARATOR: 'less', UNIT: 'centimeters'}
     })
-), ["rt.compare(_est_device_ultrasonic_1.distance('centimeters'), 'less', 15)", 2.2]);
-assert.strictEqual(
-    fakePythonGenerator.libraries_.estDevice_ultrasonic_1,
-    '_est_device_ultrasonic_1 = rt.ultrasonic(1)\n' +
-    "_est_device_ultrasonic_1.distance('centimeters')\n"
-);
+), ["rt.compare(rt.sensor_ultrasonic_distance('1', 'centimeters'), 'less', 15)", 2.2]);
+assert.strictEqual(fakePythonGenerator.libraries_.estDevice_ultrasonic_1, undefined);
 assert.deepStrictEqual(fakePythonGenerator.sensor_temperature(
     makeFakeBlock('sensor_temperature', {
         values: {PORT: 'port_var'},
         fields: {UNIT: 'fahrenheit'}
     })
-), ['rt.temperature(port_var).fahrenheit()', 2.2]);
+), ["rt.sensor_temperature(port_var, 'fahrenheit')", 2.2]);
 const blocksLoader = require('./est-blocks-loader');
 const transformedBlocks = blocksLoader('before\n    return ScratchBlocks;\nafter');
 assert.ok(transformedBlocks.indexOf('registerEstBlocks(ScratchBlocks);') <
@@ -2706,8 +2805,13 @@ assert.match(estMenuBarLayoutSource, /HOME_BUTTON_CLASS = 'est-menu-bar-home-but
 assert.match(estMenuBarLayoutSource, /ensureHomeButton/);
 assert.match(estMenuBarLayoutSource, /EST_LOCALE_CHANGED_EVENT/);
 assert.match(estMenuBarLayoutSource, /getEstText\('menu\.home'/);
-assert.match(estMenuBarLayoutSource, /homeButton\.textContent = label/);
-assert.match(estMenuBarLayoutSource, /insertBefore\(homeButton, logoItem\.nextSibling\)/);
+assert.match(estMenuBarLayoutSource, /homeButton\.setAttribute\('aria-label', label\)/);
+assert.match(estMenuBarLayoutSource, /HOME_BRAND_ITEM_CLASS = 'est-menu-bar-home-brand-item'/);
+assert.match(estMenuBarLayoutSource, /home-menu-icon\.png/);
+assert.match(estMenuBarLayoutSource, /icon\.className = 'est-menu-bar-home-icon'/);
+assert.match(estMenuBarLayoutSource, /logoItem\.appendChild\(homeButton\)/);
+assert.ok(!estMenuBarLayoutSource.includes("estLabel.textContent = 'EST'"));
+assert.ok(!estMenuBarLayoutSource.includes("studioLabel.textContent = 'Studio'"));
 assert.ok(!estMenuBarLayoutSource.includes('est-menu-bar-hide-centered-file-menu'));
 const estLanguageMenuSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -2789,10 +2893,15 @@ assert.match(estProgramControlsSource, /cannot write to hid device/);
 assert.match(estProgramControlsSource, /EST_PROGRAM_ACTIVITY_EVENT/);
 assert.match(estProgramControlsSource, /detail: \{isRunning: action === 'run'\}/);
 assert.match(estProgramControlsSource, /programActionsAllowed: false/);
+assert.match(estProgramControlsSource, /new TextEncoder\(\)\.encode\(this\.props\.codeEditorValue\)\.length/);
+assert.match(estProgramControlsSource, /programMaxBytes: EST_LEGACY_PROGRAM_MAX_BYTES/);
+assert.match(estProgramControlsSource, /programControls\.programSizeExceeded/);
+assert.ok(!estProgramControlsSource.includes('programControls.programSize\''));
+assert.ok(!estProgramControlsSource.includes('programControls.programSizeWarning'));
 assert.match(estProgramControlsSource, /getEstText\('programControls\.downloadStart'/);
 assert.match(estProgramControlsSource, /state\.locales\.locale/);
 assert.strictEqual(
-    (estProgramControlsSource.match(/disabled=\{controlsBusy \|\| !programActionsAllowed\}/g) || []).length,
+    (estProgramControlsSource.match(/disabled=\{controlsBusy \|\| !programActionsAllowed \|\| programTooLarge\}/g) || []).length,
     2
 );
 const estStatusPanelSource = fs.readFileSync(path.resolve(
@@ -2806,6 +2915,8 @@ assert.match(estStatusPanelSource, /result\.compatible === true/);
 assert.match(estStatusPanelSource, /getEstText\('status\.upgradeRequired'/);
 assert.match(estStatusPanelSource, /state\.locales\.locale/);
 assert.match(estStatusPanelSource, /EST_CONNECTION_STATUS_EVENT/);
+assert.match(estStatusPanelSource, /maxProgramBytes/);
+assert.match(estStatusPanelSource, /EST_LEGACY_PROGRAM_MAX_BYTES/);
 assert.match(estStatusPanelSource, /EST_PROGRAM_ACTIVITY_EVENT/);
 assert.match(estStatusPanelSource, /RUNNING_REFRESH_INTERVAL_MS = 10000/);
 assert.match(estStatusPanelSource, /NORMAL_REFRESH_INTERVAL_MS = 3000/);
@@ -3171,10 +3282,15 @@ assert.match(
     /\[class\*="menu-bar_active_"\] img:not\(\[class\*="menu-bar_openblock-logo_"\]\)\)[\s\S]*filter: brightness\(0\) invert\(16%\);/
 );
 assert.ok(estRendererAppStyles.includes('.app :global(.est-menu-bar-home-button)'));
-assert.match(estRendererAppStyles, /\.est-menu-bar-home-button\) \{[\s\S]*font-size: 0\.75rem;/);
-assert.match(estRendererAppStyles, /\.est-menu-bar-home-button\) \{[\s\S]*font-weight: bold;/);
-assert.match(estRendererAppStyles, /\.est-menu-bar-home-button:hover\),[\s\S]*background-color: rgba\(0, 0, 0, 0\.15\);/);
-assert.match(estRendererAppStyles, /\.est-menu-bar-home-button:active\) \{[\s\S]*color: #1f2937;/);
+assert.match(estRendererAppStyles, /\.est-menu-bar-home-button\) \{[\s\S]*width: 3rem;[\s\S]*height: 3rem;/);
+assert.match(estRendererAppStyles, /\.est-menu-bar-home-brand-item > img\) \{[\s\S]*display: none !important;/);
+assert.match(
+    estRendererAppStyles,
+    /\.est-menu-bar-home-icon\) \{[\s\S]*object-fit: contain;[\s\S]*filter: none !important;/
+);
+assert.match(estRendererAppStyles, /\.est-menu-bar-home-button:hover\),[\s\S]*background-color: rgba\(255, 255, 255, 0\.82\);/);
+assert.match(estRendererAppStyles, /\.est-menu-bar-home-button:active\) \{[\s\S]*background-color: rgba\(37, 117, 245, 0\.12\);/);
+assert.match(estRendererAppStyles, /prefers-reduced-motion: reduce/);
 assert.match(estRendererAppStyles, /\[class\*="project-title-input_title-field_"\][\s\S]*color: #111827;/);
 assert.match(estRendererAppStyles, /project-title-input_title-field_"\]::placeholder\)[\s\S]*color: #4b5563;/);
 assert.match(
@@ -3839,6 +3955,35 @@ const writeUint32LE = (bytes, offset, value) => {
     bytes[offset + 3] = (value >>> 24) & 0xff;
 };
 
+const motorTypePayload = new Uint8Array(57);
+motorTypePayload[0] = 1;
+[
+    [4, 1010, 2500, 1],
+    [5, 810, 2000, 0],
+    [0, 20, 50, 0],
+    [0xff, 500, 1250, 1]
+].forEach(([motorType, adcRaw, millivolts, pin5PullupHigh], index) => {
+    const offset = 1 + (index * 14);
+    motorTypePayload[offset] = motorType;
+    writeUint16LE(motorTypePayload, offset + 1, adcRaw);
+    writeUint16LE(motorTypePayload, offset + 3, millivolts);
+    writeUint16LE(motorTypePayload, offset + 5, adcRaw + 1);
+    writeUint16LE(motorTypePayload, offset + 7, millivolts + 1);
+    writeUint16LE(motorTypePayload, offset + 9, adcRaw + 2);
+    writeUint16LE(motorTypePayload, offset + 11, millivolts + 2);
+    motorTypePayload[offset + 13] = pin5PullupHigh;
+});
+const motorTypeResponse = buildDeviceResponse(COMMAND_MOTOR_TYPE, motorTypePayload);
+const parsedMotorTypes = parseMotorTypeResponse(motorTypeResponse);
+assert.deepStrictEqual(Array.from(buildMotorTypeFrame()), [0x68, 0x11, 0x1a, 0, 0, 0x93, 0x16]);
+assert.deepStrictEqual(Array.from(buildMotorTypeFrame(1, 2)), [0x68, 0x11, 0x1a, 2, 0, 1, 2, 0x98, 0x16]);
+assert.ok(parsedMotorTypes);
+assert.strictEqual(parsedMotorTypes.result, 1);
+assert.deepStrictEqual(parsedMotorTypes.motors.map(motor => motor.motorType), [4, 5, 0, 0xff]);
+assert.strictEqual(parsedMotorTypes.motors[0].pin5PullupHigh, true);
+assert.strictEqual(parsedMotorTypes.motors[1].millivolts, 2000);
+assert.strictEqual(parseMotorTypeResponse(buildDeviceResponse(COMMAND_MOTOR_TYPE, new Uint8Array(20))), null);
+
 assert.strictEqual(CAPABILITY_UNLIMITED_PYTHON_RUN, 1 << 18);
 assert.strictEqual(CAPABILITY_DISPLAY_FONT_STYLES, 1 << 19);
 assert.strictEqual(CAPABILITY_ZERO_SPEED_MOTOR_CONTROL, 1 << 20);
@@ -3848,6 +3993,10 @@ assert.strictEqual(CAPABILITY_COOPERATIVE_MULTITASK, 1 << 23);
 assert.strictEqual(CAPABILITY_RUNTIME_BASIC_EVENT_HATS, 1 << 24);
 assert.strictEqual(CAPABILITY_MOTOR_STALL_DETECTION, 1 << 25);
 assert.strictEqual(CAPABILITY_AUDIO_PLAYBACK, 1 << 26);
+assert.strictEqual(CAPABILITY_LARGE_PYTHON_PROGRAM, 1 << 29);
+assert.strictEqual(PYTHON_PROGRAM_LEGACY_MAX_SIZE, 8192);
+assert.strictEqual(PYTHON_PROGRAM_PROTOCOL_MAX_SIZE, 0xFFFF);
+assert.strictEqual(EST_PROGRAM_LARGE_SOURCE_MIN_FIRMWARE_VERSION, 'M1.26A');
 const m114ADeviceStatusPayload = new Uint8Array(72);
 m114ADeviceStatusPayload[0] = 1;
 m114ADeviceStatusPayload[1] = 25;
@@ -3918,6 +4067,50 @@ assert.deepStrictEqual(
     capabilityNamesFor(CAPABILITY_RUNTIME_BROADCAST),
     ['runtime-broadcast']
 );
+assert.deepStrictEqual(
+    capabilityNamesFor(CAPABILITY_LARGE_PYTHON_PROGRAM),
+    ['large-python-program']
+);
+const m126ADeviceStatusPayload = new Uint8Array(76);
+m126ADeviceStatusPayload[0] = 1;
+m126ADeviceStatusPayload[1] = 29;
+m126ADeviceStatusPayload.set(Buffer.from('M1.26A', 'ascii'), 2);
+writeUint32LE(m126ADeviceStatusPayload, 16, CAPABILITY_LARGE_PYTHON_PROGRAM);
+writeUint32LE(m126ADeviceStatusPayload, 72, 61440);
+const parsedM126ADeviceStatus = parseDeviceStatusResponse(
+    buildDeviceResponse(COMMAND_DEVICE_STATUS, m126ADeviceStatusPayload)
+);
+assert.strictEqual(parsedM126ADeviceStatus.maxProgramBytes, 61440);
+assert.strictEqual(parsedM126ADeviceStatus.protocolMinor, 29);
+const largePersistentPayload = new Uint8Array(84);
+const largePersistentName = Buffer.from('巡线 800', 'utf8');
+largePersistentPayload.set([4, 1, 3, 0x17, 6, 8, 1, 1], 0);
+writeUint32LE(largePersistentPayload, 8, 9);
+writeUint16LE(largePersistentPayload, 12, 61440);
+largePersistentPayload[14] = largePersistentName.length;
+writeUint32LE(largePersistentPayload, 16, 0x12345678);
+writeUint32LE(largePersistentPayload, 20, 0x01a60000);
+writeUint32LE(largePersistentPayload, 24, 131072);
+writeUint32LE(largePersistentPayload, 28, 65536);
+writeUint32LE(largePersistentPayload, 32, 0x02000000);
+largePersistentPayload.set([0xef, 0x40, 0x19], 36);
+writeUint32LE(largePersistentPayload, 39, 0xffff0000);
+writeUint32LE(largePersistentPayload, 43, 0x0000ffff);
+largePersistentPayload.set(largePersistentName, 47);
+largePersistentPayload[78] = 2;
+largePersistentPayload[79] = 16;
+writeUint32LE(largePersistentPayload, 80, 61440);
+const parsedLargePersistent = parsePersistentProgramResponse(
+    buildDeviceResponse(COMMAND_PERSISTENT_PROGRAM, largePersistentPayload)
+);
+assert.strictEqual(parsedLargePersistent.schemaVersion, 4);
+assert.strictEqual(parsedLargePersistent.programName, '巡线 800');
+assert.strictEqual(parsedLargePersistent.erasedSectorMask, 0xffff0000);
+assert.strictEqual(parsedLargePersistent.occupiedSectorMask, 0x0000ffff);
+assert.strictEqual(parsedLargePersistent.regionSize, 131072);
+assert.strictEqual(parsedLargePersistent.slotSize, 65536);
+assert.strictEqual(parsedLargePersistent.sectorsPerSlot, 16);
+assert.strictEqual(parsedLargePersistent.maxProgramBytes, 61440);
 assert.strictEqual(checkProgramFirmwareCompatibility(parsedM114ADeviceStatus).programCompatible, true);
 assert.strictEqual(
     checkProgramFirmwareCompatibility(parsedM114ADeviceStatus, CAPABILITY_TEMPERATURE_SENSOR).programCompatible,
@@ -3936,6 +4129,7 @@ class ProgramTestTransport {
     constructor ({
         capabilities = EST_PROGRAM_REQUIRED_CAPABILITIES,
         firmwareVersion = 'M1.12A',
+        maxProgramBytes = null,
         protocolMinor = 21,
         respondToDeviceStatus = true,
         respondToPythonStatus = true,
@@ -3947,6 +4141,7 @@ class ProgramTestTransport {
         this.closed = false;
         this.closeCount = 0;
         this.firmwareVersion = firmwareVersion;
+        this.maxProgramBytes = maxProgramBytes;
         this.protocolMinor = protocolMinor;
         this.readError = readError;
         this.respondToDeviceStatus = respondToDeviceStatus;
@@ -3977,7 +4172,7 @@ class ProgramTestTransport {
             throw this.writeError;
         }
         const command = report[2];
-        const action = command === COMMAND_DEVICE_STATUS ? 0 : report[5];
+        const action = command === COMMAND_DEVICE_STATUS || command === COMMAND_MOTOR_TYPE ? 0 : report[5];
         this.actions.push(`${command}:${action}`);
         if (command === COMMAND_PYTHON_PROGRAM) {
             this.handlePython(report, action);
@@ -3985,6 +4180,8 @@ class ProgramTestTransport {
             this.handlePersistent(report, action);
         } else if (command === COMMAND_DEVICE_STATUS && this.respondToDeviceStatus) {
             this.responses.push(this.buildDeviceStatusResponse());
+        } else if (command === COMMAND_MOTOR_TYPE) {
+            this.responses.push(buildDeviceResponse(COMMAND_MOTOR_TYPE, motorTypePayload));
         }
         return Promise.resolve();
     }
@@ -4103,16 +4300,36 @@ class ProgramTestTransport {
     }
 
     buildDeviceStatusResponse () {
-        const payload = new Uint8Array(72);
+        const payload = new Uint8Array(this.maxProgramBytes === null ? 72 : 76);
         payload[0] = 1;
         payload[1] = this.protocolMinor;
         payload.set(Buffer.from(this.firmwareVersion, 'ascii').slice(0, 6), 2);
         payload[8] = 4;
         payload[9] = 4;
         writeUint32LE(payload, 16, this.capabilities);
+        if (payload.length === 76) {
+            writeUint32LE(payload, 72, this.maxProgramBytes);
+        }
         return buildDeviceResponse(COMMAND_DEVICE_STATUS, payload);
     }
 }
+
+const testUsbPortInformation = async () => {
+    const transport = new ProgramTestTransport({
+        capabilities: (EST_PROGRAM_REQUIRED_CAPABILITIES | CAPABILITY_MOTOR_TYPE) >>> 0
+    });
+    const service = new EstDeviceService({requestTimeoutMs: 100});
+    service.transport = transport;
+    service.device = {
+        maxInputReportSize: 1024,
+        productId: 0x5750,
+        product: 'EST HID Device (HS Mode)',
+        vendorId: 0x0483
+    };
+    const status = await service.getStatus({includePortInfo: true});
+    assert.deepStrictEqual(status.motorTypes.motors.map(motor => motor.motorType), [4, 5, 0, 0xff]);
+    assert.deepStrictEqual(transport.actions, ['25:0', '26:0']);
+};
 
 const createDeferred = () => {
     let resolve;
@@ -4250,17 +4467,16 @@ const testProgramDownloadRunAndStop = async () => {
     assert.strictEqual(running.programName, 'Program 5');
     assert.strictEqual(running.savedStatus.programName, 'Program 5');
     assert.strictEqual(running.savedStatus.programSlotId, 5);
-    assert.strictEqual(running.run.loadedStatus.programSlotId, 5);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(running.run, 'loadedStatus'), false);
     assert.strictEqual(running.run.runStatus.state, 3);
     assert.strictEqual(running.run.runStatus.timeoutMs, PYTHON_PROGRAM_NO_TIMEOUT_MS);
     assert.strictEqual(transport.python.timeoutMs, PYTHON_PROGRAM_NO_TIMEOUT_MS);
     assert.strictEqual(transport.slots[5].source.toString('utf8'), runSource);
-    assert.deepStrictEqual(transport.actions.slice(-6), [
+    assert.deepStrictEqual(transport.actions.slice(-5), [
         '36:0',
         '36:1',
         '36:2',
         '37:1',
-        '37:2',
         '36:3'
     ]);
     const actionsBeforeRunningPanelRefresh = transport.actions.length;
@@ -4677,6 +4893,150 @@ const testProgramStatusTimeoutPreservesStopTransport = async () => {
     assert.strictEqual(service.transport, null);
 };
 
+const exactSizePythonSource = byteLength => {
+    const prefix = 'value = 1\n#';
+    if (byteLength < Buffer.byteLength(prefix, 'utf8')) {
+        throw new RangeError('requested Python source size is too small');
+    }
+    return prefix + 'x'.repeat(byteLength - Buffer.byteLength(prefix, 'utf8'));
+};
+
+const mixed800BlockSource = () => {
+    const lines = [
+        'import est_runtime as rt',
+        'import est',
+        '',
+        '@rt.on_start',
+        'def stack_1():',
+        '    value = 0',
+        '    values = []'
+    ];
+    for (let index = 0; index < 800; index++) {
+        switch (index % 5) {
+        case 0:
+            lines.push(`    value = value + ${index % 17}`);
+            break;
+        case 1:
+            lines.push('    value = min(value, 100)');
+            break;
+        case 2:
+            lines.push('    values.append(value)');
+            break;
+        case 3:
+            lines.push(`    est.display.pixel(${index % 180}, ${index % 128}, bool(value & 1))`);
+            break;
+        default:
+            lines.push('    value = max(value - 1, 0)');
+        }
+    }
+    lines.push('    est._program_result(value)', '', 'rt.run()', '');
+    return lines.join('\n');
+};
+
+const testLargeProgramCapacityAndSyntax = async () => {
+    const m126AProgramMaxSize = 61440;
+    assert.strictEqual(validateMicroPythonSourceSyntax('value = 1\n'), true);
+    assert.throws(
+        () => validateMicroPythonSourceSyntax('if True print(1)\n'),
+        /MicroPython syntax error:.*line 1/
+    );
+
+    const device = {
+        maxInputReportSize: 1024,
+        path: 'large-program-est',
+        productId: 0x5750,
+        product: 'EST HID Device (HS Mode)',
+        vendorId: 0x0483
+    };
+    const capabilities = (EST_PROGRAM_REQUIRED_CAPABILITIES | CAPABILITY_LARGE_PYTHON_PROGRAM) >>> 0;
+    const transport = new ProgramTestTransport({
+        capabilities,
+        firmwareVersion: 'M1.26A',
+        maxProgramBytes: m126AProgramMaxSize,
+        protocolMinor: 29
+    });
+    const service = new EstDeviceService({
+        fragmentWriteDelayMs: 0,
+        programStatusPollIntervalMs: 0,
+        requestTimeoutMs: 100
+    });
+    service.transport = transport;
+    service.device = device;
+
+    const exactLimitSource = exactSizePythonSource(m126AProgramMaxSize);
+    assert.strictEqual(Buffer.byteLength(exactLimitSource, 'utf8'), 61440);
+    const largeRun = await service.runProgram({source: exactLimitSource, slot: 7});
+    assert.strictEqual(largeRun.upload.sourceBytes, 61440);
+    assert.strictEqual(transport.slots[7].source.length, 61440);
+    assert.strictEqual(largeRun.run.runStatus.state, 3);
+
+    const mixedSource = mixed800BlockSource();
+    assert.ok(Buffer.byteLength(mixedSource, 'utf8') > PYTHON_PROGRAM_LEGACY_MAX_SIZE);
+    assert.ok(Buffer.byteLength(mixedSource, 'utf8') <= m126AProgramMaxSize);
+    const mixedDownload = await service.downloadProgram({source: mixedSource, slot: 6, programName: '800 blocks'});
+    assert.strictEqual(mixedDownload.savedStatus.sourceLength, Buffer.byteLength(mixedSource, 'utf8'));
+
+    const allSlotsTransport = new ProgramTestTransport({
+        capabilities,
+        firmwareVersion: 'M1.26A',
+        maxProgramBytes: m126AProgramMaxSize,
+        protocolMinor: 29
+    });
+    const allSlotsService = new EstDeviceService({fragmentWriteDelayMs: 0, requestTimeoutMs: 100});
+    allSlotsService.transport = allSlotsTransport;
+    allSlotsService.device = device;
+    for (let slot = 0; slot < 8; slot++) {
+        const source = `slot = ${slot}\n# 中文槽位 ${slot}\n`;
+        await allSlotsService.downloadProgram({source, slot, programName: `槽位 ${slot}`});
+        assert.strictEqual(allSlotsTransport.slots[slot].source.toString('utf8'), source);
+    }
+
+    const oversizedTransport = new ProgramTestTransport({
+        capabilities,
+        firmwareVersion: 'M1.26A',
+        maxProgramBytes: m126AProgramMaxSize,
+        protocolMinor: 29
+    });
+    const oversizedService = new EstDeviceService({requestTimeoutMs: 100});
+    oversizedService.transport = oversizedTransport;
+    oversizedService.device = device;
+    await assert.rejects(
+        oversizedService.downloadProgram({source: exactSizePythonSource(61441), slot: 0}),
+        /程序大小 61441 字节，超过设备上限 61440 字节/
+    );
+    assert.deepStrictEqual(oversizedTransport.actions, ['25:0']);
+    assert.ok(!oversizedTransport.actions.some(action => action.startsWith('36:')));
+    assert.ok(!oversizedTransport.actions.some(action => action.startsWith('37:')));
+
+    const syntaxTransport = new ProgramTestTransport({
+        capabilities,
+        firmwareVersion: 'M1.26A',
+        maxProgramBytes: m126AProgramMaxSize,
+        protocolMinor: 29
+    });
+    const syntaxService = new EstDeviceService({requestTimeoutMs: 100});
+    syntaxService.transport = syntaxTransport;
+    syntaxService.device = device;
+    await assert.rejects(
+        syntaxService.downloadProgram({source: 'if True print(1)\n', slot: 0}),
+        /MicroPython syntax error:.*line 1/
+    );
+    assert.deepStrictEqual(syntaxTransport.actions, []);
+
+    const legacyTransport = new ProgramTestTransport();
+    const legacyService = new EstDeviceService({requestTimeoutMs: 100});
+    legacyService.transport = legacyTransport;
+    legacyService.device = device;
+    await assert.rejects(
+        legacyService.downloadProgram({source: exactSizePythonSource(8193), slot: 0}),
+        /程序大小 8193 字节，超过设备上限 8192 字节/
+    );
+    assert.ok(!legacyTransport.actions.some(action => action.startsWith('36:')));
+
+    const chineseSource = "message = '中文画板和事件帽'\n";
+    assert.ok(Buffer.byteLength(chineseSource, 'utf8') > chineseSource.length);
+};
+
 const testUsbDisconnectClearsStaleTransport = async () => {
     const transport = new ProgramTestTransport({
         writeError: new TypeError('Cannot write to hid device')
@@ -4772,12 +5132,14 @@ const validateEstDefaultProject = () => new Promise((resolve, reject) => {
 
 validateEstDefaultProject()
     .then(() => testCommandQueue())
+    .then(() => testUsbPortInformation())
     .then(() => testProgramDownloadRunAndStop())
+    .then(() => testLargeProgramCapacityAndSyntax())
     .then(() => testProgramStatusTimeoutPreservesStopTransport())
     .then(() => testUsbDisconnectClearsStaleTransport())
     .then(() => testBuiltInMotorBlock())
     .then(() => console.log(
-        'EST protocol, queue, 80 EST blocks, and native operator/data/procedure tests passed'
+        'EST protocol, queue, 81 EST blocks, and native operator/data/procedure tests passed'
     ))
     .catch(error => {
         console.error(error);

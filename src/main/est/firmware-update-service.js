@@ -28,6 +28,8 @@ const uniqueExistingDirectories = directories => {
 
 export const getFirmwareRootCandidates = (projectRoot = process.cwd()) => uniqueExistingDirectories([
     process.env.EST_FIRMWARE_ROOT,
+    typeof process.resourcesPath === 'string' ? path.join(process.resourcesPath, 'est-firmware') : null,
+    path.resolve(projectRoot, 'resources', 'est-firmware'),
     path.resolve(projectRoot, '..', '..', 'EST重构'),
     path.resolve(projectRoot, '..', 'EST重构'),
     path.resolve(projectRoot, 'EST重构'),

@@ -1,5 +1,10 @@
 import {installEstPythonNameSanitizer} from './python-names';
 import {
+    cropEstDisplayBitmap,
+    decodeEstDisplayBitmap,
+    estDisplayBitmapBytesLiteral
+} from './display-bitmap';
+import {
     EST_PIANO_MAX_MIDI_NOTE,
     EST_PIANO_MIN_MIDI_NOTE,
     EST_PIANO_PITCH_NAMES,
@@ -49,9 +54,11 @@ const EST_PIANO_RESOURCE_LITERAL_RE = new RegExp(
 );
 
 const ASYNC_RUNTIME_STATEMENT_RE =
-    /^(\s*)(?!await\b)(rt\.(?:yield_once|sleep|wait_until|motor_run_for|drive_move_for|drive_steer_for|drive_dual_speed_for|display_image_for|wait_[a-z_]+)\s*\()/gm;
+    /^(\s*)(?!await\b)(rt\.(?:yield_once|sleep|wait_until(?:_async)?|motor_run_for|drive_move_for|drive_steer_for|drive_dual_speed_for|display_image_for|wait_[a-z_]+)\s*\()/gm;
 const ASYNC_BROADCAST_WAIT_STATEMENT_RE =
     /^(\s*)(?!await\b)(rt\.broadcast\s*\([^\n]*\bwait\s*=\s*True\s*\))/gm;
+const ASYNC_SENSOR_VALUE_RE =
+    /\brt\.sensor_(?:color_(?:reflection|ambient|value)|temperature|touch_pressed|ultrasonic_distance|infrared_proximity|gyro_(?:angle|rate|reset))\s*\(/g;
 const STACK_STOP_STATEMENT_RE = /\brt\.(?:stop|stop_other_stacks)\s*\(/;
 
 const ensureDictionary = (generator, name) => {
@@ -147,29 +154,17 @@ const functionCall = (generator, code) => [
     orderOf(generator, 'ORDER_FUNCTION_CALL', orderOf(generator, 'ORDER_ATOMIC', 0))
 ];
 
-const fixedSensorPort = code => {
-    const match = String(code).match(/^['"]([1-4])['"]$/);
-    return match ? match[1] : null;
-};
-
 const sensorDevice = (generator, type, portCode, warmupCall = null) => {
-    const port = fixedSensorPort(portCode);
-    if (!port) return `rt.${type}(${portCode})`;
-
-    const name = `_est_device_${type}_${port}`;
-    const key = `estDevice_${type}_${port}`;
-    const libraries = ensureDictionary(generator, 'libraries_');
-    if (!Object.prototype.hasOwnProperty.call(libraries, key)) {
-        libraries[key] = `${name} = rt.${type}(${port})\n${
-            warmupCall ? `${name}.${warmupCall}\n` : ''
-        }`;
-    }
-    return name;
+    void generator;
+    void type;
+    void warmupCall;
+    return portCode;
 };
 
 const initialiseStackNumbers = (generator, workspace) => {
     generator.estStackNumbers_ = Object.create(null);
     generator.estNextStackNumber_ = 1;
+    generator.estNextPredicateNumber_ = 1;
     generator.estProgramStartCount_ = 0;
     if (!workspace || typeof workspace.getTopBlocks !== 'function') return;
 
@@ -207,6 +202,20 @@ const hasAsyncBroadcastWaitStatement = code => {
     return ASYNC_BROADCAST_WAIT_STATEMENT_RE.test(code);
 };
 
+const hasAsyncSensorValue = code => {
+    ASYNC_SENSOR_VALUE_RE.lastIndex = 0;
+    return ASYNC_SENSOR_VALUE_RE.test(code);
+};
+
+const asyncifySensorValues = code => code.split('\n').map(line => {
+    if (line.includes('lambda:')) return line;
+    ASYNC_SENSOR_VALUE_RE.lastIndex = 0;
+    return line.replace(ASYNC_SENSOR_VALUE_RE, (match, offset, source) => {
+        const prefix = source.slice(0, offset);
+        return /\bawait\s*$/.test(prefix) ? match : `await ${match}`;
+    });
+}).join('\n');
+
 const stackNeedsCooperativeRuntime = (generator, block, code) => (
     EVENT_HAT_IDS.has(block.type) &&
     (
@@ -214,23 +223,26 @@ const stackNeedsCooperativeRuntime = (generator, block, code) => (
         STACK_STOP_STATEMENT_RE.test(code) ||
         /\bawait\s+rt\./.test(code) ||
         hasAsyncRuntimeStatement(code) ||
-        hasAsyncBroadcastWaitStatement(code)
+        hasAsyncBroadcastWaitStatement(code) ||
+        hasAsyncSensorValue(code)
     )
 );
 
 const asyncifyStackCode = code => {
     ASYNC_RUNTIME_STATEMENT_RE.lastIndex = 0;
     ASYNC_BROADCAST_WAIT_STATEMENT_RE.lastIndex = 0;
-    return code
+    ASYNC_SENSOR_VALUE_RE.lastIndex = 0;
+    const statements = code
         .replace(ASYNC_RUNTIME_STATEMENT_RE, '$1await $2')
         .replace(ASYNC_BROADCAST_WAIT_STATEMENT_RE, '$1await $2');
+    return asyncifySensorValues(statements);
 };
 
-const registerEventHat = (generator, block, decorator) => {
+const registerEventHat = (generator, block, decorator, prelude = '') => {
     ensureRuntimeImport(generator);
     const stackName = stackNameForBlock(block, generator);
     const nextBlock = block.nextConnection && block.nextConnection.targetBlock();
-    let code = `${decorator}\ndef ${stackName}():\n`;
+    let code = `${prelude}${decorator}\ndef ${stackName}():\n`;
     const variables = globalVariableNames(generator);
 
     if (variables.length > 0) {
@@ -468,6 +480,15 @@ const registerDisplayGenerators = generator => {
         return `est.display.image(${quoteField(generator, block, 'IMAGE', 'Eyes/Neutral')})\n` +
             'est.display.refresh()\n';
     };
+    generator.display_draw = block => {
+        ensureHardwareImport(generator);
+        const bitmap = cropEstDisplayBitmap(decodeEstDisplayBitmap(fieldValue(block, 'BITMAP', 'v1:')));
+        if (!bitmap) return 'est.display.clear()\nest.display.refresh()\n';
+        return 'est.display.clear()\n' +
+            `est.display.bitmap(${bitmap.x}, ${bitmap.y}, ${bitmap.width}, ${bitmap.height}, ` +
+            `${estDisplayBitmapBytesLiteral(bitmap.data)})\n` +
+            'est.display.refresh()\n';
+    };
     generator.display_text_line = block => {
         ensureRuntimeImport(generator);
         const line = valueOr(generator, block, 'LINE', '1');
@@ -538,6 +559,19 @@ const registerEventGenerators = generator => {
     };
     generator.event_condition = block => {
         const condition = valueOr(generator, block, 'CONDITION', 'False');
+        if (hasAsyncSensorValue(condition)) {
+            const stackName = stackNameForBlock(block, generator);
+            const predicateName = `_est_condition_${stackName}`;
+            const prelude =
+                `async def ${predicateName}():\n` +
+                `${generator.INDENT}return ${condition}\n`;
+            return registerEventHat(
+                generator,
+                block,
+                `@rt.on_condition_async(${predicateName})`,
+                prelude
+            );
+        }
         return registerEventHat(generator, block, `@rt.on_condition(lambda: ${condition})`);
     };
     generator.event_broadcast_received = block => {
@@ -568,6 +602,13 @@ const registerControlGenerators = generator => {
     generator.control_wait_until = block => {
         ensureRuntimeImport(generator);
         const condition = valueOr(generator, block, 'CONDITION', 'False');
+        if (hasAsyncSensorValue(condition)) {
+            const predicateNumber = generator.estNextPredicateNumber_++;
+            const predicateName = `_est_wait_condition_${predicateNumber}`;
+            return `async def ${predicateName}():\n` +
+                `${generator.INDENT}return ${condition}\n` +
+                `rt.wait_until_async(${predicateName})\n`;
+        }
         return `rt.wait_until(lambda: ${condition})\n`;
     };
     generator.control_repeat = block => {
@@ -650,36 +691,36 @@ const registerSensorGenerators = generator => {
     generator.sensor_color_reflection = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'color', 'reflection()');
-        return functionCall(generator, `${sensor.object}.reflection()`);
+        return functionCall(generator, `rt.sensor_color_reflection(${sensor.object})`);
     };
     generator.sensor_color_reflection_compare = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'color', 'reflection()');
-        const reading = `${sensor.object}.reflection()`;
+        const reading = `rt.sensor_color_reflection(${sensor.object})`;
         return functionCall(generator, `rt.compare(${reading}, ${comparator(block)}, ${compareValue(block)})`);
     };
     generator.sensor_color_ambient = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'color', 'ambient()');
-        return functionCall(generator, `${sensor.object}.ambient()`);
+        return functionCall(generator, `rt.sensor_color_ambient(${sensor.object})`);
     };
     generator.sensor_color_ambient_compare = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'color', 'ambient()');
-        const reading = `${sensor.object}.ambient()`;
+        const reading = `rt.sensor_color_ambient(${sensor.object})`;
         return functionCall(generator, `rt.compare(${reading}, ${comparator(block)}, ${compareValue(block)})`);
     };
     generator.sensor_color_value = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'color', 'color()');
-        return functionCall(generator, `${sensor.object}.color()`);
+        return functionCall(generator, `rt.sensor_color_value(${sensor.object})`);
     };
     generator.sensor_color_is = block => {
         ensureRuntimeImport(generator);
         const color = fieldValue(block, 'COLOR', 'red');
         const colorId = Object.prototype.hasOwnProperty.call(COLOR_IDS, color) ? COLOR_IDS[color] : 0;
         const sensor = device(block, '1', 'color', 'color()');
-        const code = `${sensor.object}.color() == ${colorId}`;
+        const code = `rt.sensor_color_value(${sensor.object}) == ${colorId}`;
         return [code, orderOf(generator, 'ORDER_RELATIONAL', 11)];
     };
     generator.sensor_wait_color = block => {
@@ -692,12 +733,13 @@ const registerSensorGenerators = generator => {
         ensureRuntimeImport(generator);
         const unit = fieldValue(block, 'UNIT', 'celsius') === 'fahrenheit' ? 'fahrenheit' : 'celsius';
         const sensor = device(block, '1', 'temperature', `${unit}()`);
-        return functionCall(generator, `${sensor.object}.${unit}()`);
+        return functionCall(generator,
+            `rt.sensor_temperature(${sensor.object}, ${quote(generator, unit)})`);
     };
     generator.sensor_touch_pressed = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'touch', 'pressed()');
-        return functionCall(generator, `${sensor.object}.pressed()`);
+        return functionCall(generator, `rt.sensor_touch_pressed(${sensor.object})`);
     };
     generator.sensor_wait_touch = block => {
         ensureRuntimeImport(generator);
@@ -709,13 +751,14 @@ const registerSensorGenerators = generator => {
         ensureRuntimeImport(generator);
         const unit = quoteField(generator, block, 'UNIT', 'centimeters');
         const sensor = device(block, '1', 'ultrasonic', `distance(${unit})`);
-        return functionCall(generator, `${sensor.object}.distance(${unit})`);
+        return functionCall(generator,
+            `rt.sensor_ultrasonic_distance(${sensor.object}, ${unit})`);
     };
     generator.sensor_ultrasonic_compare = block => {
         ensureRuntimeImport(generator);
         const unit = quoteField(generator, block, 'UNIT', 'centimeters');
         const sensor = device(block, '1', 'ultrasonic', `distance(${unit})`);
-        const reading = `${sensor.object}.distance(${unit})`;
+        const reading = `rt.sensor_ultrasonic_distance(${sensor.object}, ${unit})`;
         return functionCall(generator, `rt.compare(${reading}, ${comparator(block)}, ${compareValue(block)})`);
     };
     generator.sensor_wait_ultrasonic = block => {
@@ -728,12 +771,12 @@ const registerSensorGenerators = generator => {
     generator.sensor_ir_proximity = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'infrared', 'proximity()');
-        return functionCall(generator, `${sensor.object}.proximity()`);
+        return functionCall(generator, `rt.sensor_infrared_proximity(${sensor.object})`);
     };
     generator.sensor_ir_proximity_compare = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'infrared', 'proximity()');
-        const reading = `${sensor.object}.proximity()`;
+        const reading = `rt.sensor_infrared_proximity(${sensor.object})`;
         return functionCall(generator, `rt.compare(${reading}, ${comparator(block)}, ${compareValue(block)})`);
     };
     generator.sensor_wait_ir_proximity = block => {
@@ -751,22 +794,22 @@ const registerSensorGenerators = generator => {
     generator.sensor_gyro_angle = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'gyro', 'angle()');
-        return functionCall(generator, `${sensor.object}.angle()`);
+        return functionCall(generator, `rt.sensor_gyro_angle(${sensor.object})`);
     };
     generator.sensor_gyro_rate = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'gyro', 'speed()');
-        return functionCall(generator, `${sensor.object}.speed()`);
+        return functionCall(generator, `rt.sensor_gyro_rate(${sensor.object})`);
     };
     generator.sensor_gyro_reset = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'gyro');
-        return `${sensor.object}.reset_angle()\n`;
+        return `rt.sensor_gyro_reset(${sensor.object})\n`;
     };
     generator.sensor_gyro_compare = block => {
         ensureRuntimeImport(generator);
         const sensor = device(block, '1', 'gyro', 'angle()');
-        const reading = `${sensor.object}.angle()`;
+        const reading = `rt.sensor_gyro_angle(${sensor.object})`;
         return functionCall(generator, `rt.compare(${reading}, ${comparator(block)}, ${compareValue(block)})`);
     };
     generator.sensor_wait_gyro = block => {

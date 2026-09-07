@@ -55,7 +55,13 @@ export const EST_PROGRAM_COMPATIBILITY_TABLE = Object.freeze({
     'M1.24A': Object.freeze({protocolMajor: 1, protocolMinor: 27}),
     'M1.24B': Object.freeze({protocolMajor: 1, protocolMinor: 27}),
     'M1.24C': Object.freeze({protocolMajor: 1, protocolMinor: 27}),
-    'M1.25A': Object.freeze({protocolMajor: 1, protocolMinor: 28})
+    'M1.25A': Object.freeze({protocolMajor: 1, protocolMinor: 28}),
+    'M1.25B': Object.freeze({protocolMajor: 1, protocolMinor: 28}),
+    'M1.25C': Object.freeze({protocolMajor: 1, protocolMinor: 28}),
+    'M1.25D': Object.freeze({protocolMajor: 1, protocolMinor: 28}),
+    'M1.25E': Object.freeze({protocolMajor: 1, protocolMinor: 28}),
+    'M1.25F': Object.freeze({protocolMajor: 1, protocolMinor: 28}),
+    'M1.26A': Object.freeze({protocolMajor: 1, protocolMinor: 29})
 });
 
 export const CAPABILITY_FIRMWARE_UPDATE = 1 << 0;
@@ -87,6 +93,7 @@ export const CAPABILITY_MOTOR_STALL_DETECTION = 1 << 25;
 export const CAPABILITY_AUDIO_PLAYBACK = 1 << 26;
 export const CAPABILITY_AUDIO_RESOURCE_FLASH = 1 << 27;
 export const CAPABILITY_RUNTIME_BROADCAST = 1 << 28;
+export const CAPABILITY_LARGE_PYTHON_PROGRAM = 1 << 29;
 
 export const PYTHON_PROGRAM_ACTION_STATUS = 0x00;
 export const PYTHON_PROGRAM_ACTION_BEGIN = 0x01;
@@ -112,7 +119,8 @@ export const PYTHON_PROGRAM_STATE_TIMED_OUT = 8;
 export const PYTHON_PROGRAM_STATE_INVALID = 9;
 export const PYTHON_PROGRAM_FLAG_TIMEOUT_ARMED = 0x08;
 
-export const PYTHON_PROGRAM_MAX_SIZE = 8192;
+export const PYTHON_PROGRAM_LEGACY_MAX_SIZE = 8192;
+export const PYTHON_PROGRAM_PROTOCOL_MAX_SIZE = 0xFFFF;
 export const PYTHON_PROGRAM_CHUNK_SIZE = 1000;
 export const PYTHON_PROGRAM_NO_TIMEOUT_MS = 0;
 export const PYTHON_PROGRAM_MIN_TIMEOUT_MS = 100;
