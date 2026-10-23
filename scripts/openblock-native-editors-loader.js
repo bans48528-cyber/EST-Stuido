@@ -8,6 +8,23 @@
 module.exports = function (source) {
     const resourcePath = (this.resourcePath || '').replace(/\\/g, '/');
 
+    if (resourcePath.endsWith('/containers/extension-library.jsx')) {
+        const loadedMarker = '            if (this.props.vm.extensionManager.isDeviceExtensionLoaded(id)) {';
+        const unloadMarker = `                this.props.vm.extensionManager.unloadDeviceExtension(id);
+                this.updateDeviceExtensions();`;
+        if (!source.includes(loadedMarker) || !source.includes(unloadMarker) ||
+            !source.includes('autoClose={false}')) {
+            throw new Error('Unable to locate the OpenBlock extension selection hooks.');
+        }
+        // Use the native library's Scratch-style select-and-close interaction.
+        return source.replace('autoClose={false}', 'autoClose')
+            .replace('                isUnloadble\n', '                isUnloadble={false}\n')
+            .replace(unloadMarker, '                this.props.onCategorySelected(id);\n                return;')
+            .replace(`                    this.updateDeviceExtensions();
+                    analytics.event({`, `                    this.props.onCategorySelected(id);
+                    analytics.event({`);
+    }
+
     if (resourcePath.endsWith('/components/prompt/prompt.jsx')) {
         const modalMarker = '    <Modal\n        className={styles.modalContent}';
         const inputMarker = '                    defaultValue={props.defaultValue}';
@@ -90,6 +107,12 @@ module.exports = function (source) {
 
     if (resourcePath.endsWith('/containers/blocks.jsx')) {
         const messageBoxImport = `import MessageBoxType from '../lib/message-box.js';\n`;
+        const localeVisibilityMarker = '        if (this.props.isVisible === prevProps.isVisible) {';
+        const setLocaleMarker = `    setLocale (refreshWorkspace = true) {
+        this.ScratchBlocks.ScratchMsgs.setLocale(this.props.locale);`;
+        if (!source.includes(localeVisibilityMarker) || !source.includes(setLocaleMarker)) {
+            throw new Error('Unable to locate the OpenBlock block locale refresh hooks.');
+        }
         const estAiWorkspaceImport = `import {
     EST_AI_IMPORT_REQUEST_EVENT,
     importEstBlockIrToWorkspace
@@ -161,7 +184,20 @@ module.exports = function (source) {
             throw new Error('Unable to locate the OpenBlock native toolbox callback registrations.');
         }
         return source
-            .replace(messageBoxImport, `${messageBoxImport}${estAiWorkspaceImport}`)
+            .replace('    workspaceToCode () {', '    workspaceToCode () {\n' +
+                "        if (!require('est-hardware-context').getHardwareContext().profile.compiler) return '';")
+            .replace(messageBoxImport, `${messageBoxImport}${estAiWorkspaceImport}` +
+                `import {attachHardwareCodeDrafts} from 'est-hardware-code-drafts';\n` +
+                `import {defineSparkBlocksWithLocale} from 'spark-ai-blocks';\n` +
+                `import {defineEstBlocksWithLocale} from 'est-block-definitions';\n`)
+            .replace(localeVisibilityMarker, `        if (prevProps.isVisible && this.props.isVisible && prevProps.locale !== this.props.locale) {
+            this.setLocale();
+        }
+${localeVisibilityMarker}`)
+            .replace(setLocaleMarker, `    setLocale (refreshWorkspace = true) {
+        defineSparkBlocksWithLocale(this.ScratchBlocks, this.props.locale);
+        defineEstBlocksWithLocale(this.ScratchBlocks, this.props.locale);
+        this.ScratchBlocks.ScratchMsgs.setLocale(this.props.locale);`)
             .replace(deviceLibraryImport, '')
             .replace(
                 modalReducersImport,
@@ -178,7 +214,9 @@ module.exports = function (source) {
             .replace(bindMethodMarker, `${bindMethodMarker}            'handleEstAiImportRequest',\n`)
             .replace(
                 componentDidMountWorkspaceMarker,
-                `${componentDidMountWorkspaceMarker}        window.addEventListener(
+                `${componentDidMountWorkspaceMarker}` +
+                `        this.detachHardwareCodeDrafts = attachHardwareCodeDrafts(this);
+        window.addEventListener(
             EST_AI_IMPORT_REQUEST_EVENT,
             this.handleEstAiImportRequest
         );
@@ -186,9 +224,17 @@ module.exports = function (source) {
             )
             .replace(componentWillUnmountMarker, `    componentWillUnmount () {
         window.removeEventListener(EST_AI_IMPORT_REQUEST_EVENT, this.handleEstAiImportRequest);
+        this.detachHardwareCodeDrafts();
         this.detachVM();
         this.workspace.dispose();
 `)
+            .replace("import {setCodeEditorValue} from '../reducers/code';",
+                "import {setCodeEditorValue, toggleLock} from '../reducers/code';")
+            .replace('    isCodeEditorLocked: state.scratchGui.code.isCodeEditorLocked,',
+                '    isCodeEditorLocked: state.scratchGui.code.isCodeEditorLocked,\n' +
+                '    codeEditorValue: state.scratchGui.code.codeEditorValue,')
+            .replace('    onSetCodeEditorValue: value => {',
+                '    onToggleHardwareCodeLock: () => dispatch(toggleLock()),\n    onSetCodeEditorValue: value => {')
             .replace(messageBoxRenderPropsMarker, `            onSetBaudrate,
             onShowMessageBox,
             toolboxXML,`)

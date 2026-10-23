@@ -76,7 +76,8 @@ class EstStatusPanel extends React.Component {
         }
         this.refreshInFlight = true;
         try {
-            const result = await ipcRenderer.invoke('est-auto-connect');
+            const result = await ipcRenderer.invoke('est-auto-connect', {reuseConnection: true});
+            if (this.unmounted) return;
             const isConnected = result.state === 'connected';
             const isCompatible = isConnected && result.compatible === true;
             this.programRunning = isProgramStatusActive(result.status);
@@ -91,6 +92,7 @@ class EstStatusPanel extends React.Component {
                 detail: {isCompatible, isConnected, maxProgramBytes}
             }));
         } catch (error) {
+            if (this.unmounted) return;
             this.programRunning = false;
             this.setState({isCompatible: false, isConnected: false});
             window.dispatchEvent(new CustomEvent(EST_CONNECTION_STATUS_EVENT, {
@@ -119,9 +121,17 @@ class EstStatusPanel extends React.Component {
             statusText = getEstText('status.upgradeRequired', locale);
         }
         return (
-            <div className={styles.statusBarItem}>
-                <span>{statusText}</span>
-                <span className={`${styles.indicator} ${statusClass}`} />
+            <div
+                className={styles.statusBarItem}
+                title={statusText}
+                aria-label={statusText}
+                role="status"
+            >
+                <span className={styles.statusText}>{statusText}</span>
+                <span
+                    aria-hidden="true"
+                    className={`${styles.indicator} ${statusClass}`}
+                />
             </div>
         );
     }

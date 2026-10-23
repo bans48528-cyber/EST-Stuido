@@ -4,10 +4,12 @@ import {
     EST_AI_MAX_BLOCKS,
     EST_AI_MAX_DEPTH,
     EST_AI_MAX_STACKS,
-    getEstAiBlockSpec
+    getEstAiBlockSpec,
+    getEstAiNodeSpec
 } from './est-block-spec';
+import {normalizeEstAiBitmap} from './est-ai-bitmap';
 
-const ROOT_KEYS = new Set(['version', 'mode', 'stacks']);
+const ROOT_KEYS = new Set(['version', 'mode', 'stacks', 'variables', 'procedures']);
 const STACK_KEYS = new Set(['event', 'body', 'x', 'y']);
 const NODE_KEYS = new Set(['type', 'fields', 'inputs', 'body', 'elseBody']);
 const CONTINUOUS_MOTION_BLOCKS = new Set([
@@ -34,6 +36,57 @@ const addUnknownKeys = (state, value, allowedKeys, path) => {
             addError(state, 'UNKNOWN_PROPERTY', `${path}.${key}`, `不支持属性 ${key}`);
         }
     });
+};
+
+const validName = value => typeof value === 'string' && value.trim() === value &&
+    value.length > 0 && value.length <= 64 && !/[\x00-\x1f\x7f]/.test(value) && // eslint-disable-line no-control-regex
+    !['__proto__', 'constructor', 'prototype'].includes(value.toLowerCase());
+
+const normalizeDeclarations = (state, items, kind) => {
+    if (typeof items === 'undefined') return [];
+    if (!Array.isArray(items) || items.length > 64) {
+        addError(state, 'INVALID_DECLARATIONS', `$.${kind}`, `${kind} 必须是最多 64 项的数组`);
+        return [];
+    }
+    const names = new Set();
+    return items.slice(0, 64).map((item, index) => {
+        const path = `$.${kind}[${index}]`;
+        if (!isPlainObject(item) || !validName(item.name)) {
+            addError(state, 'INVALID_NAME', path, '名称须为 1～64 个字符，不能含控制字符或保留名称');
+            return null;
+        }
+        addUnknownKeys(state, item, new Set(kind === 'variables' ? ['name', 'type'] :
+            ['name', 'arguments', 'warp']), path);
+        if (names.has(item.name.toLowerCase())) addError(state, 'DUPLICATE_NAME', path, '声明名称不能重复');
+        names.add(item.name.toLowerCase());
+        if (kind === 'variables') {
+            if (!['', 'list'].includes(item.type)) addError(state, 'INVALID_VARIABLE_TYPE', path, 'type 必须为 "" 或 list');
+            return {name: item.name, type: item.type};
+        }
+        if (/[\\%]/.test(item.name)) addError(state, 'INVALID_NAME', path, '自定义积木名称不能包含 % 或反斜杠');
+        if (typeof item.warp !== 'undefined' && typeof item.warp !== 'boolean') {
+            addError(state, 'INVALID_WARP', path, 'warp 必须为布尔值');
+        }
+        if (!Array.isArray(item.arguments) || item.arguments.length > 16) {
+            addError(state, 'INVALID_ARGUMENTS', path, 'arguments 必须是最多 16 项的数组');
+        }
+        const argumentNames = new Set();
+        const args = (Array.isArray(item.arguments) ? item.arguments.slice(0, 16) : []).map((arg, argIndex) => {
+            const argPath = `${path}.arguments[${argIndex}]`;
+            if (!isPlainObject(arg) || !validName(arg.name) || !['number', 'text', 'boolean'].includes(arg.type)) {
+                addError(state, 'INVALID_ARGUMENT', argPath, '参数需要 name 和 number/text/boolean 类型');
+                return null;
+            }
+            addUnknownKeys(state, arg, new Set(['name', 'type']), argPath);
+            if (argumentNames.has(arg.name.toLowerCase())) {
+                addError(state, 'DUPLICATE_ARGUMENT', argPath, '参数名称不能重复');
+            }
+            argumentNames.add(arg.name.toLowerCase());
+            return {name: arg.name, type: arg.type};
+        }).filter(Boolean);
+        return {name: item.name, arguments: args, warp: item.warp || false};
+    })
+        .filter(Boolean);
 };
 
 const validateFiniteNumber = (state, value, descriptor, path) => {
@@ -96,7 +149,7 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
     state.seen.add(node);
     addUnknownKeys(state, node, NODE_KEYS, path);
 
-    const spec = typeof node.type === 'string' ? getEstAiBlockSpec(node.type) : null;
+    const spec = typeof node.type === 'string' ? getEstAiNodeSpec(node, state.procedures) : null;
     if (!spec) {
         addError(state, 'UNKNOWN_BLOCK', `${path}.type`, `不支持积木 ${String(node.type)}`);
         state.visiting.delete(node);
@@ -115,7 +168,7 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
         addError(state, 'INVALID_FIELDS', `${path}.fields`, 'fields 必须是对象');
     }
     Object.keys(fields).forEach(name => {
-        if (!spec.fields[name]) {
+        if (!Object.prototype.hasOwnProperty.call(spec.fields, name)) {
             addError(state, 'UNKNOWN_FIELD', `${path}.fields.${name}`, `${node.type} 没有字段 ${name}`);
         }
     });
@@ -123,11 +176,41 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
     Object.keys(spec.fields).forEach(name => {
         const descriptor = spec.fields[name];
         if (!Object.prototype.hasOwnProperty.call(fields, name)) {
+            if (typeof descriptor.default !== 'undefined') {
+                normalizedFields[name] = descriptor.default;
+                return;
+            }
             addError(state, 'MISSING_FIELD', `${path}.fields.${name}`, `缺少字段 ${name}`);
             return;
         }
+        if (descriptor.kind === 'bitmap') {
+            try {
+                normalizedFields[name] = normalizeEstAiBitmap(fields[name]);
+            } catch (error) {
+                addError(state, 'INVALID_BITMAP', `${path}.fields.${name}`, error.message);
+            }
+            return;
+        }
+        if (!['string', 'number'].includes(typeof fields[name])) {
+            addError(state, 'INVALID_FIELD_VALUE', `${path}.fields.${name}`, '字段必须是字符串或数值');
+            return;
+        }
         const value = String(fields[name]);
-        if (!descriptor.values.includes(value)) {
+        if (descriptor.kind === 'variable') {
+            if (typeof fields[name] !== 'string' || !state.variables.some(variable =>
+                variable.name === value && variable.type === descriptor.variableType)) {
+                addError(state, 'UNKNOWN_VARIABLE', `${path}.fields.${name}`, `未声明的变量/列表：${value}`);
+            }
+        } else if (descriptor.kind === 'procedure') {
+            if (typeof fields[name] !== 'string' || !state.procedures.some(procedure => procedure.name === value)) {
+                addError(state, 'UNKNOWN_PROCEDURE', `${path}.fields.${name}`, `未声明的自定义积木：${value}`);
+            }
+        } else if (descriptor.kind === 'argument') {
+            if (typeof fields[name] !== 'string' || !state.procedure || !state.procedure.arguments.some(argument =>
+                argument.name === value && argument.type === descriptor.argumentType)) {
+                addError(state, 'INVALID_ARGUMENT_SCOPE', `${path}.fields.${name}`, '参数必须属于当前定义且类型匹配');
+            }
+        } else if (!descriptor.values.includes(value)) {
             addError(
                 state,
                 'INVALID_FIELD_VALUE',
@@ -143,7 +226,7 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
         addError(state, 'INVALID_INPUTS', `${path}.inputs`, 'inputs 必须是对象');
     }
     Object.keys(inputs).forEach(name => {
-        if (!spec.inputs[name]) {
+        if (!Object.prototype.hasOwnProperty.call(spec.inputs, name)) {
             addError(state, 'UNKNOWN_INPUT', `${path}.inputs.${name}`, `${node.type} 没有输入 ${name}`);
         }
     });
@@ -182,6 +265,9 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
         } else if (descriptor.kind === 'any' && ['string', 'number'].includes(typeof value)) {
             if (typeof value === 'number' && !Number.isFinite(value)) {
                 addError(state, 'INVALID_LITERAL', inputPath, '字面量必须是有限数值或字符串');
+            }
+            if (typeof value === 'string' && value.length > 1024) {
+                addError(state, 'INVALID_TEXT', inputPath, '文本长度不能超过 1024');
             }
             normalizedInputs[name] = value;
         } else {
@@ -286,6 +372,8 @@ export const validateEstBlockIr = ir => {
         };
     }
     addUnknownKeys(state, ir, ROOT_KEYS, '$');
+    state.variables = normalizeDeclarations(state, ir.variables, 'variables');
+    state.procedures = normalizeDeclarations(state, ir.procedures, 'procedures');
     if (ir.version !== EST_AI_IR_VERSION) {
         addError(state, 'UNSUPPORTED_VERSION', '$.version', `version 必须是 ${EST_AI_IR_VERSION}`);
     }
@@ -305,6 +393,10 @@ export const validateEstBlockIr = ir => {
         addUnknownKeys(state, stack, STACK_KEYS, path);
         validateCoordinates(state, stack.x, `${path}.x`);
         validateCoordinates(state, stack.y, `${path}.y`);
+        state.procedure = stack.event && stack.event.type === 'procedures_definition' ?
+            state.procedures.find(procedure =>
+                procedure.name === (stack.event.fields && stack.event.fields.PROCEDURE)) :
+            null;
         const event = normalizeNode(stack.event, 'hat', `${path}.event`, 1, state);
         if (!Array.isArray(stack.body)) {
             addError(state, 'INVALID_BODY', `${path}.body`, 'body 必须是积木数组');
@@ -322,8 +414,18 @@ export const validateEstBlockIr = ir => {
     const normalized = {
         version: EST_AI_IR_VERSION,
         mode: ir.mode,
-        stacks: normalizedStacks
+        stacks: normalizedStacks,
+        ...(typeof ir.variables === 'undefined' ? {} : {variables: state.variables}),
+        ...(typeof ir.procedures === 'undefined' ? {} : {procedures: state.procedures})
     };
+    state.procedures.forEach(procedure => {
+        const definitions = normalizedStacks.filter(stack => stack.event &&
+            stack.event.type === 'procedures_definition' && stack.event.fields.PROCEDURE === procedure.name);
+        if (definitions.length !== 1) {
+            addError(state, 'INVALID_PROCEDURE_DEFINITION', '$.stacks',
+                `自定义积木 ${procedure.name} 必须恰好有一个 procedures_definition 程序堆`);
+        }
+    });
     const warnings = [];
     normalizedStacks.forEach((stack, index) => {
         collectSafetyWarnings(stack.body, `$.stacks[${index}].body`, warnings);

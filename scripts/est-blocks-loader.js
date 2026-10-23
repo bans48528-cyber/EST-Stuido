@@ -12,8 +12,14 @@ module.exports = function (source) {
 
     const transformedSource = source.replace(
         returnStatement,
-        `    registerEstBlocks(ScratchBlocks);\n    registerEstPythonGenerator(ScratchBlocks);\n\n${returnStatement}`
+        `    ScratchBlocks.ScratchMsgs.locales['pt-br'] = estPortugueseBlockMessages;\n` +
+        `    registerEstBlocks(ScratchBlocks);\n    registerEstPythonGenerator(ScratchBlocks);\n` +
+        `    defineSparkBlocksWithLocale(ScratchBlocks);\n` +
+        `    registerSparkPythonGenerator(ScratchBlocks);\n\n${returnStatement}`
     );
     return `import {registerEstBlocks} from 'est-block-definitions';\n` +
+        `import {defineSparkBlocksWithLocale} from 'spark-ai-blocks';\n` +
+        `import {registerSparkPythonGenerator} from 'spark-ai-python-generator';\n` +
+        `import estPortugueseBlockMessages from 'openblock-l10n/editor/blocks/pt-br.json';\n` +
         `import {registerEstPythonGenerator} from 'est-python-generator';\n${transformedSource}`;
 };

@@ -676,6 +676,18 @@ body,
     color: #111827;
 }
 
+@media (max-width: 1400px) {
+    .app :global([class*="menu-bar_menu-bar_"]) {
+        grid-template-columns: max-content minmax(0, 1fr) max-content;
+    }
+
+    .app :global([class*="menu-bar_file-menu_"]) {
+        width: 100%;
+        max-width: 252px;
+        padding: 0 8px;
+    }
+}
+
 .app :global([class*="language-selector_language-select_"]) {
     background-color: #f8fafc !important;
     color: #1f2937 !important;
@@ -785,4 +797,16 @@ body,
 .app :global(.scratchCategoryId-myBlocks .scratchCategoryMenuItemLabel),
 .app :global(.scratchCategoryId-procedures .scratchCategoryMenuItemLabel) {
     color: #FF6680;
+}
+:global([class*="library-item-extension"] [class*="featured-image-container"]) {
+    width: 100%;
+    height: 144px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+:global([class*="library-item-extension"] img[class*="featured-image_"]) {
+    width: 136px;
+    height: 136px;
+    object-fit: contain;
 }

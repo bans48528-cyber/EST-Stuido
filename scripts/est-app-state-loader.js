@@ -56,6 +56,7 @@ module.exports = function (source) {
 `;
     const requiredFragments = [
         "import {setPlayer, setFullScreen} from '../reducers/mode.js';\n",
+        '            const locale = detectLocale(Object.keys(locales));\n',
         guiStateSetup,
         modeUpdateMethod
     ];
@@ -66,6 +67,13 @@ module.exports = function (source) {
 
     return normalizedSource
         .replace("import {setPlayer, setFullScreen} from '../reducers/mode.js';\n", '')
+        .replace(
+            '            const locale = detectLocale(Object.keys(locales));\n',
+            `            const supportedLocales = Object.keys(locales);
+            const savedLocale = window.localStorage.getItem('est-studio-locale');
+            const locale = supportedLocales.includes(savedLocale) ? savedLocale : 'pt-br';
+`
+        )
         .replace(guiStateSetup, localGuiStateSetup)
         .replace(modeUpdateMethod, '');
 };

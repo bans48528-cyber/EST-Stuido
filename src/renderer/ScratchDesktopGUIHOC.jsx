@@ -24,7 +24,7 @@ import {
     openUpdateModal
 } from 'openblock-gui/src/reducers/modals';
 import {setUpdate} from 'openblock-gui/src/reducers/update';
-import {setProjectUnchanged} from 'openblock-gui/src/reducers/project-changed';
+import {setProjectChanged, setProjectUnchanged} from 'openblock-gui/src/reducers/project-changed';
 import {setProjectTitle} from 'openblock-gui/src/reducers/project-title';
 import {selectLocale} from 'openblock-gui/src/reducers/locales';
 
@@ -32,6 +32,7 @@ import MessageBoxType from 'openblock-gui/src/lib/message-box.js';
 
 import showPrivacyPolicy from './showPrivacyPolicy';
 import {getEstText} from './est-i18n';
+import {HARDWARE_SWITCH_REQUEST_EVENT, switchHardwareWorkspace} from './hardware/project';
 import {
     canLoadHomeProject,
     normalizeHomeProjectData
@@ -69,6 +70,7 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
             ]);
             this.pendingHomeProject = null;
             this.homeProjectLoadInProgress = false;
+            this.handleHardwareSwitch = this.handleHardwareSwitch.bind(this);
             this.props.onLoadingStarted();
             ipcRenderer.invoke('get-initial-project-data').then(initialProjectData => {
                 const hasInitialProject = initialProjectData && (initialProjectData.length > 0);
@@ -120,6 +122,7 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
             window.addEventListener(EST_HOME_NEW_PROJECT_EVENT, this.handleHomeNewProject);
             window.addEventListener(EST_HOME_OPEN_PROJECT_EVENT, this.handleHomeOpenProject);
             window.addEventListener(EST_HOME_SET_LOCALE_EVENT, this.handleHomeLocaleChange);
+            window.addEventListener(HARDWARE_SWITCH_REQUEST_EVENT, this.handleHardwareSwitch);
         }
         componentDidUpdate (prevProps) {
             if (this.pendingHomeProject && this.props.loadingState !== prevProps.loadingState) {
@@ -131,13 +134,39 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
             window.removeEventListener(EST_HOME_NEW_PROJECT_EVENT, this.handleHomeNewProject);
             window.removeEventListener(EST_HOME_OPEN_PROJECT_EVENT, this.handleHomeOpenProject);
             window.removeEventListener(EST_HOME_SET_LOCALE_EVENT, this.handleHomeLocaleChange);
+            window.removeEventListener(HARDWARE_SWITCH_REQUEST_EVENT, this.handleHardwareSwitch);
+        }
+        async handleHardwareSwitch (event) {
+            const detail = event.detail;
+            if (!detail) return;
+            detail.handled = true;
+            if (this.hardwareSwitchInProgress || this.homeProjectLoadInProgress ||
+                !canLoadHomeProject(this.props.loadingState)) {
+                detail.reject(new Error('HARDWARE_BUSY'));
+                return;
+            }
+            this.hardwareSwitchInProgress = true;
+            try {
+                await switchHardwareWorkspace({vm: this.props.vm,
+                    hardwareId: detail.hardwareId,
+                    title: this.props.projectTitle,
+                    setTitle: this.props.onSetProjectTitle});
+                this.props.onHardwareProjectChanged();
+                detail.resolve();
+            } catch (error) {
+                detail.reject(error);
+            } finally {
+                this.hardwareSwitchInProgress = false;
+            }
         }
         handleHomeNewProject () {
+            if (this.hardwareSwitchInProgress) return;
             if (!this.homeProjectCanReplaceCurrent()) return;
             this.props.onRequestNewProject();
             dispatchEstHomeEvent(EST_HOME_PROJECT_OPENED_EVENT);
         }
         handleHomeOpenProject (event) {
+            if (this.hardwareSwitchInProgress) return;
             if (!event.detail || !event.detail.data) {
                 dispatchEstHomeEvent(EST_HOME_PROJECT_FAILED_EVENT);
                 return;
@@ -289,6 +318,7 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
         loadingState: PropTypes.oneOf(LoadingStates),
         locale: PropTypes.string.isRequired,
         onFinishHomeProject: PropTypes.func,
+        onHardwareProjectChanged: PropTypes.func,
         onFetchedInitialProjectData: PropTypes.func,
         onHasInitialProject: PropTypes.func,
         onLoadedProject: PropTypes.func,
@@ -299,6 +329,7 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
         onSetProjectTitle: PropTypes.func,
         onSetUpdate: PropTypes.func,
         projectChanged: PropTypes.bool,
+        projectTitle: PropTypes.string,
         // using PropTypes.instanceOf(VM) here will cause prop type warnings due to VM mismatch
         vm: GUIComponent.WrappedComponent.propTypes.vm
     };
@@ -308,10 +339,12 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
             loadingState: loadingState,
             locale: state.locales.locale,
             projectChanged: state.scratchGui.projectChanged,
+            projectTitle: state.scratchGui.projectTitle,
             vm: state.scratchGui.vm
         };
     };
     const mapDispatchToProps = dispatch => ({
+        onHardwareProjectChanged: () => dispatch(setProjectChanged()),
         onLoadingStarted: () => dispatch(openLoadingProject()),
         onLoadingCompleted: () => dispatch(closeLoadingProject()),
         onHasInitialProject: (hasInitialProject, loadingState) => {

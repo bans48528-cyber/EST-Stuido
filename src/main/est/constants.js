@@ -16,9 +16,12 @@ export const COMMAND_MOTOR_SPEED = 0x1C;
 export const COMMAND_MOTOR_PAIR_POSITION = 0x1D;
 export const COMMAND_PYTHON_PROGRAM = 0x24;
 export const COMMAND_PERSISTENT_PROGRAM = 0x25;
+export const COMMAND_VISION_SENSOR = 0x28;
 
 export const EST_PROTOCOL_MAJOR = 1;
 export const EST_MIN_PROTOCOL_MINOR = 20;
+export const EST_VISION_PROTOCOL_MINOR = 30;
+export const EST_VISION_MULTI_PROTOCOL_MINOR = 31;
 
 // Development policy: accept every EST firmware until compatibility is
 // tightened for release. Keep the verified table below for diagnostics.
@@ -61,7 +64,9 @@ export const EST_PROGRAM_COMPATIBILITY_TABLE = Object.freeze({
     'M1.25D': Object.freeze({protocolMajor: 1, protocolMinor: 28}),
     'M1.25E': Object.freeze({protocolMajor: 1, protocolMinor: 28}),
     'M1.25F': Object.freeze({protocolMajor: 1, protocolMinor: 28}),
-    'M1.26A': Object.freeze({protocolMajor: 1, protocolMinor: 29})
+    'M1.26A': Object.freeze({protocolMajor: 1, protocolMinor: 29}),
+    'M1.27B': Object.freeze({protocolMajor: 1, protocolMinor: 30}),
+    'M1.28A': Object.freeze({protocolMajor: 1, protocolMinor: 31})
 });
 
 export const CAPABILITY_FIRMWARE_UPDATE = 1 << 0;
@@ -94,6 +99,38 @@ export const CAPABILITY_AUDIO_PLAYBACK = 1 << 26;
 export const CAPABILITY_AUDIO_RESOURCE_FLASH = 1 << 27;
 export const CAPABILITY_RUNTIME_BROADCAST = 1 << 28;
 export const CAPABILITY_LARGE_PYTHON_PROGRAM = 1 << 29;
+export const CAPABILITY_VISION_INPUT = (1 << 30) >>> 0;
+export const CAPABILITY_VISION_INPUT_MULTI = (1 << 31) >>> 0;
+
+export const VISION_SENSOR_ACTION_STATUS = 0x00;
+export const VISION_SENSOR_ACTION_UPDATE = 0x01;
+export const VISION_SENSOR_ACTION_CLEAR = 0x02;
+export const VISION_SENSOR_ACTION_MULTI_STATUS = 0x03;
+export const VISION_SENSOR_ACTION_UPDATE_FRAME = 0x04;
+export const VISION_SENSOR_ACTION_MULTI_CLEAR = 0x05;
+export const VISION_SENSOR_SCHEMA_VERSION = 1;
+export const VISION_SENSOR_MULTI_SCHEMA_VERSION = 2;
+export const VISION_SENSOR_DEFAULT_ID = 0;
+export const VISION_SENSOR_TARGET_LEFT_HAND = 0;
+export const VISION_SENSOR_TARGET_RIGHT_HAND = 1;
+export const VISION_SENSOR_TARGET_POSE = 2;
+export const VISION_SENSOR_TARGET_FACE = 3;
+export const VISION_SENSOR_TARGET_COUNT = 4;
+export const VISION_SENSOR_TARGET_MASK_ALL = 0x0f;
+export const VISION_SENSOR_STATE_EMPTY = 0;
+export const VISION_SENSOR_STATE_VALID = 1;
+export const VISION_SENSOR_STATE_EXPIRED = 2;
+export const VISION_SENSOR_CLEAR_REASON_INITIALIZE = 0;
+export const VISION_SENSOR_CLEAR_REASON_NO_TARGET = 1;
+export const VISION_SENSOR_CLEAR_REASON_SOURCE_ERROR = 2;
+export const VISION_SENSOR_CLEAR_REASON_DISCONNECT = 3;
+export const VISION_SENSOR_CLEAR_REASON_PROGRAM_STOPPED = 4;
+export const VISION_SENSOR_CLEAR_REASON_PROGRAM_TRANSITION = 5;
+export const VISION_SENSOR_MIN_TTL_MS = 300;
+export const VISION_SENSOR_MAX_TTL_MS = 2000;
+export const VISION_SENSOR_DEFAULT_TTL_MS = 500;
+export const VISION_SENSOR_SEND_INTERVAL_MS = 100;
+export const VISION_SENSOR_REQUEST_TIMEOUT_MS = 250;
 
 export const PYTHON_PROGRAM_ACTION_STATUS = 0x00;
 export const PYTHON_PROGRAM_ACTION_BEGIN = 0x01;

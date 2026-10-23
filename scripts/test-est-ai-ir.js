@@ -8,12 +8,13 @@ const root = path.resolve(__dirname, '..');
 const rendererRoot = path.join(root, 'src', 'renderer');
 const originalJsLoader = Module._extensions['.js'];
 const originalSvgLoader = Module._extensions['.svg'];
+Module._extensions['.png'] = (module, filename) => { module.exports = filename; };
 
 Module._extensions['.svg'] = (module, filename) => {
     module.exports = filename;
 };
 Module._extensions['.js'] = (module, filename) => {
-    if (!filename.startsWith(rendererRoot)) return originalJsLoader(module, filename);
+    if (!filename.startsWith(path.join(root, 'src'))) return originalJsLoader(module, filename);
     const transformed = babel.transformSync(fs.readFileSync(filename, 'utf8'), {
         babelrc: false,
         plugins: ['@babel/plugin-transform-modules-commonjs']
@@ -35,11 +36,21 @@ const {
 } = require(path.join(aiRoot, 'est-block-validator.js'));
 const {compileEstBlockIrToXml} = require(path.join(aiRoot, 'est-block-compiler.js'));
 const {importEstBlockIrToWorkspace} = require(path.join(aiRoot, 'est-ai-workspace.js'));
+const {makeCoverageIr} = require('./ai-ui-test/coverage-fixture');
+const {EST_HOME_BLOCK_GUIDE_CATEGORIES} = require(path.join(rendererRoot, 'est-home-block-guide.js'));
+const {normalizeEstAiBitmap} = require(path.join(aiRoot, 'est-ai-bitmap.js'));
+const {decodeEstDisplayBitmap, getEstDisplayBitmapPixel} =
+    require(path.join(rendererRoot, 'est-blocks/display-bitmap.js'));
+
+EST_HOME_BLOCK_GUIDE_CATEGORIES.forEach(category => category.items.forEach(type => {
+    assert.ok(EST_AI_BLOCK_SPEC[type], `Visible block is not covered: ${type}`);
+}));
 
 ALL_EST_BLOCK_IDS.forEach(blockId => {
     assert.ok(EST_AI_BLOCK_SPEC[blockId], `missing EST AI block spec: ${blockId}`);
 });
-assert.strictEqual(ALL_EST_BLOCK_IDS.length, 81);
+assert.strictEqual(ALL_EST_BLOCK_IDS.length, 93);
+assert.ok(ALL_EST_BLOCK_IDS.every(id => !id.startsWith('event_vision_')));
 assert.ok(EST_AI_ALLOWED_BLOCK_IDS.includes('operator_add'));
 assert.ok(EST_AI_ALLOWED_BLOCK_IDS.includes('operator_and'));
 const categorizedBlockIds = Object.values(EST_AI_RULE_CATEGORIES).reduce(
@@ -55,7 +66,12 @@ const makeValidNode = type => {
     const fieldNames = Object.keys(spec.fields);
     if (fieldNames.length) {
         node.fields = fieldNames.reduce((fields, name) => {
-            fields[name] = spec.fields[name].values[0];
+            const descriptor = spec.fields[name];
+            fields[name] = descriptor.values ? descriptor.values[0] :
+                ({bitmap: 'v1:',
+                    variable: descriptor.variableType === 'list' ? 'items' : 'value',
+                    procedure: 'helper',
+                    argument: 'value'}[descriptor.kind]);
             return fields;
         }, {});
     }
@@ -96,9 +112,112 @@ EST_AI_ALLOWED_BLOCK_IDS.forEach(blockId => {
     } else {
         stack.body = [{type: 'display_text_line', inputs: {LINE: 1, TEXT: node}}];
     }
-    const result = compileEstBlockIrToXml({version: 1, mode: 'insert', stacks: [stack]});
+    const ir = {version: 1,
+        mode: 'insert',
+        stacks: [stack],
+        variables: [{name: 'value', type: ''}, {name: 'items', type: 'list'}]};
+    if (spec.category === 'procedures') {
+        const argument = blockId.startsWith('argument_reporter_') ?
+            [{name: 'value', type: spec.fields.VALUE.argumentType}] : [];
+        ir.procedures = [{name: 'helper', arguments: argument}];
+        const definition = {type: 'procedures_definition', fields: {PROCEDURE: 'helper'}};
+        if (blockId === 'procedures_call') ir.stacks.push({event: definition, body: []});
+        else stack.event = definition;
+    }
+    const result = compileEstBlockIrToXml(ir);
     assert.match(result.xml, new RegExp(`type="${blockId}"`), `failed to compile ${blockId}`);
 });
+
+const coverage = makeCoverageIr();
+const fullCompiled = compileEstBlockIrToXml(coverage);
+assert.match(fullCompiled.xml, /<variables><variable type="" id="est-ai-v0">计数/);
+assert.match(fullCompiled.xml, /variabletype="list">记录/);
+assert.match(fullCompiled.xml, /<mutation proccode="显示记录 %n %s %b"/);
+assert.match(fullCompiled.xml, /<value name="est-ai-p0-a0">/);
+assert.match(fullCompiled.xml, /<shadow type="procedures_prototype">/);
+assert.deepStrictEqual(compileEstBlockIrToXml(fullCompiled.normalized).normalized, fullCompiled.normalized);
+const bitmap = fullCompiled.normalized.stacks[0].body[4].fields.BITMAP;
+assert.ok(getEstDisplayBitmapPixel(decodeEstDisplayBitmap(bitmap), 66, 40));
+assert.ok(!getEstDisplayBitmapPixel(decodeEstDisplayBitmap(bitmap), 58, 40));
+assert.strictEqual(normalizeEstAiBitmap(bitmap), bitmap);
+for (const invalid of ['v1:!!!!', 'https://example.com/image.png', {rows: ['01', '1']},
+    {rows: ['2']}, {rows: ['1'], x: 180}, {rows: ['1'], scale: 17}, {rows: ['1'], script: 'alert(1)'}]) {
+    assert.throws(() => normalizeEstAiBitmap(invalid));
+}
+const rejectsCoverage = (edit, code) => {
+    const ir = makeCoverageIr();
+    edit(ir);
+    const result = validateEstBlockIr(ir);
+    assert.ok(!result.valid && result.errors.some(error => error.code === code), JSON.stringify(result.errors));
+};
+rejectsCoverage(ir => {
+    ir.variables = [];
+}, 'UNKNOWN_VARIABLE');
+rejectsCoverage(ir => {
+    ir.variables[1].type = '';
+}, 'UNKNOWN_VARIABLE');
+rejectsCoverage(ir => {
+    ir.variables.push({name: '计数', type: ''});
+}, 'DUPLICATE_NAME');
+rejectsCoverage(ir => {
+    ir.variables[0].name = '__proto__';
+}, 'INVALID_NAME');
+rejectsCoverage(ir => {
+    ir.procedures = [];
+}, 'UNKNOWN_PROCEDURE');
+rejectsCoverage(ir => {
+    ir.stacks.pop();
+}, 'INVALID_PROCEDURE_DEFINITION');
+rejectsCoverage(ir => {
+    ir.stacks.push(JSON.parse(JSON.stringify(ir.stacks[1])));
+}, 'INVALID_PROCEDURE_DEFINITION');
+rejectsCoverage(ir => {
+    delete ir.stacks[0].body[3].inputs.序号;
+}, 'MISSING_INPUT');
+rejectsCoverage(ir => {
+    ir.stacks[0].body[3].inputs.extra = 1;
+}, 'UNKNOWN_INPUT');
+rejectsCoverage(ir => {
+    ir.stacks[0].body[3].inputs.可见 = 1;
+}, 'INVALID_INPUT');
+rejectsCoverage(ir => {
+    ir.stacks[0].body[0].inputs.VALUE = {type: 'argument_reporter_number', fields: {VALUE: '序号'}};
+}, 'INVALID_ARGUMENT_SCOPE');
+rejectsCoverage(ir => {
+    ir.procedures[0].arguments[0].type = 'boolean';
+}, 'INVALID_ARGUMENT_SCOPE');
+rejectsCoverage(ir => {
+    ir.procedures[0].arguments.push({name: '序号', type: 'text'});
+}, 'DUPLICATE_ARGUMENT');
+rejectsCoverage(ir => {
+    ir.procedures[0].name = 'bad %n';
+}, 'INVALID_NAME');
+rejectsCoverage(ir => {
+    ir.stacks[0].body[4].fields.BITMAP = 'v1:bad';
+}, 'INVALID_BITMAP');
+
+rejectsCoverage(ir => {
+    ir.procedures[0].warp = 'false';
+}, 'INVALID_WARP');
+rejectsCoverage(ir => {
+    ir.procedures[0].arguments = new Array(17).fill({name: 'n', type: 'number'});
+},
+'INVALID_ARGUMENTS');
+rejectsCoverage(ir => {
+    ir.variables = new Array(65).fill({name: 'n', type: ''});
+}, 'INVALID_DECLARATIONS');
+rejectsCoverage(ir => {
+    ir.stacks[0].body[0].fields.VARIABLE = {toString: null};
+}, 'INVALID_FIELD_VALUE');
+const escaped = {version: 1,
+    mode: 'insert',
+    variables: [{name: 'A<&"', type: ''}],
+    stacks: [{event: {type: 'event_program_start'},
+        body: [
+            {type: 'data_setvariableto', fields: {VARIABLE: 'A<&"'}, inputs: {VALUE: '<script>'}}
+        ]}]};
+assert.match(compileEstBlockIrToXml(escaped).xml, /A&lt;&amp;&quot;/);
+assert.doesNotMatch(compileEstBlockIrToXml(escaped).xml, /<script>/);
 
 const sampleIr = {
     version: EST_AI_IR_VERSION,
@@ -326,5 +445,5 @@ Module._extensions['.svg'] = originalSvgLoader;
 
 console.log(
     `EST AI IR tests passed and every allowed block compiled (${ALL_EST_BLOCK_IDS.length} EST blocks, ` +
-    `${EST_AI_ALLOWED_BLOCK_IDS.length - ALL_EST_BLOCK_IDS.length} native operators)`
+    `${EST_AI_ALLOWED_BLOCK_IDS.length - ALL_EST_BLOCK_IDS.length} native operators/data/procedure blocks)`
 );

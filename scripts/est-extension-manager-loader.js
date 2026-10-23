@@ -28,17 +28,25 @@ module.exports = function (source) {
     if (!deviceExtensionListPattern.test(source)) {
         throw new Error('Unable to locate the OpenBlock device extension list loader.');
     }
+    if (!source.includes('    loadDeviceExtension (deviceExtensionId) {')) {
+        throw new Error('Unable to locate the OpenBlock device extension activation hook.');
+    }
 
     return source
         .replace(builtinsPattern, [
-            "const estExtensionLibrary = require('est-extension-library').default;",
+            "const estExtensionRegistry = require('est-extension-library');",
             '',
             'const builtinExtensions = {};',
             'const builtinDevices = {};'
         ].join('\n'))
+        .replace('    loadDeviceExtension (deviceExtensionId) {', `    loadDeviceExtension (deviceExtensionId) {
+        if (deviceExtensionId === estExtensionRegistry.VISION_EXTENSION_ID) {
+            return estExtensionRegistry.loadVisionExtension(this.runtime);
+        }`)
         .replace(deviceExtensionListPattern, [
             '    getDeviceExtensionsList () {',
-            '        this._deviceExtensionsList = estExtensionLibrary.map(extension => Object.assign({}, extension, {',
+            '        this._deviceExtensionsList = estExtensionRegistry.getHardwareExtensions()' +
+                '.map(extension => Object.assign({}, extension, {',
             '            isLoaded: this.isDeviceExtensionLoaded(extension.extensionId)',
             '        }));',
             '        return Promise.resolve(this._deviceExtensionsList);',

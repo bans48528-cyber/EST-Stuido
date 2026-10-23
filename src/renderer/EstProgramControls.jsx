@@ -14,10 +14,12 @@ import {
 import {getEstText} from './est-i18n';
 import {buildEstProgramRequest} from './est-program-name';
 import styles from './EstProgramControls.css';
+import {withEstHardware} from './hardware/HardwareGate.jsx';
+import {getHardwareProfile} from '../common/hardware-profiles';
 
 const PROGRAM_SLOT_CHANGE_EVENT = 'est-program-slot-change';
 const SLOT_STORAGE_KEY = 'estStudio.programSlot';
-const SLOT_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7];
+const SLOT_OPTIONS = Array.from({length: getHardwareProfile('est').programSlots}, (item, index) => index);
 const PLAY_ICON_PATH = 'M7 4.8v14.4c0 1.2 1.3 1.9 2.3 1.2l10.2-7.2' +
     'c.8-.6.8-1.8 0-2.4L9.3 3.6C8.3 2.9 7 3.6 7 4.8z';
 
@@ -284,7 +286,9 @@ class EstProgramControls extends React.Component {
                             type="button"
                             onClick={this.handleToggleSlotMenu}
                         >
-                            <span className={styles.slotLabel}>SLOT</span>
+                            <span className={styles.slotLabel}>
+                                {getEstText('programControls.slotLabel', locale)}
+                            </span>
                             <span className={styles.slotNumber}>{selectedSlot}</span>
                         </button>
                     </div>
@@ -379,4 +383,4 @@ export {
     SLOT_OPTIONS
 };
 
-export default connect(mapStateToProps)(EstProgramControls);
+export default withEstHardware(connect(mapStateToProps)(EstProgramControls));

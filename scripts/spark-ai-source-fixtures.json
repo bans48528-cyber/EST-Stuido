@@ -1,0 +1,925 @@
+[
+  {
+    "id": "spark_motor_specifiedunit",
+    "sourceId": "motor_specifiedunit",
+    "python": "_motor.run_for_power_seconds(4, 50, 1)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_motor_startWithPower",
+    "sourceId": "motor_startWithPower",
+    "python": "_motor.run_power(4,50)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_motor_stop",
+    "sourceId": "motor_stop",
+    "python": "_motor.stop(4)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_motor_specified_manner",
+    "sourceId": "motor_specified_manner",
+    "python": "_motor.stop_module(4, 1)\n",
+    "variants": [
+      {
+        "field": "action",
+        "label": "制动",
+        "value": "1",
+        "code": "_motor.stop_module(4, 1)\n"
+      },
+      {
+        "field": "action",
+        "label": "惯性滑行",
+        "value": "0",
+        "code": "_motor.stop_module(4, 0)\n"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "id": "spark_combined_motor_starting",
+    "sourceId": "combined_motor_starting",
+    "python": "_motor.pair(4,5,3)\n",
+    "variants": [
+      {
+        "field": "STATUS",
+        "label": "全部正向",
+        "value": "3",
+        "code": "_motor.pair(4,5,3)\n"
+      },
+      {
+        "field": "STATUS",
+        "label": "左电机反向",
+        "value": "0",
+        "code": "_motor.pair(4,5,0)\n"
+      },
+      {
+        "field": "STATUS",
+        "label": "右电机反向",
+        "value": "1",
+        "code": "_motor.pair(4,5,1)\n"
+      },
+      {
+        "field": "STATUS",
+        "label": "全部反向",
+        "value": "2",
+        "code": "_motor.pair(4,5,2)\n"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "id": "spark_combined_motor_stopping",
+    "sourceId": "combined_motor_stopping",
+    "python": "_motor.mov_set_stop_module(1)\n",
+    "variants": [
+      {
+        "field": "status",
+        "label": "制动",
+        "value": "1",
+        "code": "_motor.mov_set_stop_module(1)\n"
+      },
+      {
+        "field": "status",
+        "label": "惯性滑行",
+        "value": "0",
+        "code": "_motor.mov_set_stop_module(0)\n"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "id": "spark_combined_mov_dir_power_seconds",
+    "sourceId": "combined_mov_dir_power_seconds",
+    "python": "_motor.mov_dir_power_seconds(\"advance\", 50, 1)\n",
+    "variants": [
+      {
+        "field": "DIRECTION",
+        "label": "前进",
+        "value": "advance",
+        "code": "_motor.mov_dir_power_seconds(\"advance\", 50, 1)\n"
+      },
+      {
+        "field": "DIRECTION",
+        "label": "后退",
+        "value": "retreat",
+        "code": "_motor.mov_dir_power_seconds(\"retreat\", 50, 1)\n"
+      },
+      {
+        "field": "DIRECTION",
+        "label": "向左转",
+        "value": "left",
+        "code": "_motor.mov_dir_power_seconds(\"left\", 50, 1)\n"
+      },
+      {
+        "field": "DIRECTION",
+        "label": "向右转",
+        "value": "right",
+        "code": "_motor.mov_dir_power_seconds(\"right\", 50, 1)\n"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "id": "spark_combined_mov_dir_power",
+    "sourceId": "combined_mov_dir_power",
+    "python": "_motor.mov_dir_power(\"advance\", 50)\n",
+    "variants": [
+      {
+        "field": "DIRECTION",
+        "label": "前进",
+        "value": "advance",
+        "code": "_motor.mov_dir_power(\"advance\", 50)\n"
+      },
+      {
+        "field": "DIRECTION",
+        "label": "后退",
+        "value": "retreat",
+        "code": "_motor.mov_dir_power(\"retreat\", 50)\n"
+      },
+      {
+        "field": "DIRECTION",
+        "label": "向左转",
+        "value": "left",
+        "code": "_motor.mov_dir_power(\"left\", 50)\n"
+      },
+      {
+        "field": "DIRECTION",
+        "label": "向右转",
+        "value": "right",
+        "code": "_motor.mov_dir_power(\"right\", 50)\n"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "id": "spark_combined_motor_stop",
+    "sourceId": "combined_motor_stop",
+    "python": "_motor.mov_stop()\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_combined_motor_startWithPowerObj",
+    "sourceId": "combined_motor_startWithPowerObj",
+    "python": "_motor.mov_for_power_seconds(50, 50, 1)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_combined_motor_startWithPower",
+    "sourceId": "combined_motor_startWithPower",
+    "python": "_motor.mov_power(50, 50)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_combined_linepatrolInit",
+    "sourceId": "combined_linepatrolInit",
+    "python": "_motor.mov_find_line_init()\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_combined_linepatrol_ltr",
+    "sourceId": "combined_linepatrol_ltr",
+    "python": "_motor.mov_find_line_run(0, 0, 80, 80, 0.1, 0.6)\n",
+    "variants": [],
+    "notes": [
+      "PORT_ONE/PORT_TWO 实际传入左右灰度读数，不是端口编号；原 UI 用“左传感器/右传感器”标注，适合嵌入灰度数值积木。"
+    ]
+  },
+  {
+    "id": "spark_matrix_lamp",
+    "sourceId": "matrix_lamp",
+    "python": "_matrix.show(0x1F,0x1F,0x1F,0x1F,0x1F,0x1F,0x1F)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_matrix_lamp_stop",
+    "sourceId": "matrix_lamp_stop",
+    "python": "_matrix.clear()\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_matrix_lamp_set",
+    "sourceId": "matrix_lamp_set",
+    "python": "_matrix.set_brightness(0)\n",
+    "variants": [
+      {
+        "field": "brightness",
+        "label": "0",
+        "value": "0",
+        "code": "_matrix.set_brightness(0)\n"
+      },
+      {
+        "field": "brightness",
+        "label": "1",
+        "value": "1",
+        "code": "_matrix.set_brightness(1)\n"
+      },
+      {
+        "field": "brightness",
+        "label": "2",
+        "value": "2",
+        "code": "_matrix.set_brightness(2)\n"
+      },
+      {
+        "field": "brightness",
+        "label": "3",
+        "value": "3",
+        "code": "_matrix.set_brightness(3)\n"
+      },
+      {
+        "field": "brightness",
+        "label": "4",
+        "value": "4",
+        "code": "_matrix.set_brightness(4)\n"
+      },
+      {
+        "field": "brightness",
+        "label": "5",
+        "value": "5",
+        "code": "_matrix.set_brightness(5)\n"
+      },
+      {
+        "field": "brightness",
+        "label": "6",
+        "value": "6",
+        "code": "_matrix.set_brightness(6)\n"
+      },
+      {
+        "field": "brightness",
+        "label": "7",
+        "value": "7",
+        "code": "_matrix.set_brightness(7)\n"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "id": "spark_matrix_lamp_text",
+    "sourceId": "matrix_lamp_text",
+    "python": "_matrix.show_roll(str('ABCD'))\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_matrix_lamp_single",
+    "sourceId": "matrix_lamp_single",
+    "python": "_matrix.set_pixel_brightness(0,0,1)\n",
+    "variants": [
+      {
+        "field": "switchOnOff",
+        "label": "打开",
+        "value": "1",
+        "code": "_matrix.set_pixel_brightness(0,0,1)\n"
+      },
+      {
+        "field": "switchOnOff",
+        "label": "熄灭",
+        "value": "0",
+        "code": "_matrix.set_pixel_brightness(0,0,0)\n"
+      }
+    ],
+    "notes": [
+      "原界面 x 下拉为 0–9、y 为 0–7；固件只接收 x=0–6、y=0–4，越界不点亮。brightness shadow 留在工具箱 XML，但实际块没有该输入，因此不作为可见参数。",
+      "set_pixel_brightness 的最后参数为开/关 1/0，并非连续单像素亮度。"
+    ]
+  },
+  {
+    "id": "spark_sound_PlayMusic",
+    "sourceId": "sound_PlayMusic",
+    "python": "_beep.play_muic(\"c\", 0.25)\n",
+    "variants": [],
+    "notes": [
+      "界面显示“拍”，原生成器直接把 BEATS 传给 _beep.play_muic；固件按秒乘以 1000 转换。音符字符串会先将首字母转为小写。"
+    ]
+  },
+  {
+    "id": "spark_event_whenflagclicked",
+    "sourceId": "event_whenflagclicked",
+    "python": "  \n",
+    "variants": [],
+    "notes": [
+      "开始积木本身不生成硬件指令；后续连接的积木依次生成主程序。默认空积木的输出只有空白。"
+    ]
+  },
+  {
+    "id": "spark_control_wait",
+    "sourceId": "control_wait",
+    "python": "_os.sleep_s(1)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_control_wait_until",
+    "sourceId": "control_wait_until",
+    "python": "while not (False):\n    _os.sleep_s(0.001)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_control_break",
+    "sourceId": "control_break",
+    "python": "break\n",
+    "variants": [],
+    "notes": [
+      "原始片段 break 必须位于循环体内；这是上下文要求。"
+    ]
+  },
+  {
+    "id": "spark_control_repeat",
+    "sourceId": "control_repeat",
+    "python": "for count in range(10):\n    _os.sleep_s(0.001)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_control_forever",
+    "sourceId": "control_forever",
+    "python": "while True:\n    _os.sleep_s(0.001)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_control_if",
+    "sourceId": "control_if",
+    "python": "if False:\n    pass\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_control_if_else",
+    "sourceId": "control_if_else",
+    "python": "if False:\n    pass\nelse:\n    pass\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_control_repeat_until",
+    "sourceId": "control_repeat_until",
+    "python": "while not (False):\n    _os.sleep_s(0.001)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_control_stop",
+    "sourceId": "control_stop",
+    "python": "_os.stop_exit()\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_sensing_key_judgment",
+    "sourceId": "sensing_key_judgment",
+    "python": "_touch.state(0)",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_sensing_reflected_light_judgment",
+    "sourceId": "sensing_reflected_light_judgment",
+    "python": "_color.cmp_lux(0, \">\", 50)",
+    "variants": [
+      {
+        "field": "judgment",
+        "label": ">",
+        "value": ">",
+        "code": "_color.cmp_lux(0, \">\", 50)"
+      },
+      {
+        "field": "judgment",
+        "label": "<",
+        "value": "<",
+        "code": "_color.cmp_lux(0, \"<\", 50)"
+      },
+      {
+        "field": "judgment",
+        "label": "=",
+        "value": "=",
+        "code": "_color.cmp_lux(0, \"=\", 50)"
+      }
+    ],
+    "notes": [
+      "固件 cmp_lux 的“=”分支在差值小于 5 时返回 0，否则返回 1，与通常的相等判断相反；保留原生成器。"
+    ]
+  },
+  {
+    "id": "spark_sensing_reflected_light_detection",
+    "sourceId": "sensing_reflected_light_detection",
+    "python": "_color.lux(0)",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_sensing_set_color_threshold_value",
+    "sourceId": "sensing_set_color_threshold_value",
+    "python": "_color.set_color_threshold_value(0, 1000)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_sensing_grayscale_state",
+    "sourceId": "sensing_grayscale_state",
+    "python": "_color.lux_state(0)",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_sensing_one_calibrate",
+    "sourceId": "sensing_one_calibrate",
+    "python": "_color.one_calibrate(0, 1)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_sensing_two_calibrate",
+    "sourceId": "sensing_two_calibrate",
+    "python": "_color.two_calibrate(0, 0, 1)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_sensing_ultrasonic_judgment",
+    "sourceId": "sensing_ultrasonic_judgment",
+    "python": "_ultrasion.cmp_value(0, \">\", 10)",
+    "variants": [
+      {
+        "field": "judgment",
+        "label": ">",
+        "value": ">",
+        "code": "_ultrasion.cmp_value(0, \">\", 10)"
+      },
+      {
+        "field": "judgment",
+        "label": "<",
+        "value": "<",
+        "code": "_ultrasion.cmp_value(0, \"<\", 10)"
+      },
+      {
+        "field": "judgment",
+        "label": "=",
+        "value": "=",
+        "code": "_ultrasion.cmp_value(0, \"=\", 10)"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "id": "spark_sensing_ultrasonic_detection",
+    "sourceId": "sensing_ultrasonic_detection",
+    "python": "_ultrasion.value(0)",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_sensing_isHandling",
+    "sourceId": "sensing_isHandling",
+    "python": "_key.key_remote(\"up\",\"press\")",
+    "variants": [
+      {
+        "field": "BUTTON",
+        "label": "被按下",
+        "value": "press",
+        "code": "_key.key_remote(\"up\",\"press\")"
+      },
+      {
+        "field": "BUTTON",
+        "label": "未按下",
+        "value": "unpress",
+        "code": "_key.key_remote(\"up\",\"unpress\")"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "id": "spark_combined_forward_offset",
+    "sourceId": "combined_forward_offset",
+    "python": "_motor.mov_set_advance_offset(0, 0)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_combined_backward_offset",
+    "sourceId": "combined_backward_offset",
+    "python": "_motor.mov_set_retreat_offset(0, 0)\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_read_adcance_left_offset",
+    "sourceId": "read_adcance_left_offset",
+    "python": "_key.read_adcance_left_offset()",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_read_advance_right_offset",
+    "sourceId": "read_advance_right_offset",
+    "python": "_key.read_advance_right_offset()",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_read_retreat_left_offset",
+    "sourceId": "read_retreat_left_offset",
+    "python": "_key.read_retreat_left_offset()",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_read_retreat_right_offset",
+    "sourceId": "read_retreat_right_offset",
+    "python": "_key.read_retreat_right_offset()",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_sensing_mainIsPress",
+    "sourceId": "sensing_mainIsPress",
+    "python": "_key.key_mast(\"left\", 1)",
+    "variants": [
+      {
+        "field": "KEYS",
+        "label": "左",
+        "value": "left",
+        "code": "_key.key_mast(\"left\", 1)"
+      },
+      {
+        "field": "KEYS",
+        "label": "右",
+        "value": "right",
+        "code": "_key.key_mast(\"right\", 1)"
+      },
+      {
+        "field": "BUTTON",
+        "label": "被按下",
+        "value": "1",
+        "code": "_key.key_mast(\"left\", 1)"
+      },
+      {
+        "field": "BUTTON",
+        "label": "未按下",
+        "value": "0",
+        "code": "_key.key_mast(\"left\", 0)"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "id": "spark_sensing_timer",
+    "sourceId": "sensing_timer",
+    "python": "_os.timer()",
+    "variants": [],
+    "notes": [
+      "直接返回 _os.timer()，固件单位为 1 ms tick，未除以 1000。"
+    ]
+  },
+  {
+    "id": "spark_sensing_reset_timer",
+    "sourceId": "sensing_reset_timer",
+    "python": "_os.resetTimer()\n",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_add",
+    "sourceId": "operator_add",
+    "python": "0 + 0",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_subtract",
+    "sourceId": "operator_subtract",
+    "python": "0 - 0",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_multiply",
+    "sourceId": "operator_multiply",
+    "python": "0 * 0",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_divide",
+    "sourceId": "operator_divide",
+    "python": "0 / 0",
+    "variants": [],
+    "notes": [
+      "空数字槽默认生成 0，因此默认例子分母为 0；原样提取，实际程序需填写有效的除数。"
+    ]
+  },
+  {
+    "id": "spark_operator_gt",
+    "sourceId": "operator_gt",
+    "python": "0 > 50",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_lt",
+    "sourceId": "operator_lt",
+    "python": "0 < 50",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_equals",
+    "sourceId": "operator_equals",
+    "python": "0 == 50",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_and",
+    "sourceId": "operator_and",
+    "python": "0 and 0",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_or",
+    "sourceId": "operator_or",
+    "python": "0 or 0",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_not",
+    "sourceId": "operator_not",
+    "python": "not false",
+    "variants": [],
+    "notes": [
+      "布尔输入留空时原生成器输出小写 false，得到 not false；未在固件中确认名为 false 的变量。此处原样保留，接入时需处理空布尔输入。"
+    ]
+  },
+  {
+    "id": "spark_operator_contains",
+    "sourceId": "operator_contains",
+    "python": "str('apple').find(str('a')) > -1",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_join",
+    "sourceId": "operator_join",
+    "python": "str('apple') + str('banana')",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_letter_of",
+    "sourceId": "operator_letter_of",
+    "python": "'apple'[0]",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_length",
+    "sourceId": "operator_length",
+    "python": "len('apple')",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_mod",
+    "sourceId": "operator_mod",
+    "python": "_math.fmod(0, 0)",
+    "variants": [],
+    "notes": [
+      "空数字槽默认生成 0，因此默认例子分母为 0；原样提取，实际程序需填写有效的除数。"
+    ]
+  },
+  {
+    "id": "spark_operator_round",
+    "sourceId": "operator_round",
+    "python": "_math.round(0)",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_mathop",
+    "sourceId": "operator_mathop",
+    "python": "_math.fabs(0)",
+    "variants": [
+      {
+        "field": "OPERATOR",
+        "label": "绝对值",
+        "value": "_abs_",
+        "code": "_math.fabs(0)"
+      },
+      {
+        "field": "OPERATOR",
+        "label": "向下取整",
+        "value": "down_abs",
+        "code": "_math.floor(0)"
+      },
+      {
+        "field": "OPERATOR",
+        "label": "向上取整",
+        "value": "up_abs",
+        "code": "_math.ceil(0)"
+      },
+      {
+        "field": "OPERATOR",
+        "label": "平方根",
+        "value": "sqrt_abs",
+        "code": "_math.sqrt(0)"
+      },
+      {
+        "field": "OPERATOR",
+        "label": "sin",
+        "value": "sin_abs",
+        "code": "_math.sin(0)"
+      },
+      {
+        "field": "OPERATOR",
+        "label": "cos",
+        "value": "cos_abs",
+        "code": "_math.cos(0)"
+      },
+      {
+        "field": "OPERATOR",
+        "label": "tan",
+        "value": "tan_abs",
+        "code": "_math.tan(0)"
+      },
+      {
+        "field": "OPERATOR",
+        "label": "asin",
+        "value": "asin_abs",
+        "code": "_math.asin(0)"
+      },
+      {
+        "field": "OPERATOR",
+        "label": "acos",
+        "value": "acos_abs",
+        "code": "_math.acos(0)"
+      },
+      {
+        "field": "OPERATOR",
+        "label": "atan",
+        "value": "atan_abs",
+        "code": "_math.atan(0)"
+      },
+      {
+        "field": "OPERATOR",
+        "label": "log",
+        "value": "ln_abs",
+        "code": "_math.log(0)"
+      },
+      {
+        "field": "OPERATOR",
+        "label": "e ^",
+        "value": "e_abs",
+        "code": "_math.exp(0)"
+      },
+      {
+        "field": "OPERATOR",
+        "label": "10 ^",
+        "value": "10_abs",
+        "code": "_math.pow(10, 0)"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "id": "spark_operator_random",
+    "sourceId": "operator_random",
+    "python": "_random.randint(1, 10)",
+    "variants": [],
+    "notes": []
+  },
+  {
+    "id": "data_variable",
+    "sourceId": "data_variable",
+    "python": "my_variable",
+    "variants": [],
+    "notes": [
+      "变量示例名为 my_variable；原生成器在完整程序初始化阶段生成 my_variable = 0。"
+    ]
+  },
+  {
+    "id": "data_setvariableto",
+    "sourceId": "data_setvariableto",
+    "python": "my_variable = 0\n",
+    "variants": [],
+    "notes": [
+      "变量示例名为 my_variable；原生成器在完整程序初始化阶段生成 my_variable = 0。"
+    ]
+  },
+  {
+    "id": "data_changevariableby",
+    "sourceId": "data_changevariableby",
+    "python": "my_variable += 1\n",
+    "variants": [],
+    "notes": [
+      "变量示例名为 my_variable；原生成器在完整程序初始化阶段生成 my_variable = 0。"
+    ]
+  },
+  {
+    "id": "data_addtolist",
+    "sourceId": "data_addtolist",
+    "python": "my_list.append('东西')\n",
+    "variants": [],
+    "notes": [
+      "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。"
+    ]
+  },
+  {
+    "id": "data_deleteoflist",
+    "sourceId": "data_deleteoflist",
+    "python": "my_list.remove_index(1)\n",
+    "variants": [],
+    "notes": [
+      "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。",
+      "给定固件仓库的 PikaStdData.List 未提供此生成片段调用的方法，接入时不能直接认定可运行。"
+    ]
+  },
+  {
+    "id": "data_deletealloflist",
+    "sourceId": "data_deletealloflist",
+    "python": "my_list.remove_all()\n",
+    "variants": [],
+    "notes": [
+      "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。",
+      "给定固件仓库的 PikaStdData.List 未提供此生成片段调用的方法，接入时不能直接认定可运行。"
+    ]
+  },
+  {
+    "id": "data_insertatlist",
+    "sourceId": "data_insertatlist",
+    "python": "my_list.insert(1, '东西')\n",
+    "variants": [],
+    "notes": [
+      "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。"
+    ]
+  },
+  {
+    "id": "data_replaceitemoflist",
+    "sourceId": "data_replaceitemoflist",
+    "python": "my_list.set(1, '东西')\n",
+    "variants": [],
+    "notes": [
+      "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。"
+    ]
+  },
+  {
+    "id": "data_itemoflist",
+    "sourceId": "data_itemoflist",
+    "python": "my_list[1]",
+    "variants": [],
+    "notes": [
+      "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。"
+    ]
+  },
+  {
+    "id": "data_itemnumoflist",
+    "sourceId": "data_itemnumoflist",
+    "python": "my_list.dataToindex('东西')",
+    "variants": [],
+    "notes": [
+      "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。",
+      "给定固件仓库的 PikaStdData.List 未提供此生成片段调用的方法，接入时不能直接认定可运行。"
+    ]
+  },
+  {
+    "id": "data_lengthoflist",
+    "sourceId": "data_lengthoflist",
+    "python": "my_list.num()",
+    "variants": [],
+    "notes": [
+      "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。",
+      "给定固件仓库的 PikaStdData.List 未提供此生成片段调用的方法，接入时不能直接认定可运行。"
+    ]
+  },
+  {
+    "id": "data_listcontainsitem",
+    "sourceId": "data_listcontainsitem",
+    "python": "my_list.list_if_data('东西')",
+    "variants": [],
+    "notes": [
+      "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。",
+      "给定固件仓库的 PikaStdData.List 未提供此生成片段调用的方法，接入时不能直接认定可运行。"
+    ]
+  },
+  {
+    "id": "procedures_call",
+    "sourceId": "procedures_call",
+    "python": "my_block()\n",
+    "variants": [],
+    "notes": [
+      "仅在制作自定义积木后出现；示例使用 my_block，实际函数名与参数由用户定义。"
+    ]
+  }
+]

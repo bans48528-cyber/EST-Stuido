@@ -28,15 +28,20 @@ import {
     CAPABILITY_RUNTIME_BROADCAST,
     CAPABILITY_TEMPERATURE_SENSOR,
     CAPABILITY_UNLIMITED_PYTHON_RUN,
+    CAPABILITY_VISION_INPUT,
+    CAPABILITY_VISION_INPUT_MULTI,
     CAPABILITY_ZERO_SPEED_MOTOR_CONTROL,
     COMMAND_PERSISTENT_PROGRAM,
     COMMAND_PYTHON_PROGRAM,
     COMMAND_MOTOR_TYPE,
+    COMMAND_VISION_SENSOR,
     DEVICE_DIRECTION,
     EST_ALLOW_ALL_FIRMWARE_VERSIONS,
     EST_MIN_PROTOCOL_MINOR,
     EST_PROGRAM_COMPATIBILITY_TABLE,
     EST_PROTOCOL_MAJOR,
+    EST_VISION_PROTOCOL_MINOR,
+    EST_VISION_MULTI_PROTOCOL_MINOR,
     EST_USB_PID,
     EST_USB_VID,
     FRAME_END,
@@ -62,7 +67,21 @@ import {
     PYTHON_PROGRAM_PROTOCOL_MAX_SIZE,
     PYTHON_PROGRAM_MAX_TIMEOUT_MS,
     PYTHON_PROGRAM_MIN_TIMEOUT_MS,
-    PYTHON_PROGRAM_NO_TIMEOUT_MS
+    PYTHON_PROGRAM_NO_TIMEOUT_MS,
+    VISION_SENSOR_ACTION_CLEAR,
+    VISION_SENSOR_ACTION_MULTI_CLEAR,
+    VISION_SENSOR_ACTION_MULTI_STATUS,
+    VISION_SENSOR_ACTION_STATUS,
+    VISION_SENSOR_ACTION_UPDATE,
+    VISION_SENSOR_ACTION_UPDATE_FRAME,
+    VISION_SENSOR_CLEAR_REASON_PROGRAM_TRANSITION,
+    VISION_SENSOR_DEFAULT_ID,
+    VISION_SENSOR_MAX_TTL_MS,
+    VISION_SENSOR_MIN_TTL_MS,
+    VISION_SENSOR_MULTI_SCHEMA_VERSION,
+    VISION_SENSOR_SCHEMA_VERSION,
+    VISION_SENSOR_TARGET_COUNT,
+    VISION_SENSOR_TARGET_MASK_ALL
 } from './constants';
 
 export const checksum = bytes => Array.from(bytes).reduce((sum, value) => sum + value, 0) & 0xff;
@@ -140,6 +159,12 @@ const assertUint32 = (value, label) => {
     }
 };
 
+const assertUint16 = (value, label) => {
+    if (!Number.isInteger(value) || value < 0 || value > 0xffff) {
+        throw new RangeError(`${label} must fit uint16`);
+    }
+};
+
 const writeUint16LE = (bytes, offset, value) => {
     bytes[offset] = value & 0xff;
     bytes[offset + 1] = (value >>> 8) & 0xff;
@@ -209,7 +234,9 @@ const EST_PROGRAM_CAPABILITY_PROTOCOL_MINOR_REQUIREMENTS = Object.freeze([
     [CAPABILITY_MOTOR_STALL_DETECTION, EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR],
     [CAPABILITY_AUDIO_PLAYBACK, EST_PROGRAM_MOTOR_STALL_PROTOCOL_MINOR],
     [CAPABILITY_RUNTIME_BROADCAST, EST_PROGRAM_BROADCAST_PROTOCOL_MINOR],
-    [CAPABILITY_LARGE_PYTHON_PROGRAM, EST_PROGRAM_LARGE_SOURCE_PROTOCOL_MINOR]
+    [CAPABILITY_LARGE_PYTHON_PROGRAM, EST_PROGRAM_LARGE_SOURCE_PROTOCOL_MINOR],
+    [CAPABILITY_VISION_INPUT, EST_VISION_PROTOCOL_MINOR],
+    [CAPABILITY_VISION_INPUT_MULTI, EST_VISION_MULTI_PROTOCOL_MINOR]
 ]);
 export const EST_CAPABILITY_NAMES = Object.freeze([
     [CAPABILITY_FIRMWARE_UPDATE, 'firmware-update'],
@@ -241,7 +268,9 @@ export const EST_CAPABILITY_NAMES = Object.freeze([
     [CAPABILITY_AUDIO_PLAYBACK, 'audio-playback'],
     [CAPABILITY_AUDIO_RESOURCE_FLASH, 'audio-resource-flash'],
     [CAPABILITY_RUNTIME_BROADCAST, 'runtime-broadcast'],
-    [CAPABILITY_LARGE_PYTHON_PROGRAM, 'large-python-program']
+    [CAPABILITY_LARGE_PYTHON_PROGRAM, 'large-python-program'],
+    [CAPABILITY_VISION_INPUT, 'vision-input'],
+    [CAPABILITY_VISION_INPUT_MULTI, 'vision-input-multi']
 ]);
 
 export const capabilityNamesFor = capabilities => EST_CAPABILITY_NAMES
@@ -301,6 +330,21 @@ export const isEstFirmwareVersionAtLeast = (version, minimumVersion) => {
 export const programRequiredCapabilitiesForSource = source => {
     const text = typeof source === 'string' ? source : Buffer.from(source || '').toString('utf8');
     let capabilities = 0;
+    // Generated Python uses ordinary literals; displayed text is not a runtime API call.
+    const visionCode = text.replace(
+        /("""|''')[\s\S]*?\1|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|#[^\r\n]*/g,
+        match => (match[0] === '#' ? ' ' : "'value'")
+    );
+    if (/\brt\.vision_(?:valid|snapshot|class_id|confidence|position)\s*\(/.test(visionCode) ||
+        /\best\.vision\.snapshot\s*\(/.test(visionCode)) {
+        capabilities |= CAPABILITY_VISION_INPUT;
+    }
+    if (/\brt\.vision_(?:enabled|multi_status)\s*\(/.test(visionCode) ||
+        /\brt\.vision_(?:valid|snapshot|class_id|confidence|position)\s*\(\s*[^)\s]/.test(visionCode) ||
+        /\best\.vision\.status\s*\(/.test(visionCode) ||
+        /\best\.vision\.snapshot\s*\(\s*[^)\s]/.test(visionCode)) {
+        capabilities |= CAPABILITY_VISION_INPUT | CAPABILITY_VISION_INPUT_MULTI;
+    }
     if (/\brt\.temperature\s*\(/.test(text)) {
         capabilities |= CAPABILITY_TEMPERATURE_SENSOR;
     }
@@ -457,6 +501,258 @@ export const buildPythonProgramClearFrame = () => buildFrame(
     COMMAND_PYTHON_PROGRAM,
     Uint8Array.from([PYTHON_PROGRAM_ACTION_CLEAR])
 );
+
+const validateVisionSensorId = sensorId => {
+    if (sensorId !== VISION_SENSOR_DEFAULT_ID) {
+        throw new RangeError(`Vision sensor ID must be ${VISION_SENSOR_DEFAULT_ID}`);
+    }
+};
+
+const validateVisionCoordinate = (value, label) => {
+    if (!Number.isInteger(value) || value < 0 || value > 10000) {
+        throw new RangeError(`${label} must be an integer from 0 to 10000`);
+    }
+};
+
+const VISION_TARGET_KEYS = Object.freeze(['left', 'right', 'pose', 'face']);
+
+const validateVisionTargetValue = (value, label) => {
+    if (!value || typeof value !== 'object') {
+        throw new RangeError(`${label} result is required`);
+    }
+    assertUint16(value.classId, `${label} class ID`);
+    if (value.classId === 0xffff) {
+        throw new RangeError(`${label} class ID 65535 is reserved for invalid data`);
+    }
+    if (!Number.isInteger(value.confidencePermille) ||
+        value.confidencePermille < 0 || value.confidencePermille > 1000) {
+        throw new RangeError(`${label} confidence must be an integer from 0 to 1000`);
+    }
+    validateVisionCoordinate(value.centerX, `${label} center X`);
+    validateVisionCoordinate(value.centerY, `${label} center Y`);
+    validateVisionCoordinate(value.width, `${label} width`);
+    validateVisionCoordinate(value.height, `${label} height`);
+};
+
+export const buildVisionSensorStatusFrame = (sensorId = VISION_SENSOR_DEFAULT_ID) => {
+    validateVisionSensorId(sensorId);
+    return buildFrame(COMMAND_VISION_SENSOR, Uint8Array.from([
+        VISION_SENSOR_ACTION_STATUS,
+        VISION_SENSOR_SCHEMA_VERSION,
+        sensorId,
+        0
+    ]));
+};
+
+export const buildVisionSensorUpdateFrame = ({
+    sensorId = VISION_SENSOR_DEFAULT_ID,
+    sequence,
+    ttlMs,
+    classId,
+    confidencePermille,
+    centerX,
+    centerY,
+    width,
+    height
+} = {}) => {
+    validateVisionSensorId(sensorId);
+    assertUint32(sequence, 'Vision sequence');
+    if (!Number.isInteger(ttlMs) || ttlMs < VISION_SENSOR_MIN_TTL_MS || ttlMs > VISION_SENSOR_MAX_TTL_MS) {
+        throw new RangeError(
+            `Vision TTL must be ${VISION_SENSOR_MIN_TTL_MS}..${VISION_SENSOR_MAX_TTL_MS} ms`
+        );
+    }
+    assertUint16(classId, 'Vision class ID');
+    if (classId === 0xffff) {
+        throw new RangeError('Vision class ID 65535 is reserved for invalid data');
+    }
+    if (!Number.isInteger(confidencePermille) || confidencePermille < 0 || confidencePermille > 1000) {
+        throw new RangeError('Vision confidence must be an integer from 0 to 1000');
+    }
+    validateVisionCoordinate(centerX, 'Vision center X');
+    validateVisionCoordinate(centerY, 'Vision center Y');
+    validateVisionCoordinate(width, 'Vision width');
+    validateVisionCoordinate(height, 'Vision height');
+
+    const payload = new Uint8Array(22);
+    payload.set([
+        VISION_SENSOR_ACTION_UPDATE,
+        VISION_SENSOR_SCHEMA_VERSION,
+        sensorId,
+        0
+    ], 0);
+    writeUint32LE(payload, 4, sequence);
+    writeUint16LE(payload, 8, ttlMs);
+    writeUint16LE(payload, 10, classId);
+    writeUint16LE(payload, 12, confidencePermille);
+    writeUint16LE(payload, 14, centerX);
+    writeUint16LE(payload, 16, centerY);
+    writeUint16LE(payload, 18, width);
+    writeUint16LE(payload, 20, height);
+    return buildFrame(COMMAND_VISION_SENSOR, payload);
+};
+
+export const buildVisionSensorClearFrame = ({
+    sensorId = VISION_SENSOR_DEFAULT_ID,
+    reason,
+    sequence
+} = {}) => {
+    validateVisionSensorId(sensorId);
+    if (!Number.isInteger(reason) || reason < 0 || reason > VISION_SENSOR_CLEAR_REASON_PROGRAM_TRANSITION) {
+        throw new RangeError(
+            `Vision clear reason must be 0..${VISION_SENSOR_CLEAR_REASON_PROGRAM_TRANSITION}`
+        );
+    }
+    assertUint32(sequence, 'Vision sequence');
+    const payload = new Uint8Array(8);
+    payload.set([
+        VISION_SENSOR_ACTION_CLEAR,
+        VISION_SENSOR_SCHEMA_VERSION,
+        sensorId,
+        reason
+    ], 0);
+    writeUint32LE(payload, 4, sequence);
+    return buildFrame(COMMAND_VISION_SENSOR, payload);
+};
+
+export const buildVisionSensorMultiStatusFrame = () => buildFrame(
+    COMMAND_VISION_SENSOR,
+    Uint8Array.from([
+        VISION_SENSOR_ACTION_MULTI_STATUS,
+        VISION_SENSOR_MULTI_SCHEMA_VERSION,
+        0,
+        0
+    ])
+);
+
+export const buildVisionSensorMultiUpdateFrame = ({
+    sequence,
+    ttlMs,
+    enabledMask,
+    validMask,
+    targets = {}
+} = {}) => {
+    assertUint32(sequence, 'Vision sequence');
+    if (!Number.isInteger(ttlMs) || ttlMs < VISION_SENSOR_MIN_TTL_MS || ttlMs > VISION_SENSOR_MAX_TTL_MS) {
+        throw new RangeError(
+            `Vision TTL must be ${VISION_SENSOR_MIN_TTL_MS}..${VISION_SENSOR_MAX_TTL_MS} ms`
+        );
+    }
+    if (!Number.isInteger(enabledMask) || enabledMask < 0 || enabledMask > VISION_SENSOR_TARGET_MASK_ALL) {
+        throw new RangeError('Vision enabled mask must use bits 0..3');
+    }
+    if (!Number.isInteger(validMask) || validMask < 0 || validMask > VISION_SENSOR_TARGET_MASK_ALL) {
+        throw new RangeError('Vision valid mask must use bits 0..3');
+    }
+    if ((validMask & ~enabledMask) !== 0) {
+        throw new RangeError('Vision valid mask must be a subset of enabled mask');
+    }
+
+    const payload = new Uint8Array(57);
+    payload.set([
+        VISION_SENSOR_ACTION_UPDATE_FRAME,
+        VISION_SENSOR_MULTI_SCHEMA_VERSION,
+        enabledMask | (validMask << 4)
+    ], 0);
+    writeUint32LE(payload, 3, sequence);
+    writeUint16LE(payload, 7, ttlMs);
+    for (let target = 0; target < VISION_SENSOR_TARGET_COUNT; target++) {
+        if ((validMask & (1 << target)) === 0) continue;
+        const value = targets[target] || targets[VISION_TARGET_KEYS[target]];
+        const label = `Vision ${VISION_TARGET_KEYS[target]}`;
+        validateVisionTargetValue(value, label);
+        const offset = 9 + (target * 12);
+        writeUint16LE(payload, offset, value.classId);
+        writeUint16LE(payload, offset + 2, value.confidencePermille);
+        writeUint16LE(payload, offset + 4, value.centerX);
+        writeUint16LE(payload, offset + 6, value.centerY);
+        writeUint16LE(payload, offset + 8, value.width);
+        writeUint16LE(payload, offset + 10, value.height);
+    }
+    const frame = buildFrame(COMMAND_VISION_SENSOR, payload);
+    if (frame.length !== LEGACY_REPORT_SIZE) {
+        throw new Error('Vision multi-target frame must fit exactly one 64-byte HID report');
+    }
+    return frame;
+};
+
+export const buildVisionSensorMultiClearFrame = ({
+    targetMask = VISION_SENSOR_TARGET_MASK_ALL,
+    reason,
+    sequence
+} = {}) => {
+    if (!Number.isInteger(targetMask) || targetMask < 1 || targetMask > VISION_SENSOR_TARGET_MASK_ALL) {
+        throw new RangeError('Vision clear target mask must use bits 0..3');
+    }
+    if (!Number.isInteger(reason) || reason < 0 || reason > VISION_SENSOR_CLEAR_REASON_PROGRAM_TRANSITION) {
+        throw new RangeError(
+            `Vision clear reason must be 0..${VISION_SENSOR_CLEAR_REASON_PROGRAM_TRANSITION}`
+        );
+    }
+    assertUint32(sequence, 'Vision sequence');
+    const payload = new Uint8Array(8);
+    payload.set([
+        VISION_SENSOR_ACTION_MULTI_CLEAR,
+        VISION_SENSOR_MULTI_SCHEMA_VERSION,
+        targetMask,
+        reason
+    ], 0);
+    writeUint32LE(payload, 4, sequence);
+    return buildFrame(COMMAND_VISION_SENSOR, payload);
+};
+
+const parseVisionSensorMultiPayload = payload => ({
+    schemaVersion: payload[0],
+    result: payload[1],
+    error: payload[2],
+    acceptedAction: payload[3],
+    supportedMask: payload[4],
+    enabledMask: payload[5],
+    validMask: payload[6],
+    lastClearReason: payload[7],
+    sequence: readUint32LE(payload, 8),
+    ttlMs: readUint16LE(payload, 12),
+    remainingMs: [
+        readUint16LE(payload, 14),
+        readUint16LE(payload, 16),
+        readUint16LE(payload, 18),
+        readUint16LE(payload, 20)
+    ]
+});
+
+export const parseVisionSensorMultiResponse = report => {
+    const parsed = parseFrame(report, COMMAND_VISION_SENSOR);
+    if (!parsed || parsed.payload.length !== 24 ||
+        parsed.payload[0] !== VISION_SENSOR_MULTI_SCHEMA_VERSION) {
+        return null;
+    }
+    return parseVisionSensorMultiPayload(parsed.payload);
+};
+
+export const parseVisionSensorResponse = report => {
+    const parsed = parseFrame(report, COMMAND_VISION_SENSOR);
+    if (!parsed) {
+        return null;
+    }
+    const payload = parsed.payload;
+    if (payload.length === 24 && payload[0] === VISION_SENSOR_MULTI_SCHEMA_VERSION) {
+        return parseVisionSensorMultiPayload(payload);
+    }
+    if (payload.length !== 16) {
+        return null;
+    }
+    return {
+        schemaVersion: payload[0],
+        result: payload[1],
+        state: payload[2],
+        error: payload[3],
+        sensorId: payload[4],
+        acceptedAction: payload[5],
+        sequence: readUint32LE(payload, 8),
+        ageMs: readUint16LE(payload, 12),
+        ttlMs: readUint16LE(payload, 14)
+    };
+};
 
 const validatePersistentProgramSlot = slot => {
     if (!Number.isInteger(slot) || slot < 0 || slot >= PERSISTENT_PROGRAM_SLOT_COUNT) {

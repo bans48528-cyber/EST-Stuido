@@ -1,6 +1,8 @@
 import editorMessageOverrides from './est-editor-message-overrides.json';
+import cameraMessages from '../common/est-camera-messages.json';
+import visionGuideMessages from './est-vision/guide-messages.json';
 
-export const EST_DEFAULT_LOCALE = 'zh-cn';
+export const EST_DEFAULT_LOCALE = 'pt-br';
 export const EST_LOCALE_CHANGED_EVENT = 'est-locale-changed';
 
 export const EST_LOCALE_NAMES = {
@@ -12,6 +14,47 @@ export const EST_LOCALE_NAMES = {
 };
 
 const zhCN = {
+    'home.blockGuide.vision_valid': '视觉目标有效｜按类型读取左手、右手、人体或面部的最新状态。',
+    'home.blockGuide.vision_gesture': '判断手势｜按左右手分别读取，同一程序可以同时判断两只手。',
+    'home.blockGuide.vision_class': '视觉类别编号｜按类型返回类别编号，失效时返回 -1。',
+    'home.blockGuide.vision_position': '视觉位置和大小｜按类型返回镜像预览坐标或大小，范围 0–100。',
+    'block.vision.valid': '视觉 %1 有效？',
+    'block.vision.waitState': '等待视觉 %1 %2',
+    'block.vision.waitGesture': '等待视觉 %1 是 %2',
+    'vision.valid': '有效', 'vision.invalid': '无效',
+    'category.vision': '视觉',
+    'vision.removedEvents': '此项目含已移除的视觉事件帽，已取消载入以保护原程序。请先在旧版中替换这些事件帽，再打开项目。',
+    'extension.vision.description': '使用电脑摄像头识别手势、人脸动作和人体姿态，将选中的目标发送到 EST。',
+    'block.vision.face.detected': '检测到人脸？',
+    'block.vision.face.action': '人脸动作是 %1 ？',
+    'block.vision.face.wait': '等待人脸动作是 %1',
+    'block.vision.pose.detected': '检测到人体？',
+    'block.vision.pose.action': '人体姿态是 %1 ？',
+    'block.vision.pose.wait': '等待人体姿态是 %1',
+    'vision.face.natural': '自然', 'vision.face.smile': '微笑',
+    'vision.face.blink': '眨眼', 'vision.face.mouth': '张嘴',
+    'vision.pose.standing': '站立', 'vision.pose.leftUp': '举起左手',
+    'vision.pose.rightUp': '举起右手', 'vision.pose.bothUp': '举起双手',
+    'vision.pose.squat': '下蹲', 'vision.pose.leanLeft': '身体左倾', 'vision.pose.leanRight': '身体右倾',
+    'home.blockGuide.vision_face_detected': '检测到人脸｜直接读取面部缓存；需在摄像头页开启面部动作。',
+    'home.blockGuide.vision_face_action': '人脸动作判断｜判断微笑、眨眼、张嘴或自然；可同时符合多个动作，不推断身份或情绪。',
+    'home.blockGuide.vision_wait_face': '等待人脸动作｜等待当前发送的人脸符合指定动作；无目标时继续等待。',
+    'home.blockGuide.vision_pose_detected': '检测到人体｜直接读取人体缓存；需在摄像头页开启人体姿态。',
+    'home.blockGuide.vision_pose_action': '人体姿态判断｜判断站立、举手、下蹲或倾斜；基于可见关键点的简单规则。',
+    'home.blockGuide.vision_wait_pose': '等待人体姿态｜等待当前发送的人体符合指定姿态；不切换摄像头发送对象。',
+    'home.blockGuide.mode.vision.target': '识别对象｜电脑可同时发送左手、右手、人体和面部结果。',
+    'home.blockGuide.vision_wait_state': '等待视觉状态｜等待目标有效或无效；条件已满足则立即继续，不阻塞其他协作任务。',
+    'home.blockGuide.vision_wait_gesture': '等待视觉手势｜按指定左手或右手缓存等待，不影响其他视觉类型。',
+    'block.vision.gesture': '视觉 %1 是 %2？',
+    'block.vision.class': '视觉 %1 类别编号',
+    'block.vision.position': '视觉 %1 %2（0–100）',
+    'vision.cameraRunning': '视觉 · 摄像头运行中',
+    'vision.settings': '查看摄像头',
+    'vision.stopCamera': '停止摄像头',
+    'vision.left': '左手', 'vision.right': '右手', 'vision.pose': '人体', 'vision.face': '面部',
+    'vision.palm': '张开手掌', 'vision.fist': '握拳', 'vision.thumb': '点赞',
+    'vision.point': '食指指向', 'vision.victory': '胜利手势', 'vision.other': '其他手势',
+    'vision.x': 'X', 'vision.y': 'Y', 'vision.width': '宽度', 'vision.height': '高度',
     'menu.home': '主页',
     'home.navigation': '主页导航',
     'home.nav.files': '文件',
@@ -97,11 +140,15 @@ const zhCN = {
     'home.build.sensorCar': '传感器车',
     'home.build.creative': '创意作品',
     'home.more.title': '使用与支持',
-    'home.more.intro': '查看设备连接、硬件端口、积木编程、AI 助手和软件使用说明。遇到问题时，也可以从对应指南快速排查。',
+    'home.more.intro': '查看视觉识别、设备连接、硬件端口、积木编程、AI 助手和软件使用说明。遇到问题时，也可以从对应指南快速排查。',
+    'home.more.est': '认识 EST',
+    'home.more.estSummary': '了解 EST 主控、硬件扩展、编程功能和智能能力',
+    'home.more.vision': '视觉识别与摄像头',
+    'home.more.visionSummary': '识别双手、人体姿态和面部动作，并把结果发送到 EST',
     'home.more.interaction': '软硬件交互指南',
     'home.more.interactionSummary': '从连接 EST 到下载、运行和排查问题',
     'home.more.hardware': '硬件说明',
-    'home.more.hardwareSummary': '主控、A–D 电机端口与 1–4 传感器端口',
+    'home.more.hardwareSummary': '主控、电机、传感器、视觉输入和固件升级',
     'home.more.blocks': '积木块功能说明',
     'home.more.blocksSummary': '逐一说明当前工具箱中每个积木块的功能',
     'home.more.ai': 'AI 编程助手',
@@ -110,6 +157,73 @@ const zhCN = {
     'home.more.softwareSummary': '版本、项目文件、工作区与更新说明',
     'home.more.about': '关于我们',
     'home.more.aboutSummary': '产品定位、技术基础与获取支持',
+    'home.dialog.est.title': 'EST 介绍',
+    'home.dialog.est.lead': 'EST 是一套以可编程主控为核心的教育机器人系统。它把积木机械结构、电机、传感器、屏幕与声音连接起来，并通过 EST Studio 完成搭建参考、程序设计、下载运行和调试。',
+    'home.dialog.est.overviewTitle': 'EST 是什么',
+    'home.dialog.est.overviewImageAlt': '由 EST 主控、电机和积木结构搭建的爬行蜘蛛模型',
+    'home.dialog.est.overviewImageCaption': '软件内置搭建库中的“爬行蜘蛛”示例，展示 EST 主控、电机与积木机械结构的组合。',
+    'home.dialog.est.overview1': 'EST 主控是模型的控制中心：程序读取按键和传感器，根据逻辑控制电机、显示、状态灯与声音，让静态结构变成能够感知和行动的机器人。',
+    'home.dialog.est.overview2': 'EST Studio 是配套桌面软件，负责项目管理、积木编程、Python 代码生成、USB 通信、硬件状态查看、程序下载运行与固件维护。',
+    'home.dialog.est.overview3': '系统既适合第一次接触机器人编程的学习者，也支持巡线、避障、分拣、机械臂、仿生结构和视觉交互等综合项目。',
+    'home.dialog.est.controllerTitle': '主控上的输入与输出',
+    'home.dialog.est.controller1': '主控按键可作为程序输入，用于启动任务、切换状态或进行菜单交互；事件积木可以在按键按下或松开时启动程序堆。',
+    'home.dialog.est.controller2': '180 × 128 显示屏可以显示内置图像、文字和自定义黑白图形；文字支持按行或按坐标放置。',
+    'home.dialog.est.controller3': '状态灯支持关闭、红色和蓝色；声音输出支持音效、钢琴音符、音量设置和停止播放。',
+    'home.dialog.est.controller4': 'USB 用于连接电脑、查询硬件、传输程序和更新固件。主控提供 0–7 八个程序槽位，程序下载后可以保存、加载、运行和停止。',
+    'home.dialog.est.hardwareTitle': '电机、端口与传感器',
+    'home.dialog.est.hardware1': 'A、B、C、D 是四个电机端口。程序可以单独控制一个电机，也可以把两个电机设为左右驱动组，实现直行、转向、差速运动和巡线。',
+    'home.dialog.est.hardware2': '电机支持方向、速度、功率、圈数、角度和时间控制，并可读取累计角度、当前速度和堵转状态；停止时可选择保持位置或惯性滑行。',
+    'home.dialog.est.hardware3': '1、2、3、4 是四个传感器端口。软件支持颜色传感器的反射光、环境光和颜色模式，以及触碰、超声波距离、红外近程与信标、陀螺仪角度与角速度、温度等输入。',
+    'home.dialog.est.hardware4': '电脑摄像头还能作为不占用 1–4 端口的虚拟视觉输入。软件列出的传感器是当前支持范围，具体套装包含的主控、电机、传感器和结构件以实际配置为准。',
+    'home.dialog.est.programmingTitle': '编程与设备控制',
+    'home.dialog.est.programming1': '积木工具箱包含事件、电机、移动、显示、声音、控制、传感器、视觉、运算、变量与列表和“我的模块”，可以从顺序动作逐步搭建复杂逻辑。',
+    'home.dialog.est.programming2': '积木会生成可查看的 Python 代码。一个项目可以包含多个事件程序堆，通过条件、循环、广播、计时器和自定义模块组织并行或协作任务。',
+    'home.dialog.est.programming3': '连接 EST 后可选择程序槽位。“下载”保存当前程序，“运行”会先下载再启动，“停止”终止用户程序并让设备处理电机安全停止。',
+    'home.dialog.est.programming4': '项目使用 .ests 文件保存；主页提供最近文件和搭建库，硬件状态面板显示连接、电量、固件和已识别外设，并提供固件升级或兼容性降级流程。',
+    'home.dialog.est.smartTitle': 'AI 与视觉能力',
+    'home.dialog.est.smart1': 'AI 编程助手可以把自然语言需求转换为经过本地规则校验的积木方案，支持预览、插入或替换工作区；是否应用、下载和运行始终由用户决定。',
+    'home.dialog.est.smart2': '视觉识别在电脑上处理左手、右手、人体姿态和面部动作，可向 EST 发送目标有效状态、类别、镜像位置与大小，程序通过视觉积木读取。',
+    'home.dialog.est.smart3': '摄像头画面和视觉模型处理保留在本机，不发送到 AI 编程服务；光线、遮挡和角度会影响识别，视觉结果不能替代人工检查与安全保护。',
+    'home.dialog.est.useTitle': '可以用 EST 做什么',
+    'home.dialog.est.use1': '基础学习：让电机运动，在屏幕显示信息，播放声音，并通过按键、等待、判断和循环理解程序流程。',
+    'home.dialog.est.use2': '感知控制：制作巡线车、避障车、雷达守卫、颜色分拣机等，让传感器读数实时改变机器人的行为。',
+    'home.dialog.est.use3': '综合项目：搭建机械臂、搬运与分拣机器人、双足机器人或视觉交互作品，把机械设计、数据、算法和任务分工结合起来。',
+    'home.dialog.est.useNote': '使用前请核对实物端口、机械安装方向、软件版本与固件能力。第一次真机测试应使用低速度、短时间，并为运动结构留出安全空间。',
+    'home.dialog.vision.title': '视觉识别与摄像头',
+    'home.dialog.vision.lead': '使用电脑摄像头在本机识别左手、右手、人体姿态和面部动作，并把结构化结果实时发送给正在运行的 EST 程序。摄像头窗口与项目窗口相互独立。',
+    'home.dialog.vision.openAction': '打开摄像头',
+    'home.dialog.vision.startTitle': '打开并开始识别',
+    'home.dialog.vision.startImageAlt': 'EST Studio 摄像头窗口正在识别左手',
+    'home.dialog.vision.startImageCaption': '这是当前软件实际摄像头窗口的隔离测试画面；蓝色方块和识别结果为测试数据，不包含用户摄像头内容。',
+    'home.dialog.vision.start1': '点击本指南上方的“打开摄像头”，或返回编辑器点击摄像头按钮；视觉识别会在独立窗口中打开。',
+    'home.dialog.vision.start2': '在停止状态选择摄像头，并开启需要的左手、右手、身体或面部项目；至少要开启一项。只开启需要的项目可减少电脑负载。',
+    'home.dialog.vision.start3': '点击“开始识别”。首次使用会先加载、初始化并预热本机模型，然后请求摄像头权限；看到预览与数据后即可使用。',
+    'home.dialog.vision.start4': '点击“停止识别”会停止识别与发送；关闭独立窗口会释放摄像头。再次打开时需要重新开始识别。',
+    'home.dialog.vision.modeTitle': '可以识别什么',
+    'home.dialog.vision.mode1': '左手与右手分开识别：张开手掌、握拳、点赞、食指指向、胜利手势和其他手势。',
+    'home.dialog.vision.mode2': '身体姿态：站立、举起左手、举起右手、举起双手、下蹲、身体左倾和身体右倾。',
+    'home.dialog.vision.mode3': '面部动作：自然、微笑、眨眼和张嘴；微笑、眨眼、张嘴可能同时成立。该功能不识别人物身份。',
+    'home.dialog.vision.mode4': '视觉积木还能读取目标是否有效、类别编号，以及镜像预览中的横向位置、纵向位置、宽度和高度；位置与大小统一为 0–100。',
+    'home.dialog.vision.programTitle': '在积木程序中使用',
+    'home.dialog.vision.program1': '新项目默认不显示视觉积木。点击编辑器左下角的“添加扩展”，选择“视觉”，视觉类别才会加入积木区。',
+    'home.dialog.vision.program2': '视觉扩展提供 12 个判断、读数和等待积木，可按左手、右手、人体或面部读取结果；当前不提供“识别到时”事件帽。',
+    'home.dialog.vision.program3': '打开摄像头，开启程序所需的识别项目并开始识别；只添加视觉扩展不会自动启动摄像头。',
+    'home.dialog.vision.program4': '连接 EST 后下载并运行程序。摄像头窗口会自动把最新有效数据送到 EST，程序再通过视觉积木读取；AI 编程助手也可以生成这些视觉积木。',
+    'home.dialog.vision.programNote': '先在积木块功能说明中查看每个视觉积木的图片、目标类型、动作选项和返回值，再按真机显示的数据核对条件。',
+    'home.dialog.vision.firmwareTitle': '连接与固件要求',
+    'home.dialog.vision.firmware1': '只启用一个识别目标时，EST 需要协议 1.30 和 vision-input 能力；软件已知版本 M1.27B 对应此协议。',
+    'home.dialog.vision.firmware2': '同时启用多个识别目标时，EST 需要协议 1.31 和 vision-input-multi 能力；软件已知版本 M1.28A 对应此协议。',
+    'home.dialog.vision.firmware3': '未连接或固件不支持时，本机预览与识别仍可继续，窗口底部会说明未发送的原因；请在“硬件状态”中查看版本并按硬件说明完成升级。',
+    'home.dialog.vision.firmware4': '下载程序或升级固件时会暂停发送；程序没有运行时会等待，目标离开画面或数据过期时会把该目标设为无效，避免程序继续读取旧结果。',
+    'home.dialog.vision.privacyTitle': '隐私、性能与识别边界',
+    'home.dialog.vision.privacy1': '视觉模型和识别运算在本机完成，摄像头画面不会发送到 AI 编程服务；软件只通过 USB 向 EST 发送类别、位置、大小等结构化数值。',
+    'home.dialog.vision.privacy2': '光线、遮挡、人与摄像头的距离和角度都会影响结果。请让目标完整进入画面，并根据电脑性能减少同时开启的识别项目。',
+    'home.dialog.vision.privacy3': '面部功能只判断列出的简单动作，不用于身份、年龄、健康或情绪推断；视觉结果适合交互与教学验证，不应作为安全判断的唯一依据。',
+    'home.dialog.vision.troubleshootTitle': '常见问题',
+    'home.dialog.vision.troubleshoot1': '找不到摄像头或没有画面：检查 Windows 摄像头权限，关闭正在占用摄像头的其他软件，然后重新打开窗口或切换设备。',
+    'home.dialog.vision.troubleshoot2': '首次启动较慢：等待窗口完成模型加载、初始化和预热；如果提示加载失败，重新打开窗口并确认软件文件完整。',
+    'home.dialog.vision.troubleshoot3': '本机能识别但 EST 没有数据：检查 USB 连接、固件能力、程序是否正在运行，以及摄像头中是否开启了程序使用的目标。',
+    'home.dialog.vision.troubleshoot4': '单项目正常、多项目不能发送：把摄像头切换为只开启一个目标测试；若单项目可用，请按硬件说明升级到支持协议 1.31 的固件。',
     'home.dialog.interaction.title': '软硬件交互指南',
     'home.dialog.interaction.lead': '按照下面的顺序完成连接、编程和运行。EST Studio 会自动发现一台通过 USB 连接的 EST。',
     'home.dialog.interaction.connectTitle': '第一次连接',
@@ -122,11 +236,20 @@ const zhCN = {
     'home.dialog.interaction.program2': '“下载”会把当前积木生成的 Python 程序写入所选槽位，并覆盖该槽位原有程序。',
     'home.dialog.interaction.program3': '“运行”会先下载当前程序，再启动所选槽位，适合边编程边测试。',
     'home.dialog.interaction.program4': '“停止”只终止当前用户程序；EST 会负责让运行中的电机安全停止。',
+    'home.dialog.interaction.hostTitle': '在主机屏幕上操作',
+    'home.dialog.interaction.host1':
+        '不连接电脑时，也可用 EST 主机的六个实体按键打开“最近程序”“程序”“端口查看”“红外遥控”“马达输出”和“设置”，' +
+        '直接运行已保存的程序或查看端口。完整按键说明见“其他 → 硬件说明 → 主机屏幕与按键”。',
+    'home.dialog.interaction.host2': '主机屏幕上的“端口查看”和“设置”属于设备自身菜单；电脑软件菜单栏中的“硬件状态”用于连接详情与固件更新，两者不是同一个界面。',
     'home.dialog.interaction.feedbackTitle': '查看运行反馈',
     'home.dialog.interaction.feedback1': '操作进行时，界面会显示正在生成、下载或启动；完成后会提示对应槽位。',
     'home.dialog.interaction.feedback2': '如果积木无法生成有效 Python，下载不会开始。检查悬空输入、无效变量名或不完整的积木连接。',
     'home.dialog.interaction.feedback3': '如果固件不支持程序使用的功能，先在硬件状态中完成固件更新，再重新下载。',
     'home.dialog.interaction.feedbackNote': '下载、运行启动或固件更新期间，请保持 USB 和电源稳定，不要拔线或关闭软件。',
+    'home.dialog.interaction.visionTitle': '电脑摄像头作为视觉输入',
+    'home.dialog.interaction.vision1': '视觉识别在电脑上运行，通过 USB 把左手、右手、人体和面部的结构化结果作为虚拟传感器数据发送到 EST，不占用 1–4 传感器端口。',
+    'home.dialog.interaction.vision2': '项目使用视觉积木时，要先添加“视觉”扩展，再打开摄像头并开启相同的识别目标；只有 EST 程序正在运行时才会持续使用发送的数据。',
+    'home.dialog.interaction.vision3': '程序下载、切换、停止或固件升级期间，视觉发送会暂停或清除；恢复运行后会重新发送最新结果，不沿用已经过期的目标。',
     'home.dialog.interaction.troubleshootTitle': '常见问题',
     'home.dialog.interaction.troubleshoot1': '一直未连接：确认线材支持数据传输，换一个 USB 端口，并关闭可能占用设备的其他软件。',
     'home.dialog.interaction.troubleshoot2': '下载中断：重新连接 EST，等待状态恢复后再次下载；中断不会主动删除槽位中的旧程序。',
@@ -137,6 +260,47 @@ const zhCN = {
     'home.dialog.hardware.controller1': 'USB 用于设备通信和程序传输。连接成功后，可在菜单栏查看连接状态。',
     'home.dialog.hardware.controller2': '硬件状态面板会显示连接、电量、固件版本和已识别的外设信息。',
     'home.dialog.hardware.controller3': '主控自带按键、显示、状态灯和声音输出，可直接使用对应积木控制。',
+    'home.dialog.hardware.hostHomeTitle': '主机屏幕与按键',
+    'home.dialog.hardware.hostHomeImageAlt': 'EST 主机屏幕的最近程序首页示意',
+    'home.dialog.hardware.hostImageCaption': '固件渲染的主机屏幕示意；程序名和读数为示例，实际界面可能随固件版本及设备状态变化。',
+    'home.dialog.hardware.hostHome1':
+        '主机有返回、左、上、下、右、确认六个按键。在首页按左或上选前一项，按右或下选后一项，按确认打开所选功能。' +
+        '首页共有“最近程序”“程序”“端口查看”“红外遥控”“马达输出”“设置”六项。',
+    'home.dialog.hardware.hostHome2': '屏幕上方显示电量，下方可看到 USB 连接状态及当前菜单位置。左右切换首页项目时，图标会滚动显示。',
+    'home.dialog.hardware.hostHome3': '在首页短按返回，会出现关机确认；再次按返回取消，按确认关机。进入子页面后，短按返回通常回到上一层或首页。',
+    'home.dialog.hardware.hostHome4': '在主机菜单中长按返回约 1 秒会执行紧急停止并回到首页。USB 程序传输时屏幕会显示进度，传输结束前按键操作暂不可用。',
+    'home.dialog.hardware.hostProgramsTitle': '最近程序与程序列表',
+    'home.dialog.hardware.hostProgramsImageAlt': 'EST 主机程序列表界面示意',
+    'home.dialog.hardware.hostPrograms1': '首页选“最近程序”并按确认，可快速运行上次使用的程序；没有最近程序时不会启动。',
+    'home.dialog.hardware.hostPrograms2': '首页选“程序”并按确认进入列表。这里显示已保存的程序槽位（0–7）；按上、下选择，按确认运行。运行中按返回可停止程序。',
+    'home.dialog.hardware.hostPrograms3': '选中程序后按右键会打开删除确认。默认是取消；按左或右切换到删除，再按确认才会删除。删除后该槽位的程序无法从主机恢复，请先核对名称与槽位。',
+    'home.dialog.hardware.hostPrograms4': '电量过低时主机可能阻止启动程序并提示充电；程序执行出错时按屏幕提示查看错误信息，按返回退出错误页。',
+    'home.dialog.hardware.hostPortsTitle': '端口查看与传感器模式',
+    'home.dialog.hardware.hostPortsImageAlt': 'EST 主机端口查看界面示意',
+    'home.dialog.hardware.hostPorts1': '首页选“端口查看”。按左、右在 A、B、C、D 马达端口和 1、2、3、4 传感器端口间循环选择；按返回回首页。',
+    'home.dialog.hardware.hostPorts2': '马达页显示已识别的类型、停止或运行状态、速度与角度。传感器页显示类型、当前模式和实时读数；这里用于查看，不会驱动马达。',
+    'home.dialog.hardware.hostPorts3':
+        '选中支持切换模式的传感器端口后，按确认依次切换：颜色（反射光／环境光／颜色）、超声波（厘米／英寸／存在检测）、' +
+        '红外（接近／信标／遥控）、陀螺仪（角度／角速度）、温度（摄氏／华氏）。触碰等无多模式的传感器按确认不会切换。',
+    'home.dialog.hardware.hostRemoteTitle': '红外遥控',
+    'home.dialog.hardware.hostRemote1': '先把红外传感器接到 4 号端口，并连接要控制的两个马达。首页进入“红外遥控”后，主机使用遥控器第 1 通道接收指令。',
+    'home.dialog.hardware.hostRemote2': '默认控制 B、C 两个马达；按确认可切换到 A、D。切换时会先制动所有马达。遥控输出可达到 100% 功率，测试前请让轮子离地并清空运动范围。',
+    'home.dialog.hardware.hostRemote3': '按返回退出遥控并制动马达；传感器或马达断开、遥控信号丢失时，主机也会停止输出并显示故障提示。',
+    'home.dialog.hardware.hostMotorTitle': '马达输出（主机手动控制）',
+    'home.dialog.hardware.hostMotor1': '首页进入“马达输出”时，A–D 马达初始均为停止，输出功率从 25% 开始。',
+    'home.dialog.hardware.hostMotor2': '上键对应 A、左键对应 B、右键对应 C、下键对应 D。每按一次对应按键，该端口依次在“停止 → 正转 → 反转 → 停止”之间切换。',
+    'home.dialog.hardware.hostMotor3': '按确认在 25%、50%、75%、100% 四档功率之间循环切换，已运行的马达会立即采用新档位。',
+    'home.dialog.hardware.hostMotor4': '短按返回离开此页时，所有马达都会制动；再次进入此页时会重置为停止和 25%。',
+    'home.dialog.hardware.hostMotorNote': '这里是切换式控制，不是“按住运行、松手停止”：按键松开后马达仍会保持当前方向。调试前请固定机器人或让轮子离地；需要立即停止时长按返回约 1 秒。',
+    'home.dialog.hardware.hostSettingsTitle': '设置、设备信息与关机',
+    'home.dialog.hardware.hostSettingsImageAlt': 'EST 主机设置界面示意',
+    'home.dialog.hardware.hostSettings1':
+        '首页进入“设置”。按上、下选择“背光”“音量”“语言”“设备信息”；背光用左、右在 10%–100% 间以 10% 调节，' +
+        '音量在 0%–100% 间以 10% 调节。',
+    'home.dialog.hardware.hostSettings2':
+        '选“语言”后按左、右切换中文、英语、葡萄牙语（巴西）；选“设备信息”后按确认，可查看型号、固件、引导程序、' +
+        'USB 和电池信息。按返回先退回设置，再按返回回首页。',
+    'home.dialog.hardware.hostSettings3': '背光、音量与语言设置会在设备上保存。主机菜单没有固件升级入口；升级或降级请在电脑端 EST Studio 的“硬件状态”中完成，步骤见下文。',
     'home.dialog.hardware.outputTitle': '电机与输出',
     'home.dialog.hardware.output1': '电机使用 A、B、C、D 端口。控制单个电机时，在积木中选择它实际连接的端口。',
     'home.dialog.hardware.output2': '移动类积木同时控制左右两个电机。使用前先设置左右电机端口，并核对安装方向。',
@@ -146,6 +310,7 @@ const zhCN = {
     'home.dialog.hardware.sensor2': '颜色传感器可读取反射光、环境光和颜色，适合巡线、颜色识别和亮度判断。',
     'home.dialog.hardware.sensor3': '触碰、超声波和红外传感器分别用于碰撞触发、距离测量和近程或信标检测。',
     'home.dialog.hardware.sensor4': '陀螺仪用于角度与角速度，温度传感器用于温度读取；主控按键和计时器无需外接端口。',
+    'home.dialog.hardware.sensor5': '电脑摄像头可作为虚拟视觉输入，不连接 1–4 端口；它需要单独打开摄像头窗口，并使用支持视觉输入的 EST 固件。',
     'home.dialog.hardware.firmwareTitle': '固件升级与降级流程',
     'home.dialog.hardware.firmware1': '保存当前项目，使用 USB 将 EST 连接电脑并保持稳定供电；开始前先停止正在运行的程序。',
     'home.dialog.hardware.firmware2': '进入编辑器，打开菜单栏的“硬件状态”，确认设备已经连接，并查看当前“固件版本”。',
@@ -167,7 +332,7 @@ const zhCN = {
     'home.dialog.blocks.start2': '在下方连接电机、移动、显示或播放等动作积木。',
     'home.dialog.blocks.start3': '把传感器或运算积木放入数值、条件等输入位置，按需要加入等待、重复或判断。',
     'home.dialog.blocks.start4': '查看右侧 Python 代码，选择程序槽位后下载或运行。',
-    'home.dialog.blocks.categoryTitle': '8 类积木速查',
+    'home.dialog.blocks.categoryTitle': '11 类积木速查',
     'home.dialog.blocks.category1': '电机：控制 A–D 中的单个电机，设置方向、速度、功率、运行量和停止方式，也可读取角度与速度。',
     'home.dialog.blocks.category2': '移动：把两个电机作为左右轮组控制，完成直行、转向、双电机差速和巡线。',
     'home.dialog.blocks.category3': '显示：在主控屏幕显示图像或文字，清除画面，并设置状态灯。',
@@ -176,6 +341,9 @@ const zhCN = {
     'home.dialog.blocks.category6': '控制：等待、重复、永久循环、条件判断，以及停止当前或其他程序堆。',
     'home.dialog.blocks.category7': '传感器：读取主控按键、颜色、温度、触碰、超声波、红外、陀螺仪和计时器。',
     'home.dialog.blocks.category8': '运算：进行算术、比较、逻辑、随机数和文本组合，为控制和传感器判断提供条件。',
+    'home.dialog.blocks.category9': '视觉：读取左手、右手、人体和面部的有效状态、类别、动作、位置与大小，并等待指定视觉条件。',
+    'home.dialog.blocks.category10': '变量与列表：保存和修改数值或文字，批量管理列表项目，并把数据用于条件、运算和输出。',
+    'home.dialog.blocks.category11': '我的模块：把一组逻辑封装成可重复调用的模块，并按需添加数值、文字或真假参数。',
     'home.dialog.blocks.inputTitle': '读懂输入与形状',
     'home.dialog.blocks.input1': '白色数值框可直接输入，也可以放入变量、传感器读数或运算结果。',
     'home.dialog.blocks.input2': '电机端口、移动端口和事件传感器端口既可使用下拉选项，也可放入原生变量。',
@@ -386,7 +554,9 @@ const zhCN = {
     'home.dialog.ai.setupNote': 'API 地址必须使用 HTTPS；仅 localhost、127.0.0.1 或本机 IPv6 回环地址允许使用 HTTP。请确认地址可信。',
     'home.dialog.ai.promptTitle': '怎样描述任务',
     'home.dialog.ai.prompt1': '写清机器人要完成的目标，并尽量说明电机和传感器端口、左右轮角色、方向、速度、距离或时间单位、触发条件、阈值与停止方式。',
-    'home.dialog.ai.prompt2': '复杂任务可以先让 AI 生成最小可运行部分，再通过后续对话逐步增加传感器判断、循环、显示或声音；AI 会参考本次对话中上一版程序继续修改。',
+    'home.dialog.ai.prompt2':
+        '复杂任务可以先让 AI 生成最小可运行部分，再通过后续对话逐步增加传感器或视觉判断、循环、变量、列表、' +
+        '“我的模块”、自定义绘图、显示或声音；AI 会参考本次对话中上一版程序继续修改。',
     'home.dialog.ai.prompt3': '连接 EST 时，助手会读取一次 USB 端口快照并优先使用已检测到的设备；USB 无法知道哪个电机是左轮或右轮，这类机械角色仍需在描述中写明。',
     'home.dialog.ai.prompt4': '未连接 EST 也可以对话和生成程序，但您需要自行核对所有端口、硬件型号和安装方向。',
     'home.dialog.ai.applyTitle': '生成、预览与应用',
@@ -399,10 +569,11 @@ const zhCN = {
     'home.dialog.ai.apply5': '应用成功只代表积木已经进入工作区。AI 不会自动下载或运行程序；请再次检查程序，然后使用编辑器的下载或运行按钮。',
     'home.dialog.ai.applyNote': '真机测试前请抬起轮组或留出安全空间，先使用低速度、短时间验证方向和停止逻辑。AI 生成内容始终需要人工检查。',
     'home.dialog.ai.scopeTitle': '当前支持范围',
-    'home.dialog.ai.scope1': '可以生成事件、电机、移动、显示、声音、控制、传感器和运算类积木，并支持一个方案中的多个程序堆。',
-    'home.dialog.ai.scope2': '当前版本不生成变量、列表、“我的模块”或任意 Python 代码；需要这些功能时，请应用基础程序后在工作区手动补充。',
-    'home.dialog.ai.scope3': '单次候选程序最多包含 8 个程序堆、256 个积木，积木嵌套深度最多 24 层；超出时应把需求拆成较小步骤。',
-    'home.dialog.ai.scope4': 'AI 会遵守软件提供的积木目录和数值规则，但仍可能误解自然语言、机械结构或教学意图，不能代替真机验证。',
+    'home.dialog.ai.scope1': '可以生成当前 EST 工具箱中的事件、电机、移动、显示、声音、控制、传感器、视觉和运算类积木，并支持一个方案中的多个程序堆。',
+    'home.dialog.ai.scope2': '可以创建和使用变量、列表与“我的模块”；“我的模块”支持数值、文字和真假参数，也可以生成主控 180 × 128 屏幕的自定义位图绘制数据。',
+    'home.dialog.ai.scope3': '不会生成或执行任意 Python、XML 或 JavaScript，也不接受外部图片网址和未经允许的 Blockly 原始修改；超出积木能力的部分需要在工作区另行完成。',
+    'home.dialog.ai.scope4': '单次候选程序最多包含 8 个程序堆、256 个积木，积木嵌套深度最多 24 层；超出时应把需求拆成较小步骤。',
+    'home.dialog.ai.scope5': 'AI 会遵守软件提供的积木目录和数值规则，但仍可能误解自然语言、机械结构、视觉条件或教学意图，不能代替预览检查和真机验证。',
     'home.dialog.ai.privacyTitle': '数据、密钥与费用',
     'home.dialog.ai.privacy1': 'API 配置与密钥会加密保存在本机。密钥只用于您保存的 API 地址；更换地址时不会自动沿用旧密钥。',
     'home.dialog.ai.privacy2': '请求会把本次对话、所需积木规则，以及连接设备时的一份 USB 端口快照发送到您配置的 AI 地址；软件不会自动上传整个当前项目。',
@@ -413,7 +584,7 @@ const zhCN = {
     'home.dialog.ai.troubleshoot2':
         '出现 400、404 或 503：检查模型 ID、API 地址和 JSON 模式；出现 401 或 403：检查密钥及权限；' +
         '出现 402 或 429：检查余额、额度或稍后重试。',
-    'home.dialog.ai.troubleshoot3': '请求在 90 秒内没有完成或提示网络中断：缩小任务范围后重试，并检查网络、本机 Ollama 服务或远程服务商状态。',
+    'home.dialog.ai.troubleshoot3': '请求在 8 分钟内没有完成或提示网络中断：缩小任务范围后重试，并检查网络、本机 Ollama 服务或远程服务商状态。',
     'home.dialog.ai.troubleshoot4': '提示程序校验或积木预览失败：把任务拆小，明确端口和参数后重新生成；也可以点击错误旁的“检查连接设置”或“重试”。',
     'home.dialog.software.title': '软件信息',
     'home.dialog.software.lead': '当前版本：EST Studio {version}。这是一款面向 EST 的桌面图形化编程软件。',
@@ -425,6 +596,7 @@ const zhCN = {
     'home.dialog.software.workspace1': '编辑器固定使用 EST 上传模式，无需选择通用硬件或切换模拟、实时模式。',
     'home.dialog.software.workspace2': '积木区用于搭建逻辑；Python 代码区会同步显示当前工作区生成的代码。',
     'home.dialog.software.workspace3': '一个项目可以包含多个事件程序堆；生成代码会按程序堆组织执行。',
+    'home.dialog.software.workspace4': '“视觉”是按项目添加的可选扩展，识别在独立摄像头窗口运行；AI 编程助手是可移动的浮动面板，两者都不会自动下载或运行程序。',
     'home.dialog.software.updateTitle': '版本与更新',
     'home.dialog.software.update1': '软件版本与 EST 固件版本是两项独立信息；遇到兼容提示时，需要确认两者是否匹配。',
     'home.dialog.software.update2': '在硬件状态中可以查看固件版本，并在提供更新包时执行固件更新。',
@@ -434,10 +606,10 @@ const zhCN = {
     'home.dialog.about.lead': 'EST Studio 是为 EST 主控与配套外设设计的图形化编程环境，让搭建、编程和真机运行形成连续体验。',
     'home.dialog.about.purposeTitle': '我们希望解决什么',
     'home.dialog.about.purpose1': '让学习者不必先配置通用硬件，就能直接进入 EST 积木编程。',
-    'home.dialog.about.purpose2': '让教师和学生能够在同一界面完成项目管理、搭建参考、编程和设备运行。',
+    'home.dialog.about.purpose2': '让教师和学生能够在同一软件中完成项目管理、搭建参考、积木与 AI 辅助编程、视觉交互和设备运行。',
     'home.dialog.about.purpose3': '保留可查看的 Python 代码，帮助学习者从图形化逻辑逐步理解文本编程。',
     'home.dialog.about.foundationTitle': '技术与许可',
-    'home.dialog.about.foundation2': '软件通过 USB 自动发现 EST，并将积木转换为可在设备上运行的 Python 程序。',
+    'home.dialog.about.foundation2': '软件通过 USB 自动发现 EST，将积木转换为可在设备上运行的 Python 程序，并能在本机识别摄像头画面后发送结构化视觉数据。',
     'home.dialog.about.foundation3': '项目保留 MIT、Scratch Foundation 与相关商标许可文件；第三方名称与商标归各自权利人所有。',
     'home.dialog.about.supportTitle': '获取支持前的准备',
     'home.dialog.about.support1': '记录问题发生前的操作、界面提示，以及是否可以稳定复现。',
@@ -455,6 +627,7 @@ const zhCN = {
     'codeDrawer.resize': '拖动调整 Python 代码区宽度；双击恢复默认宽度',
 
     'programControls.group': 'EST 程序控制',
+    'programControls.slotLabel': '槽位',
     'programControls.programSize': '程序大小：{used} / {limit} 字节',
     'programControls.programSizeWarning': '容量接近上限',
     'programControls.programSizeExceeded': '程序超过设备容量',
@@ -745,6 +918,47 @@ const zhCN = {
 };
 
 const en = {
+    'home.blockGuide.vision_valid': 'Vision target valid｜Reads fresh state for left hand, right hand, body, or face.',
+    'home.blockGuide.vision_gesture': 'Match gesture｜Reads left and right hands independently in the same program.',
+    'home.blockGuide.vision_class': 'Vision class ID｜Returns the selected target class, or -1 when invalid.',
+    'home.blockGuide.vision_position': 'Vision position and size｜Returns mirrored coordinates or size for one target, 0–100.',
+    'block.vision.valid': 'vision %1 valid?',
+    'block.vision.waitState': 'wait until vision %1 is %2',
+    'block.vision.waitGesture': 'wait until vision %1 is %2',
+    'vision.valid': 'valid', 'vision.invalid': 'invalid',
+    'category.vision': 'Vision',
+    'vision.removedEvents': 'This project contains removed vision event hats. Loading was cancelled to preserve the program. Replace those hats in the previous version before opening it here.',
+    'extension.vision.description': 'Recognize hand gestures, face actions and body poses with the computer camera. Send the selected target to EST.',
+    'block.vision.face.detected': 'face detected?',
+    'block.vision.face.action': 'face action is %1 ?',
+    'block.vision.face.wait': 'wait until face action is %1',
+    'block.vision.pose.detected': 'body detected?',
+    'block.vision.pose.action': 'body pose is %1 ?',
+    'block.vision.pose.wait': 'wait until body pose is %1',
+    'vision.face.natural': 'neutral', 'vision.face.smile': 'smile',
+    'vision.face.blink': 'blink', 'vision.face.mouth': 'mouth open',
+    'vision.pose.standing': 'standing', 'vision.pose.leftUp': 'left hand raised',
+    'vision.pose.rightUp': 'right hand raised', 'vision.pose.bothUp': 'both hands raised',
+    'vision.pose.squat': 'squatting', 'vision.pose.leanLeft': 'leaning left', 'vision.pose.leanRight': 'leaning right',
+    'home.blockGuide.vision_face_detected': 'Face detected｜Reads the face cache directly. Enable face actions in the camera panel.',
+    'home.blockGuide.vision_face_action': 'Face action｜Matches smile, blink, mouth open or neutral. Multiple actions can match; no identity or emotion inference.',
+    'home.blockGuide.vision_wait_face': 'Wait for face action｜Waits for the transmitted face action. No target keeps waiting.',
+    'home.blockGuide.vision_pose_detected': 'Body detected｜Reads the body cache directly. Enable body pose in the camera panel.',
+    'home.blockGuide.vision_pose_action': 'Body pose｜Matches standing, raised hands, squatting or leaning using simple visible-landmark rules.',
+    'home.blockGuide.vision_wait_pose': 'Wait for pose｜Waits for the transmitted body pose without changing the camera target.',
+    'home.blockGuide.mode.vision.target': 'Recognition targets｜The computer can send both hands, body and face results together.',
+    'home.blockGuide.vision_wait_state': 'Wait for vision state｜Continues immediately if already satisfied; yields to other cooperative tasks while waiting.',
+    'home.blockGuide.vision_wait_gesture': 'Wait for gesture｜Waits on the selected hand cache without affecting other vision types.',
+    'block.vision.gesture': 'vision %1 is %2?',
+    'block.vision.class': 'vision %1 class ID',
+    'block.vision.position': 'vision %1 %2 (0–100)',
+    'vision.cameraRunning': 'Vision · Camera active',
+    'vision.settings': 'View camera',
+    'vision.stopCamera': 'Stop camera',
+    'vision.left': 'left hand', 'vision.right': 'right hand', 'vision.pose': 'body', 'vision.face': 'face',
+    'vision.palm': 'open palm', 'vision.fist': 'fist', 'vision.thumb': 'thumbs up',
+    'vision.point': 'pointing', 'vision.victory': 'victory', 'vision.other': 'other gesture',
+    'vision.x': 'X', 'vision.y': 'Y', 'vision.width': 'width', 'vision.height': 'height',
     'menu.home': 'Home',
     'home.navigation': 'Home navigation',
     'home.nav.files': 'Files',
@@ -831,12 +1045,16 @@ const en = {
     'home.build.creative': 'Creative build',
     'home.more.title': 'Guides and support',
     'home.more.intro':
-        'Find help for device connections, hardware ports, block programming, the AI assistant ' +
-        'and the app. Use the matching guide to troubleshoot a problem.',
+        'Find help for vision recognition, device connections, hardware ports, block programming, ' +
+        'the AI assistant and the app. Use the matching guide to troubleshoot a problem.',
+    'home.more.est': 'Meet EST',
+    'home.more.estSummary': 'Learn about the EST hub, hardware expansion, programming and smart features',
+    'home.more.vision': 'Vision recognition and camera',
+    'home.more.visionSummary': 'Recognize hands, body poses and face actions, then send results to EST',
     'home.more.interaction': 'Software and hardware guide',
     'home.more.interactionSummary': 'Connect EST, download programs, run them and solve problems',
     'home.more.hardware': 'Hardware guide',
-    'home.more.hardwareSummary': 'Hub, A–D motor ports and 1–4 sensor ports',
+    'home.more.hardwareSummary': 'Hub, motors, sensors, vision input and firmware updates',
     'home.more.blocks': 'Block reference',
     'home.more.blocksSummary': 'A function-by-function reference for every block in the toolbox',
     'home.more.ai': 'AI Coding Assistant',
@@ -845,6 +1063,179 @@ const en = {
     'home.more.softwareSummary': 'Version, project files, workspace and updates',
     'home.more.about': 'About us',
     'home.more.aboutSummary': 'Product purpose, technical foundation and support',
+    'home.dialog.est.title': 'Introducing EST',
+    'home.dialog.est.lead':
+        'EST is an educational robotics system centered on a programmable hub. It connects block-built ' +
+        'mechanisms, motors, sensors, a display and sound, while EST Studio provides building references, ' +
+        'program design, download, execution and debugging.',
+    'home.dialog.est.overviewTitle': 'What EST is',
+    'home.dialog.est.overviewImageAlt':
+        'A crawling spider model built with an EST hub, motors and block mechanisms',
+    'home.dialog.est.overviewImageCaption':
+        'The Crawling spider example from the built-in building library shows how an EST hub, motors ' +
+        'and block mechanisms work together.',
+    'home.dialog.est.overview1':
+        'The EST hub is the model’s control center. A program reads buttons and sensors, then controls ' +
+        'motors, the display, status light and sound so a static structure can sense and act.',
+    'home.dialog.est.overview2':
+        'EST Studio is the companion desktop app for projects, block programming, Python generation, ' +
+        'USB communication, Hardware Status, program download and execution, and firmware maintenance.',
+    'home.dialog.est.overview3':
+        'The system suits first-time robotics learners and supports integrated projects such as line ' +
+        'followers, obstacle avoidance, sorting, robot arms, biomimetic mechanisms and vision interaction.',
+    'home.dialog.est.controllerTitle': 'Inputs and outputs on the hub',
+    'home.dialog.est.controller1':
+        'Hub buttons provide program input for starting tasks, changing state or navigating an interface. ' +
+        'Event blocks can start a stack when a button is pressed or released.',
+    'home.dialog.est.controller2':
+        'The 180 × 128 display can show built-in images, text and custom monochrome drawings. Text can ' +
+        'be placed by line or at precise coordinates.',
+    'home.dialog.est.controller3':
+        'The status light supports off, red and blue. Sound output supports effects, piano notes, volume ' +
+        'control and stopping playback.',
+    'home.dialog.est.controller4':
+        'USB connects the computer, queries hardware, transfers programs and updates firmware. The hub ' +
+        'has eight program slots numbered 0–7 for saving, loading, running and stopping programs.',
+    'home.dialog.est.hardwareTitle': 'Motors, ports and sensors',
+    'home.dialog.est.hardware1':
+        'A, B, C and D are four motor ports. A program can control one motor or configure two as a ' +
+        'left/right drive pair for straight motion, steering, tank movement and line following.',
+    'home.dialog.est.hardware2':
+        'Motor blocks control direction, speed, power, rotations, degrees and time, and report accumulated ' +
+        'angle, current speed and stall state. A stop can hold position or coast.',
+    'home.dialog.est.hardware3':
+        'Ports 1, 2, 3 and 4 accept sensors. The app supports reflected light, ambient light and color; ' +
+        'touch; ultrasonic distance; infrared proximity and beacon; gyro angle and rate; and temperature.',
+    'home.dialog.est.hardware4':
+        'The computer camera can also act as virtual vision input without using ports 1–4. The sensors ' +
+        'listed here are the supported range; the hub, motors, sensors and parts included depend on the kit.',
+    'home.dialog.est.programmingTitle': 'Programming and device control',
+    'home.dialog.est.programming1':
+        'The toolbox includes Events, Motor, Movement, Display, Sound, Control, Sensing, Vision, Operators, ' +
+        'Variables and Lists, and My Blocks, from simple sequences through complex logic.',
+    'home.dialog.est.programming2':
+        'Blocks generate visible Python code. A project can contain several event stacks organized with ' +
+        'conditions, loops, broadcasts, timers and custom blocks for concurrent or cooperative tasks.',
+    'home.dialog.est.programming3':
+        'After connecting EST, choose a program slot. Download saves the current program, Run downloads ' +
+        'then starts it, and Stop ends the user program while the device handles safe motor stopping.',
+    'home.dialog.est.programming4':
+        'Projects are saved as .ests files. The home page provides recent files and building guides. ' +
+        'Hardware Status shows connection, battery, firmware and peripherals and provides firmware updates.',
+    'home.dialog.est.smartTitle': 'AI and vision features',
+    'home.dialog.est.smart1':
+        'The AI Coding Assistant converts natural-language requests into locally validated block proposals ' +
+        'that can be previewed, inserted or used to replace the workspace. The user controls every apply, ' +
+        'download and run action.',
+    'home.dialog.est.smart2':
+        'Computer-side vision recognizes the left hand, right hand, body poses and face actions. It sends ' +
+        'validity, class, mirrored position and size to EST for programs to read with Vision blocks.',
+    'home.dialog.est.smart3':
+        'Camera frames and vision model processing stay local and are not sent to the AI Coding service. ' +
+        'Lighting, occlusion and angle affect results, which never replace review or safety protection.',
+    'home.dialog.est.useTitle': 'What you can make with EST',
+    'home.dialog.est.use1':
+        'Learn the basics by moving motors, showing information, playing sound and using buttons, waits, ' +
+        'conditions and loops to understand program flow.',
+    'home.dialog.est.use2':
+        'Build sensing projects such as line followers, obstacle-avoidance cars, radar guards and color ' +
+        'sorters, where sensor readings change behavior in real time.',
+    'home.dialog.est.use3':
+        'Create integrated robot arms, transport and sorting robots, bipeds or vision interactions that ' +
+        'combine mechanical design, data, algorithms and task coordination.',
+    'home.dialog.est.useNote':
+        'Before use, verify physical ports, installation direction, app version and firmware capability. ' +
+        'Begin hardware tests at low speed and for short durations with clear space around moving parts.',
+    'home.dialog.vision.title': 'Vision recognition and camera',
+    'home.dialog.vision.lead':
+        'Use the computer camera to recognize the left hand, right hand, body poses and face ' +
+        'actions locally, then send structured results to a running EST program. The camera ' +
+        'window is independent of the project window.',
+    'home.dialog.vision.openAction': 'Open camera',
+    'home.dialog.vision.startTitle': 'Open and start recognition',
+    'home.dialog.vision.startImageAlt': 'EST Studio camera window recognizing a left hand',
+    'home.dialog.vision.startImageCaption':
+        'This is the actual camera window from the current app using an isolated test source. The ' +
+        'blue square and recognition result are test data and contain no user camera content.',
+    'home.dialog.vision.start1':
+        'Choose Open camera above, or return to the editor and choose its camera button. Vision ' +
+        'recognition opens in a separate window.',
+    'home.dialog.vision.start2':
+        'While stopped, select a camera and enable at least one of Left hand, Right hand, Body or ' +
+        'Face. Enabling only what you need reduces computer load.',
+    'home.dialog.vision.start3':
+        'Choose Start recognition. On first use, the app loads, initializes and warms up the ' +
+        'local models before requesting camera permission. It is ready when preview and data appear.',
+    'home.dialog.vision.start4':
+        'Stop recognition ends recognition and sending. Closing the independent window releases ' +
+        'the camera; start recognition again the next time you open it.',
+    'home.dialog.vision.modeTitle': 'What it recognizes',
+    'home.dialog.vision.mode1':
+        'Left and right hands are recognized separately: open palm, fist, thumbs up, pointing, ' +
+        'victory and other gesture.',
+    'home.dialog.vision.mode2':
+        'Body poses: standing, left hand raised, right hand raised, both hands raised, squat, lean ' +
+        'left and lean right.',
+    'home.dialog.vision.mode3':
+        'Face actions: natural, smile, blink and mouth open. Smile, blink and mouth open can be ' +
+        'true together. This feature does not identify a person.',
+    'home.dialog.vision.mode4':
+        'Vision blocks can also report whether a target is valid, its class number, and horizontal ' +
+        'position, vertical position, width and height in the mirrored preview, all normalized to 0–100.',
+    'home.dialog.vision.programTitle': 'Use vision in a block program',
+    'home.dialog.vision.program1':
+        'New projects do not show vision blocks by default. Choose Add Extension at the lower left ' +
+        'of the editor and select Vision to add its category.',
+    'home.dialog.vision.program2':
+        'The Vision extension provides 12 condition, reporter and wait blocks for the left hand, ' +
+        'right hand, body or face. It currently has no “when recognized” event hat.',
+    'home.dialog.vision.program3':
+        'Open the camera, enable every target used by the program and start recognition. Adding the ' +
+        'Vision extension does not start the camera automatically.',
+    'home.dialog.vision.program4':
+        'Connect EST, then download and run the program. The camera window automatically sends the ' +
+        'latest valid data for the vision blocks to read. The AI Coding Assistant can generate ' +
+        'these vision blocks too.',
+    'home.dialog.vision.programNote':
+        'Use the Block reference to see an image of every vision block plus its target types, ' +
+        'action choices and return value, then verify conditions against live hardware data.',
+    'home.dialog.vision.firmwareTitle': 'Connection and firmware requirements',
+    'home.dialog.vision.firmware1':
+        'With one recognition target enabled, EST requires protocol 1.30 and the vision-input ' +
+        'capability. The app maps known version M1.27B to this protocol.',
+    'home.dialog.vision.firmware2':
+        'With several recognition targets enabled together, EST requires protocol 1.31 and the ' +
+        'vision-input-multi capability. The app maps known version M1.28A to this protocol.',
+    'home.dialog.vision.firmware3':
+        'Local preview and recognition can continue when EST is disconnected or its firmware is ' +
+        'unsupported. The window footer explains why data is not being sent; check Hardware Status ' +
+        'and follow the Hardware guide to update.',
+    'home.dialog.vision.firmware4':
+        'Sending pauses during a program download or firmware update. It waits while no program is ' +
+        'running and marks a missing or expired target invalid so the program cannot keep stale data.',
+    'home.dialog.vision.privacyTitle': 'Privacy, performance and limits',
+    'home.dialog.vision.privacy1':
+        'Vision models and recognition run locally. Camera frames are not sent to the AI Coding ' +
+        'service; only structured values such as class, position and size go to EST over USB.',
+    'home.dialog.vision.privacy2':
+        'Lighting, occlusion, distance and camera angle affect results. Keep the target fully in ' +
+        'view and enable fewer recognition targets if the computer is under heavy load.',
+    'home.dialog.vision.privacy3':
+        'Face recognition checks only the listed simple actions. It does not infer identity, age, ' +
+        'health or emotion. Do not use vision results as the only input for a safety decision.',
+    'home.dialog.vision.troubleshootTitle': 'Common problems',
+    'home.dialog.vision.troubleshoot1':
+        'No camera or image: check Windows camera permission, close other software using the camera, ' +
+        'then reopen the window or select another device.',
+    'home.dialog.vision.troubleshoot2':
+        'Slow first start: wait for model loading, initialization and warm-up. If loading fails, ' +
+        'reopen the window and make sure the app installation is complete.',
+    'home.dialog.vision.troubleshoot3':
+        'Local recognition works but EST has no data: check USB, firmware capability, whether the ' +
+        'program is running and whether the camera has enabled every target used by the program.',
+    'home.dialog.vision.troubleshoot4':
+        'One target works but several do not: enable only one target and test again. If it works, ' +
+        'follow the Hardware guide to install firmware with protocol 1.31 support.',
     'home.dialog.interaction.title': 'Software and hardware guide',
     'home.dialog.interaction.lead':
         'Follow this sequence to connect, program and run. EST Studio automatically finds one EST ' +
@@ -870,6 +1261,14 @@ const en = {
         'useful for quick testing.',
     'home.dialog.interaction.program4':
         'Stop ends the current user program. EST then handles a safe stop for any running motors.',
+    'home.dialog.interaction.hostTitle': 'Use the hub screen',
+    'home.dialog.interaction.host1':
+        'You can use the six physical buttons even without a computer. The hub offers Recent Program, ' +
+        'Programs, Port Viewer, IR Remote, Motor Output and Settings. See More → Hardware guide → ' +
+        'Hub screen and buttons for the full button guide.',
+    'home.dialog.interaction.host2':
+        'Port Viewer and Settings are menus on the hub itself. Hardware Status in the desktop app ' +
+        'shows connection details and handles firmware updates; it is a different interface.',
     'home.dialog.interaction.feedbackTitle': 'Read the feedback',
     'home.dialog.interaction.feedback1':
         'The interface reports generation, download and startup progress, then confirms the ' +
@@ -883,6 +1282,16 @@ const en = {
     'home.dialog.interaction.feedbackNote':
         'Keep USB and power stable while downloading, starting a run or updating firmware. Do not ' +
         'unplug EST or close the app.',
+    'home.dialog.interaction.visionTitle': 'Use the computer camera as vision input',
+    'home.dialog.interaction.vision1':
+        'Recognition runs on the computer and sends structured left-hand, right-hand, body and face ' +
+        'results to EST over USB as virtual sensor data. It uses no port from 1–4.',
+    'home.dialog.interaction.vision2':
+        'For a project with vision blocks, add the Vision extension, open the camera and enable the ' +
+        'same targets. Data is used continuously only while the EST program is running.',
+    'home.dialog.interaction.vision3':
+        'Vision sending pauses or clears during program download, transition, stop or firmware ' +
+        'update. It resumes with the latest result and does not reuse an expired target.',
     'home.dialog.interaction.troubleshootTitle': 'Common problems',
     'home.dialog.interaction.troubleshoot1':
         'No connection: use a cable that carries data, try another USB port and close other ' +
@@ -907,6 +1316,94 @@ const en = {
     'home.dialog.hardware.controller3':
         'The hub has buttons, a display, a status light and sound output that can be controlled ' +
         'directly with blocks.',
+    'home.dialog.hardware.hostHomeTitle': 'Hub screen and buttons',
+    'home.dialog.hardware.hostHomeImageAlt': 'Example of the Recent Program screen on the EST hub',
+    'home.dialog.hardware.hostImageCaption':
+        'Example rendered from the hub firmware. Program names and readings are sample data; ' +
+        'the screen can vary with firmware version and device state.',
+    'home.dialog.hardware.hostHome1':
+        'The hub has Back, Left, Up, Down, Right and Confirm buttons. On the home screen, Left or Up ' +
+        'selects the previous item, Right or Down selects the next, and Confirm opens it. The six ' +
+        'items are Recent Program, Programs, Port Viewer, IR Remote, Motor Output and Settings.',
+    'home.dialog.hardware.hostHome2':
+        'Battery level appears at the top. USB connection and menu position appear at the bottom. ' +
+        'The icons scroll as you move through the home items.',
+    'home.dialog.hardware.hostHome3':
+        'Press Back briefly on the home screen to open the power-off confirmation. Press Back again ' +
+        'to cancel or Confirm to power off. In a submenu, Back normally returns to the previous ' +
+        'page or home screen.',
+    'home.dialog.hardware.hostHome4':
+        'Hold Back for about one second in the hub menus to emergency-stop and return home. During ' +
+        'a USB program transfer, the screen shows progress and buttons are unavailable until it ends.',
+    'home.dialog.hardware.hostProgramsTitle': 'Recent Program and program list',
+    'home.dialog.hardware.hostProgramsImageAlt': 'Example of the EST hub program list',
+    'home.dialog.hardware.hostPrograms1':
+        'Choose Recent Program on the home screen and press Confirm to rerun the most recently used ' +
+        'program. Nothing starts if there is no recent program.',
+    'home.dialog.hardware.hostPrograms2':
+        'Choose Programs to see saved program slots (0–7). Use Up and Down to select one, then ' +
+        'Confirm to run it. Press Back while it is running to stop it.',
+    'home.dialog.hardware.hostPrograms3':
+        'Press Right on a selected program to open the delete confirmation. Cancel is selected by ' +
+        'default; use Left or Right to select Delete, then Confirm. A deleted program cannot be ' +
+        'restored from the hub, so check its name and slot first.',
+    'home.dialog.hardware.hostPrograms4':
+        'Very low battery may prevent a program from starting and prompt you to charge EST. If a ' +
+        'program fails, read the on-screen error and press Back to leave the error page.',
+    'home.dialog.hardware.hostPortsTitle': 'Port Viewer and sensor modes',
+    'home.dialog.hardware.hostPortsImageAlt': 'Example of the EST hub Port Viewer',
+    'home.dialog.hardware.hostPorts1':
+        'Choose Port Viewer on the home screen. Use Left and Right to cycle through motor ports ' +
+        'A, B, C, D and sensor ports 1, 2, 3, 4. Press Back to return home.',
+    'home.dialog.hardware.hostPorts2':
+        'Motor pages show the detected type, stopped/running state, speed and angle. Sensor pages ' +
+        'show type, current mode and live value. Viewing ports does not drive motors.',
+    'home.dialog.hardware.hostPorts3':
+        'On a sensor port that supports modes, press Confirm to cycle: color (reflected/ambient/' +
+        'color), ultrasonic (cm/inches/presence), infrared (proximity/beacon/remote), gyro ' +
+        '(angle/rate), or temperature (Celsius/Fahrenheit). Touch and other single-mode sensors ' +
+        'do not change mode when you press Confirm.',
+    'home.dialog.hardware.hostRemoteTitle': 'IR Remote',
+    'home.dialog.hardware.hostRemote1':
+        'Connect the infrared sensor to sensor port 4 and the two motors you want to control. ' +
+        'IR Remote on the home screen listens to remote channel 1.',
+    'home.dialog.hardware.hostRemote2':
+        'The default motor pair is B/C. Press Confirm to switch to A/D; all motors brake during the ' +
+        'switch. Remote output can reach 100% power. Lift wheels off the ground and clear the ' +
+        'movement area before testing.',
+    'home.dialog.hardware.hostRemote3':
+        'Back exits IR Remote and brakes the motors. A disconnected sensor or motor, or a lost ' +
+        'remote signal, also stops output and shows a fault.',
+    'home.dialog.hardware.hostMotorTitle': 'Motor Output (manual control)',
+    'home.dialog.hardware.hostMotor1':
+        'When you enter Motor Output, all A–D motors begin stopped and power starts at 25%.',
+    'home.dialog.hardware.hostMotor2':
+        'Up controls A, Left controls B, Right controls C and Down controls D. Each press cycles ' +
+        'that port through Stop → Forward → Reverse → Stop.',
+    'home.dialog.hardware.hostMotor3':
+        'Confirm cycles power through 25%, 50%, 75% and 100%. Running motors adopt the new level ' +
+        'immediately.',
+    'home.dialog.hardware.hostMotor4':
+        'Press Back briefly to leave this page and brake all motors. Re-entering resets all ports ' +
+        'to Stop and power to 25%.',
+    'home.dialog.hardware.hostMotorNote':
+        'This is latched control, not hold-to-run: releasing a button does not stop the motor. ' +
+        'Secure the robot or lift its wheels before testing. Hold Back for about one second if you ' +
+        'need an immediate emergency stop.',
+    'home.dialog.hardware.hostSettingsTitle': 'Settings, device info and power-off',
+    'home.dialog.hardware.hostSettingsImageAlt': 'Example of the EST hub Settings screen',
+    'home.dialog.hardware.hostSettings1':
+        'Choose Settings on the home screen. Use Up/Down to select Backlight, Volume, Language or ' +
+        'Device Info. Left/Right adjusts backlight from 10–100% or volume from 0–100%, both in ' +
+        '10% steps.',
+    'home.dialog.hardware.hostSettings2':
+        'Use Left/Right on Language to switch among Chinese, English and Brazilian Portuguese. ' +
+        'Choose Device Info and press Confirm to see model, firmware, bootloader, USB and battery ' +
+        'information. Press Back to return to Settings, then Back again to return home.',
+    'home.dialog.hardware.hostSettings3':
+        'Backlight, volume and language settings are saved on the hub. Firmware updates are not ' +
+        'started from this menu; use Hardware Status in EST Studio on the computer and follow the ' +
+        'steps below.',
     'home.dialog.hardware.outputTitle': 'Motors and outputs',
     'home.dialog.hardware.output1':
         'Motors use ports A, B, C and D. A single-motor block must use the port where that motor ' +
@@ -930,6 +1427,9 @@ const en = {
     'home.dialog.hardware.sensor4':
         'The gyro reports angle and rate, while the temperature sensor reports temperature. Hub ' +
         'buttons and timers need no external port.',
+    'home.dialog.hardware.sensor5':
+        'The computer camera acts as virtual vision input without using ports 1–4. Open its camera ' +
+        'window separately and use EST firmware that supports vision input.',
     'home.dialog.hardware.firmwareTitle': 'Firmware upgrade and downgrade',
     'home.dialog.hardware.firmware1':
         'Save the current project, connect EST to the computer by USB, keep its power stable and ' +
@@ -981,7 +1481,7 @@ const en = {
         'Put sensor or operator blocks into value and condition inputs, then add waits, loops or ' +
         'decisions as needed.',
     'home.dialog.blocks.start4': 'Review the Python panel, choose a program slot and select Download or Run.',
-    'home.dialog.blocks.categoryTitle': 'The 8 categories',
+    'home.dialog.blocks.categoryTitle': 'The 11 categories',
     'home.dialog.blocks.category1':
         'Motor: control one motor on A–D; set direction, speed, power, amount and stop action, or ' +
         'read angle and speed.',
@@ -1003,6 +1503,14 @@ const en = {
     'home.dialog.blocks.category8':
         'Operators: calculate, compare, combine logic, choose random values and join text for ' +
         'conditions and outputs.',
+    'home.dialog.blocks.category9':
+        'Vision: read validity, class, action, position and size for either hand, the body or face, ' +
+        'and wait for a selected vision condition.',
+    'home.dialog.blocks.category10':
+        'Variables and lists: store and change numbers or text, manage collections and use their ' +
+        'data in conditions, calculations and output.',
+    'home.dialog.blocks.category11':
+        'My Blocks: package logic for reuse and add number, text or Boolean arguments as needed.',
     'home.dialog.blocks.inputTitle': 'Understand inputs and shapes',
     'home.dialog.blocks.input1':
         'Type directly into a white value field or insert a variable, sensor reading or operator ' +
@@ -1386,9 +1894,9 @@ const en = {
         'State the robot goal and, where possible, motor and sensor ports, left/right wheel roles, ' +
         'direction, speed, distance or time units, triggers, thresholds and stopping behavior.',
     'home.dialog.ai.prompt2':
-        'For a complex task, generate the smallest runnable part first, then add sensor logic, ' +
-        'loops, display or sound in follow-up messages. The assistant can refine the previous ' +
-        'proposal in the current conversation.',
+        'For a complex task, generate the smallest runnable part first, then add sensor or vision ' +
+        'logic, loops, variables, lists, My Blocks, custom drawing, display or sound in follow-up ' +
+        'messages. The assistant can refine the previous proposal in the current conversation.',
     'home.dialog.ai.prompt3':
         'When EST is connected, the assistant reads one USB port snapshot and prefers detected ' +
         'devices. USB cannot know semantic roles such as left or right wheel, so state those roles.',
@@ -1419,17 +1927,21 @@ const en = {
         'short durations to verify direction and stopping. Always review AI-generated content.',
     'home.dialog.ai.scopeTitle': 'Current scope',
     'home.dialog.ai.scope1':
-        'The assistant can generate event, motor, movement, display, sound, control, sensing and ' +
-        'operator blocks, including several program stacks in one proposal.',
+        'The assistant can generate event, motor, movement, display, sound, control, sensing, vision ' +
+        'and operator blocks from the current EST toolbox, including several stacks in one proposal.',
     'home.dialog.ai.scope2':
-        'This version does not generate variables, lists, My Blocks or arbitrary Python. Apply the ' +
-        'base program and add those features manually in the workspace.',
+        'It can create and use variables, lists and My Blocks. My Blocks support number, text and ' +
+        'Boolean arguments, and it can generate custom bitmap data for the 180 × 128 hub display.',
     'home.dialog.ai.scope3':
+        'It does not generate or execute arbitrary Python, XML or JavaScript, accept external image ' +
+        'URLs, or apply unapproved raw Blockly mutations. Complete unsupported work separately.',
+    'home.dialog.ai.scope4':
         'One proposal can contain at most 8 stacks and 256 blocks, with up to 24 levels of nesting. ' +
         'Split larger requests into smaller steps.',
-    'home.dialog.ai.scope4':
+    'home.dialog.ai.scope5':
         'The AI follows the supplied block catalog and value rules but can still misunderstand ' +
-        'natural language, mechanisms or teaching intent. It does not replace hardware testing.',
+        'natural language, mechanisms, vision conditions or teaching intent. It does not replace ' +
+        'preview review and hardware testing.',
     'home.dialog.ai.privacyTitle': 'Data, keys and costs',
     'home.dialog.ai.privacy1':
         'API settings and keys are encrypted on this computer. A key is used only with its saved ' +
@@ -1452,7 +1964,7 @@ const en = {
         'For 400, 404 or 503, check the model ID, API URL and JSON mode. For 401 or 403, check the ' +
         'key and its permissions. For 402 or 429, check quota or wait before retrying.',
     'home.dialog.ai.troubleshoot3':
-        'If a request exceeds 90 seconds or the connection drops, reduce the task and retry, then ' +
+        'If a request exceeds 8 minutes or the connection drops, reduce the task and retry, then ' +
         'check the network, local Ollama service or remote provider status.',
     'home.dialog.ai.troubleshoot4':
         'For a validation or preview failure, split the task, state ports and parameters, then ' +
@@ -1481,6 +1993,10 @@ const en = {
     'home.dialog.software.workspace3':
         'One project can contain several event stacks; generated code keeps their execution ' +
         'organized by stack.',
+    'home.dialog.software.workspace4':
+        'Vision is an optional per-project extension with recognition in a separate camera window. ' +
+        'The AI Coding Assistant is a movable floating panel; neither downloads or runs a program ' +
+        'automatically.',
     'home.dialog.software.updateTitle': 'Versions and updates',
     'home.dialog.software.update1':
         'The app version and EST firmware version are separate. Check both when the interface ' +
@@ -1502,15 +2018,15 @@ const en = {
     'home.dialog.about.purpose1':
         'Let learners begin EST block programming without configuring generic hardware first.',
     'home.dialog.about.purpose2':
-        'Give teachers and students one place for projects, building references, programming and ' +
-        'device runs.',
+        'Give teachers and students one app for projects, building references, block and AI-assisted ' +
+        'programming, vision interaction and device runs.',
     'home.dialog.about.purpose3':
         'Keep generated Python visible so learners can move gradually from block logic to text ' +
         'programming.',
     'home.dialog.about.foundationTitle': 'Technology and licenses',
     'home.dialog.about.foundation2':
-        'It discovers EST over USB and converts blocks into Python programs that run on the ' +
-        'device.',
+        'It discovers EST over USB, converts blocks into Python programs that run on the device, ' +
+        'and recognizes camera frames locally before sending structured vision data.',
     'home.dialog.about.foundation3':
         'The project retains MIT, Scratch Foundation and applicable trademark license files. ' +
         'Third-party names and marks belong to their owners.',
@@ -1538,6 +2054,7 @@ const en = {
     'codeDrawer.resize': 'Drag to resize the Python code panel; double-click to reset',
 
     'programControls.group': 'EST program controls',
+    'programControls.slotLabel': 'SLOT',
     'programControls.programSize': 'Program size: {used} / {limit} bytes',
     'programControls.programSizeWarning': 'Approaching capacity',
     'programControls.programSizeExceeded': 'Program exceeds device capacity',
@@ -1837,6 +2354,47 @@ const en = {
 
 const ptBR = {
     ...en,
+    'home.blockGuide.vision_valid': 'Alvo visual válido｜Lê o estado recente da mão esquerda, direita, corpo ou rosto.',
+    'home.blockGuide.vision_gesture': 'Comparar gesto｜Lê as duas mãos separadamente no mesmo programa.',
+    'home.blockGuide.vision_class': 'Código da classe visual｜Retorna a classe do alvo ou -1 se inválido.',
+    'home.blockGuide.vision_position': 'Posição e tamanho｜Retorna coordenadas ou tamanho do alvo, 0–100.',
+    'block.vision.valid': 'visão %1 válida?',
+    'block.vision.waitState': 'esperar até visão %1 ficar %2',
+    'block.vision.waitGesture': 'esperar até visão %1 ser %2',
+    'vision.valid': 'válido', 'vision.invalid': 'inválido',
+    'category.vision': 'Visão',
+    'vision.removedEvents': 'O projeto contém blocos de evento visual removidos. A abertura foi cancelada para preservar o programa. Substitua esses blocos na versão anterior antes de abrir aqui.',
+    'extension.vision.description': 'Reconheça gestos, ações faciais e posturas com a câmera. Envie o alvo selecionado ao EST.',
+    'block.vision.face.detected': 'rosto detectado?',
+    'block.vision.face.action': 'ação facial é %1 ?',
+    'block.vision.face.wait': 'esperar até ação facial ser %1',
+    'block.vision.pose.detected': 'corpo detectado?',
+    'block.vision.pose.action': 'postura é %1 ?',
+    'block.vision.pose.wait': 'esperar até postura ser %1',
+    'vision.face.natural': 'neutra', 'vision.face.smile': 'sorriso',
+    'vision.face.blink': 'piscar', 'vision.face.mouth': 'boca aberta',
+    'vision.pose.standing': 'em pé', 'vision.pose.leftUp': 'mão esquerda levantada',
+    'vision.pose.rightUp': 'mão direita levantada', 'vision.pose.bothUp': 'duas mãos levantadas',
+    'vision.pose.squat': 'agachado', 'vision.pose.leanLeft': 'inclinado à esquerda', 'vision.pose.leanRight': 'inclinado à direita',
+    'home.blockGuide.vision_face_detected': 'Rosto detectado｜Lê diretamente o cache do rosto. Ative ações faciais na câmera.',
+    'home.blockGuide.vision_face_action': 'Ação facial｜Compara sorriso, piscar, boca aberta ou neutra. Pode combinar ações; não identifica pessoas nem emoções.',
+    'home.blockGuide.vision_wait_face': 'Esperar ação facial｜Espera a ação do rosto transmitido. Sem alvo, continua esperando.',
+    'home.blockGuide.vision_pose_detected': 'Corpo detectado｜Lê diretamente o cache do corpo. Ative postura na câmera.',
+    'home.blockGuide.vision_pose_action': 'Postura｜Compara posição em pé, mãos levantadas, agachamento ou inclinação por pontos visíveis.',
+    'home.blockGuide.vision_wait_pose': 'Esperar postura｜Espera a postura transmitida sem alterar o alvo da câmera.',
+    'home.blockGuide.mode.vision.target': 'Alvos reconhecidos｜O computador envia mãos, corpo e rosto ao mesmo tempo.',
+    'home.blockGuide.vision_wait_state': 'Esperar estado visual｜Continua se a condição já for verdadeira; permite outras tarefas durante a espera.',
+    'home.blockGuide.vision_wait_gesture': 'Esperar gesto｜Espera o cache da mão escolhida sem afetar outros tipos visuais.',
+    'block.vision.gesture': 'visão %1 é %2?',
+    'block.vision.class': 'código da visão %1',
+    'block.vision.position': '%2 da visão %1 (0–100)',
+    'vision.cameraRunning': 'Visão · Câmera ativa',
+    'vision.settings': 'Ver câmera',
+    'vision.stopCamera': 'Parar câmera',
+    'vision.left': 'mão esquerda', 'vision.right': 'mão direita', 'vision.pose': 'corpo', 'vision.face': 'rosto',
+    'vision.palm': 'palma aberta', 'vision.fist': 'punho fechado', 'vision.thumb': 'polegar para cima',
+    'vision.point': 'apontar', 'vision.victory': 'vitória', 'vision.other': 'outro gesto',
+    'vision.x': 'X', 'vision.y': 'Y', 'vision.width': 'largura', 'vision.height': 'altura',
     'menu.home': 'Inicio',
     'home.navigation': 'Navegacao inicial',
     'home.nav.files': 'Arquivos',
@@ -1931,6 +2489,7 @@ const ptBR = {
     'codeDrawer.resize': 'Arraste para ajustar o painel de codigo Python; duplo clique para restaurar',
 
     'programControls.group': 'Controles do programa EST',
+    'programControls.slotLabel': 'ESPAÇO',
     'programControls.programSize': 'Programa: {used} / {limit} bytes',
     'programControls.programSizeWarning': 'Capacidade quase cheia',
     'programControls.programSizeExceeded': 'Programa excede a capacidade',
@@ -2348,13 +2907,16 @@ const ru = {
     'category.sensing': 'Датчики'
 };
 
+const hardwareMessages = require('../common/hardware-messages.json');
 const EST_MESSAGES = {
-    en,
-    ru,
-    'zh-cn': zhCN,
-    'zh-tw': zhTW,
-    'pt-br': ptBR
+    en: {...en, ...cameraMessages.en},
+    ru: {...ru, ...cameraMessages.ru, ...visionGuideMessages.ru},
+    'zh-cn': {...zhCN, ...cameraMessages['zh-cn']},
+    'zh-tw': {...zhTW, ...cameraMessages['zh-tw'], ...visionGuideMessages['zh-tw']},
+    'pt-br': {...ptBR, ...cameraMessages['pt-br'], ...visionGuideMessages['pt-br']}
 };
+
+Object.keys(EST_MESSAGES).forEach(locale => Object.assign(EST_MESSAGES[locale], hardwareMessages[locale]));
 
 const normalizeKey = locale => String(locale || EST_DEFAULT_LOCALE)
     .toLowerCase()
@@ -2388,6 +2950,7 @@ export const setCurrentEstLocale = (locale, options = {}) => {
     const normalized = normalizeEstLocale(locale);
     if (typeof window !== 'undefined') {
         window.estCurrentLocale = normalized;
+        if (window.localStorage) window.localStorage.setItem('est-studio-locale', normalized);
     }
     if (typeof document !== 'undefined' && document.documentElement) {
         document.documentElement.lang = normalized;

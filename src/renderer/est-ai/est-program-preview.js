@@ -166,6 +166,8 @@ export const createEstProgramStackPreviews = async xml => {
         .filter(node => node.nodeName.toLowerCase() === 'block');
     const previewWorkspace = createPreviewWorkspace();
     try {
+        const variables = Array.from(documentNode.children).find(node => node.nodeName.toLowerCase() === 'variables');
+        if (variables) ScratchBlocks.Xml.domToVariables(variables, previewWorkspace.workspace);
         const previews = [];
         for (let index = 0; index < stackNodes.length; index++) {
             let block;

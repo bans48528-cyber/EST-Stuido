@@ -1,4 +1,5 @@
 import {installEstPythonNameSanitizer} from './python-names';
+import {visualClassPredicate} from '../est-vision/visual-classes';
 import {
     cropEstDisplayBitmap,
     decodeEstDisplayBitmap,
@@ -85,6 +86,28 @@ const doubleQuote = value => `"${String(value).replace(/\\/g, '\\\\').replace(/"
 const fieldValue = (block, name, fallback) => {
     const value = block.getFieldValue(name);
     return value === null || typeof value === 'undefined' || value === '' ? fallback : value;
+};
+
+const visionGesturePredicate = block => {
+    const gesture = String(fieldValue(block, 'GESTURE', '1'));
+    if (!['1', '2', '3', '4', '5', '6'].includes(gesture)) throw new Error('Invalid vision gesture');
+    const side = fieldValue(block, 'SIDE', 'right');
+    if (!['left', 'right'].includes(side)) throw new Error('Invalid vision hand');
+    const classId = (side === 'left' ? 1100 : 1200) + Number(gesture);
+    return `(lambda s: bool(s[0]) and s[1] == ${classId})(rt.vision_snapshot('${side}'))`;
+};
+
+const visionTarget = block => {
+    const target = block ? fieldValue(block, 'TARGET', 'right') : 'right';
+    if (!['left', 'right', 'pose', 'face'].includes(target)) throw new Error('Invalid vision target');
+    return target;
+};
+
+const visionStatePredicate = block => {
+    const state = fieldValue(block, 'STATE', 'valid');
+    if (!['valid', 'invalid'].includes(state)) throw new Error('Invalid vision state');
+    const call = `rt.vision_valid('${visionTarget(block)}')`;
+    return state === 'valid' ? call : `not ${call}`;
 };
 
 const quoteField = (generator, block, name, fallback) => quote(
@@ -283,6 +306,20 @@ const registerLifecycle = (ScratchBlocks, generator) => {
 };
 
 const registerSupportGenerators = generator => {
+    const nativeMathop = generator.operator_mathop;
+    if (typeof nativeMathop === 'function') {
+        generator.operator_mathop = block => {
+            const operator = block.getFieldValue('OPERATOR');
+            if (operator === 'abs') {
+                const value = valueOr(generator, block, 'NUM', '0');
+                return [`abs(${value})`, orderOf(generator, 'ORDER_FUNCTION_CALL', 2.2)];
+            }
+            const result = nativeMathop(block);
+            // OpenBlock emits acosh for the acos menu option; retain all other native math behaviour.
+            return operator === 'acos' ?
+                [result[0].replace('math.acosh(', 'math.acos('), result[1]] : result;
+        };
+    }
     generator.note = block => [
         numberField(block, 'NOTE', '60'),
         orderOf(generator, 'ORDER_ATOMIC', 0)
@@ -825,6 +862,50 @@ const registerSensorGenerators = generator => {
         ensureRuntimeImport(generator);
         return 'rt.reset_timer()\n';
     };
+    generator.vision_valid = block => {
+        ensureRuntimeImport(generator);
+        return functionCall(generator, `rt.vision_valid('${visionTarget(block)}')`);
+    };
+    generator.vision_gesture = block => {
+        ensureRuntimeImport(generator);
+        return functionCall(generator, visionGesturePredicate(block));
+    };
+    generator.vision_wait_state = block => {
+        ensureRuntimeImport(generator);
+        return `rt.wait_until(lambda: ${visionStatePredicate(block)})\n`;
+    };
+    generator.vision_wait_gesture = block => {
+        ensureRuntimeImport(generator);
+        return `rt.wait_until(lambda: ${visionGesturePredicate(block)})\n`;
+    };
+    generator.vision_class = block => {
+        ensureRuntimeImport(generator);
+        return functionCall(generator,
+            `(lambda s: s[1] if s[0] else -1)(rt.vision_snapshot('${visionTarget(block)}'))`);
+    };
+    generator.vision_position = block => {
+        ensureRuntimeImport(generator);
+        const index = String(fieldValue(block, 'PROPERTY', '3'));
+        if (!['3', '4', '5', '6'].includes(index)) throw new Error('Invalid vision position');
+        return functionCall(generator,
+            `(lambda s: s[${index}] if s[0] else 0)(rt.vision_snapshot('${visionTarget(block)}'))`);
+    };
+    ['face', 'pose'].forEach(kind => {
+        const predicate = block => visualClassPredicate(kind,
+            fieldValue(block, 'ACTION', kind === 'face' ? 'natural' : 'standing'));
+        generator[`vision_${kind}_detected`] = () => {
+            ensureRuntimeImport(generator);
+            return functionCall(generator, visualClassPredicate(kind));
+        };
+        generator[`vision_${kind}_action`] = block => {
+            ensureRuntimeImport(generator);
+            return functionCall(generator, predicate(block));
+        };
+        generator[`vision_wait_${kind}`] = block => {
+            ensureRuntimeImport(generator);
+            return `rt.wait_until(lambda: ${predicate(block)})\n`;
+        };
+    });
 };
 
 export const registerEstPythonGenerator = ScratchBlocks => {

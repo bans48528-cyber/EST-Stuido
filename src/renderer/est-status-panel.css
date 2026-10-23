@@ -32,3 +32,8 @@
 .upgradeRequired {
     background: #f59e0b;
 }
+
+@media (max-width: 1400px) {
+    .statusBarItem { padding: 0 6px; }
+    .statusText { display: none; }
+}

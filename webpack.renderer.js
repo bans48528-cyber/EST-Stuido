@@ -1,6 +1,8 @@
 const path = require('path');
 
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const transformHolisticAsset = require('./scripts/est-holistic-assets');
+const transformVisionAsset = require('./scripts/est-vision-assets');
 
 const makeConfig = require('./webpack.makeConfig.js');
 
@@ -41,7 +43,19 @@ module.exports = defaultConfig =>
                 new CopyWebpackPlugin([{
                     from: 'extension-worker.{js,js.map}',
                     context: path.join(getModulePath('openblock-vm'), 'dist', 'web')
-                }])
+                }]),
+                new CopyWebpackPlugin([{
+                    from: '*.{js,data,wasm,binarypb,tflite}',
+                    context: getModulePath('@mediapipe/holistic'),
+                    transform: transformHolisticAsset,
+                    to: 'static/mediapipe-holistic'
+                }]),
+                ...['hands', 'pose', 'face_mesh'].map(kind => new CopyWebpackPlugin([{
+                    from: '*.{js,data,wasm,binarypb,tflite}',
+                    context: getModulePath(`@mediapipe/${kind}`),
+                    transform: transformVisionAsset,
+                    to: `static/mediapipe-${kind}`
+                }]))
             ]
         }
     );

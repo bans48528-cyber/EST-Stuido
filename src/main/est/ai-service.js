@@ -6,7 +6,7 @@ import {
 
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 const MAX_REQUEST_BYTES = 240000;
-const REQUEST_TIMEOUT = 90000;
+const REQUEST_TIMEOUT = 8 * 60 * 1000;
 
 // Only the main process supplies a saved, validated endpoint. Never follow redirects with credentials.
 export const requestEstAiCompletion = ({apiKey, config, messages, signal}) => new Promise((resolve, reject) => {
@@ -32,7 +32,7 @@ export const requestEstAiCompletion = ({apiKey, config, messages, signal}) => ne
         return error;
     };
     timer = setTimeout(() => {
-        const error = new Error('请求超时：AI 服务在 90 秒内没有返回完整回复。请重试或检查模型与 API 地址。');
+        const error = new Error('请求超时：AI 服务在 8 分钟内没有返回完整回复。请重试或检查模型与 API 地址。');
         error.code = 'REQUEST_TIMEOUT';
         finish(error);
         request.destroy();

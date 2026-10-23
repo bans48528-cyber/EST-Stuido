@@ -3,6 +3,7 @@ import {createPortal} from 'react-dom';
 import EstAiMascot from './EstAiMascot.jsx';
 
 import homeMenuIcon from './est-home-assets/home-menu-icon.png';
+import {HARDWARE_CHANGED_EVENT, isEstHardwareActive} from './hardware/context';
 
 import {
     EST_LOCALE_CHANGED_EVENT,
@@ -34,6 +35,8 @@ const AI_BUTTON_SELECTOR = `.${AI_BUTTON_CLASS}`;
 const getAiButtonLabel = locale => {
     if (locale === 'zh-tw') return 'AI 程式助手';
     if (locale === 'zh-cn') return 'AI 编程助手';
+    if (locale === 'pt-br') return 'Assistente de IA';
+    if (locale === 'ru') return 'ИИ-помощник';
     return 'AI Assistant';
 };
 
@@ -69,6 +72,7 @@ class EstMenuBarLayout extends React.Component {
         window.addEventListener('resize', this.scheduleLayoutUpdate);
         window.addEventListener(EST_LOCALE_CHANGED_EVENT, this.handleLocaleChange);
         window.addEventListener(EST_AI_MENU_STATE_EVENT, this.handleAiMenuState);
+        window.addEventListener(HARDWARE_CHANGED_EVENT, this.handleAiMenuState);
         if (typeof ResizeObserver !== 'undefined') {
             this.resizeObserver = new ResizeObserver(this.scheduleLayoutUpdate);
         }
@@ -83,6 +87,7 @@ class EstMenuBarLayout extends React.Component {
         window.removeEventListener('resize', this.scheduleLayoutUpdate);
         window.removeEventListener(EST_LOCALE_CHANGED_EVENT, this.handleLocaleChange);
         window.removeEventListener(EST_AI_MENU_STATE_EVENT, this.handleAiMenuState);
+        window.removeEventListener(HARDWARE_CHANGED_EVENT, this.handleAiMenuState);
         if (this.layoutFrame) {
             window.cancelAnimationFrame(this.layoutFrame);
         }
@@ -147,10 +152,10 @@ class EstMenuBarLayout extends React.Component {
     updateAiButtonState () {
         if (!this.aiButton) return;
         const state = window.estAiMenuState || {visible: true, open: false};
-        this.aiButton.hidden = state.visible === false;
+        this.aiButton.hidden = state.visible === false || !isEstHardwareActive();
         this.aiButton.setAttribute('aria-pressed', state.open ? 'true' : 'false');
-        if (this.state.aiVisible !== (state.visible !== false)) {
-            this.setState({aiVisible: state.visible !== false});
+        if (this.state.aiVisible !== !this.aiButton.hidden) {
+            this.setState({aiVisible: !this.aiButton.hidden});
         }
     }
 

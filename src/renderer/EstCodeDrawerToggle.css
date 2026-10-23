@@ -21,6 +21,7 @@
 }
 
 .toggle-button:hover,
+.toggle-button:focus-visible,
 .toggle-button:active,
 .toggle-button-open {
     background-color: $ui-black-transparent;

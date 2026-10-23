@@ -11,10 +11,12 @@ const estRoots = [
     path.resolve(__dirname, '..', 'src', 'main', 'est'),
     path.resolve(__dirname, '..', 'src', 'renderer', 'est-blocks'),
     path.resolve(__dirname, '..', 'src', 'renderer', 'est-project'),
-    path.resolve(__dirname, '..', 'src', 'renderer')
+    path.resolve(__dirname, '..', 'src', 'renderer'),
+    path.resolve(__dirname, '..', 'src', 'common')
 ];
 const originalLoader = Module._extensions['.js'];
 const originalSvgLoader = Module._extensions['.svg'];
+Module._extensions['.png'] = (module, filename) => { module.exports = filename; };
 Module._extensions['.svg'] = (module, filename) => {
     module.exports = filename;
 };
@@ -166,6 +168,7 @@ const {
 } = require(path.join(estRendererRoot, 'est-program-name.js'));
 const {
     EST_EDITOR_MESSAGE_OVERRIDES,
+    EST_DEFAULT_LOCALE,
     EST_LOCALE_CHANGED_EVENT,
     EST_LOCALE_NAMES,
     getEstLocaleOptions,
@@ -415,7 +418,9 @@ assert.deepStrictEqual(Object.keys(EST_PROGRAM_COMPATIBILITY_TABLE), [
     'M1.25D',
     'M1.25E',
     'M1.25F',
-    'M1.26A'
+    'M1.26A',
+    'M1.27B',
+    'M1.28A'
 ]);
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.22H'], {protocolMajor: 1, protocolMinor: 26});
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.22I'], {protocolMajor: 1, protocolMinor: 26});
@@ -429,6 +434,8 @@ assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.25D'], {protocolMajor
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.25E'], {protocolMajor: 1, protocolMinor: 28});
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.25F'], {protocolMajor: 1, protocolMinor: 28});
 assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.26A'], {protocolMajor: 1, protocolMinor: 29});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.27B'], {protocolMajor: 1, protocolMinor: 30});
+assert.deepStrictEqual(EST_PROGRAM_COMPATIBILITY_TABLE['M1.28A'], {protocolMajor: 1, protocolMinor: 31});
 assert.deepStrictEqual(parseEstFirmwareVersion('M1.22E'), {
     family: 'M',
     major: 1,
@@ -532,10 +539,10 @@ try {
 
 const bundledFirmwareRoot = path.resolve(__dirname, '..', 'resources', 'est-firmware');
 const bundledLatestPackage = resolveLatestEstOsPackage([bundledFirmwareRoot]);
-assert.strictEqual(bundledLatestPackage.targetVersion, 'M1.26A');
+assert.strictEqual(bundledLatestPackage.targetVersion, 'M1.28H');
 assert.strictEqual(
     bundledLatestPackage.sha256,
-    'fa75bab689a1a5b5c26e90f2f6bf09615058e845d237598147c22950b1b4fd6b'
+    '5d5a32f4422b75f35f612231778215f49e0e0df0e071a6d959588cc3e63f6d1b'
 );
 assert.strictEqual(
     crypto.createHash('sha256')
@@ -1190,8 +1197,8 @@ const fakeScratchBlocks = {
         });
     }
 };
-registerEstBlocks(fakeScratchBlocks);
-registerEstBlocks(fakeScratchBlocks);
+registerEstBlocks(fakeScratchBlocks, 'zh-cn');
+registerEstBlocks(fakeScratchBlocks, 'zh-cn');
 [
     'addShowVariable',
     'addHideVariable',
@@ -1352,7 +1359,8 @@ const expectedCategoryCounts = {
     sound: 6,
     event: 7,
     control: 9,
-    sensing: 27
+    sensing: 27,
+    vision: 12
 };
 assert.deepStrictEqual(
     Object.fromEntries(Object.entries(CATEGORY_BLOCK_IDS).map(([categoryId, blockIds]) => [
@@ -1361,8 +1369,10 @@ assert.deepStrictEqual(
     ])),
     expectedCategoryCounts
 );
-assert.strictEqual(registeredBlockDefinitions.length, 85);
-assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 81);
+assert.strictEqual(registeredBlockDefinitions.length, 97);
+assert.strictEqual(new Set(ALL_EST_BLOCK_IDS).size, 93);
+assert.ok(registeredBlockDefinitions.filter(block => block.category === 'vision')
+    .every(block => !(block.extensions || []).includes('shape_hat')));
 assert.deepStrictEqual(EST_REPLACED_OPENBLOCK_BLOCK_IDS, [
     'sound_play',
     'event_broadcast',
@@ -1439,11 +1449,11 @@ assert.strictEqual(isSteeringDialMarkVisible(165), false);
 assert.strictEqual(isSteeringDialMarkVisible(180), true);
 assert.strictEqual(isSteeringDialMarkVisible(270), true);
 assert.strictEqual(isSteeringDialMarkVisible(345), true);
-assert.strictEqual(formatSteeringDisplayText(-40), '左:-40');
-assert.strictEqual(formatSteeringDisplayText(0), '前:0');
-assert.strictEqual(formatSteeringDisplayText(40), '右:40');
-assert.strictEqual(formatSteeringDisplayText(-120), '左:-100');
-assert.strictEqual(formatSteeringDisplayText(120), '右:100');
+assert.strictEqual(formatSteeringDisplayText(-40), 'esq.:-40');
+assert.strictEqual(formatSteeringDisplayText(0), 'frente:0');
+assert.strictEqual(formatSteeringDisplayText(40), 'dir.:40');
+assert.strictEqual(formatSteeringDisplayText(-120), 'esq.:-100');
+assert.strictEqual(formatSteeringDisplayText(120), 'dir.:100');
 assert.strictEqual(typeof registeredFields[EST_STEERING_FIELD_TYPE], 'function');
 const steeringField = new registeredFields[EST_STEERING_FIELD_TYPE](0);
 assert.strictEqual(steeringField.classValidator('-120'), '-100');
@@ -1451,7 +1461,7 @@ assert.strictEqual(steeringField.classValidator('43.6'), '44');
 assert.strictEqual(steeringField.classValidator('150'), '100');
 assert.strictEqual(steeringField.classValidator('not-a-number'), null);
 steeringField.getText = () => '-40';
-assert.strictEqual(steeringField.getDisplayText_(), '左:-40');
+assert.strictEqual(steeringField.getDisplayText_(), 'esq.:-40');
 const blockDefinitionFor = blockId => registeredBlockDefinitions.find(definition => definition.type === blockId);
 const soundOptions = definitionArguments(blockDefinitionFor('sound_play'))
     .find(argument => argument.name === 'SOUND').options;
@@ -1467,11 +1477,12 @@ assert.strictEqual(Object.prototype.hasOwnProperty.call(noteForDuration, 'check'
 assert.strictEqual(noteContinuous.type, 'input_value');
 assert.strictEqual(Object.prototype.hasOwnProperty.call(noteContinuous, 'check'), false);
 assert.strictEqual(EST_LOCALE_NAMES['pt-br'], 'Português (Brasil)');
+assert.strictEqual(EST_DEFAULT_LOCALE, 'pt-br');
 assert.strictEqual(normalizeEstLocale('pt_BR'), 'pt-br');
 assert.strictEqual(getEstText('menu.hardwareStatus', 'pt-br'), 'Status do hardware');
-assert.strictEqual(getEstText('firmware.updateButton'), '固件更新');
-assert.strictEqual(getEstText('firmware.upgradeEstOs'), '升级EST OS');
-assert.strictEqual(getEstText('firmware.downgradeLegacyEst'), '降级旧EST系统');
+assert.strictEqual(getEstText('firmware.updateButton'), 'Atualizar firmware');
+assert.strictEqual(getEstText('firmware.upgradeEstOs'), 'Atualizar EST OS');
+assert.strictEqual(getEstText('firmware.downgradeLegacyEst'), 'Voltar ao EST antigo');
 assert.strictEqual(getEstText('firmware.updateButton', 'pt-br'), 'Atualizar firmware');
 assert.deepStrictEqual(getEstLocaleOptions({
     en: {},
@@ -1515,7 +1526,7 @@ assert.deepStrictEqual(ptTemperatureUnit.options, [
     ['Celsius', 'celsius'],
     ['Fahrenheit', 'fahrenheit']
 ]);
-const ptToolboxCategories = getEstToolboxCategories('pt-br');
+const ptToolboxCategories = getEstToolboxCategories('pt-br', true);
 assert.match(ptToolboxCategories, /<category[^>]*name="Sensores"/s);
 assert.match(ptToolboxCategories, /<category[^>]*name="Reproduzir"/s);
 assert.ok(!ptToolboxCategories.includes('name="传感器"'));
@@ -1895,7 +1906,8 @@ assert.deepStrictEqual(numberCheckedInputs, []);
         const condition = definitionArguments(definition).find(argument => argument.name === 'CONDITION');
         assert.strictEqual(condition.check, 'Boolean', blockId);
     });
-const estToolboxCategories = getEstToolboxCategories();
+const estToolboxCategories = getEstToolboxCategories('zh-cn', true);
+assert.doesNotMatch(getEstToolboxCategories('zh-cn'), /type="(?:vision_|event_vision_)/);
 const noteShadowPattern = blockId => new RegExp([
     `<block type="${blockId}">`,
     '[\\s\\S]*?<value name="NOTE">',
@@ -1916,7 +1928,8 @@ assert.match(
     });
 assert.ok(!estToolboxCategories.includes('name="声音"'));
 assert.match(estToolboxCategories, /<category[^>]*name="%\{BKY_CATEGORY_OPERATORS\}"/s);
-assert.strictEqual((estToolboxCategories.match(/<category/g) || []).length, 8);
+assert.strictEqual((estToolboxCategories.match(/<category/g) || []).length, 9);
+assert.strictEqual((getEstToolboxCategories('zh-cn').match(/<category/g) || []).length, 8);
 ALL_EST_BLOCK_IDS.forEach(blockId => {
     assert.ok(estToolboxCategories.includes(`<block type="${blockId}"`));
 });
@@ -2073,9 +2086,10 @@ registerEstPythonGenerator(fakeGeneratorScratchBlocks);
 assert.strictEqual(fakePythonGenerator.data_variable, nativeDataVariableGenerator);
 assert.strictEqual(fakePythonGenerator.data_listcontents, nativeListGenerator);
 assert.strictEqual(fakePythonGenerator.procedures_call, nativeProcedureGenerator);
-OPENBLOCK_NATIVE_OPERATOR_IDS.filter(blockId => blockId !== 'operator_random').forEach(blockId => {
-    assert.strictEqual(fakePythonGenerator[blockId], nativeOperatorGenerators[blockId], blockId);
-});
+OPENBLOCK_NATIVE_OPERATOR_IDS.filter(blockId => !['operator_random', 'operator_mathop'].includes(blockId))
+    .forEach(blockId => {
+        assert.strictEqual(fakePythonGenerator[blockId], nativeOperatorGenerators[blockId], blockId);
+    });
 assert.notStrictEqual(
     fakePythonGenerator.operator_random,
     nativeOperatorGenerators.operator_random,
@@ -2455,12 +2469,14 @@ assert.ok(transformedBlocks.indexOf('registerEstBlocks(ScratchBlocks);') <
 assert.ok(transformedBlocks.indexOf('registerEstPythonGenerator(ScratchBlocks);') <
     transformedBlocks.indexOf('return ScratchBlocks;'));
 assert.match(transformedBlocks, /from 'est-python-generator'/);
+assert.match(transformedBlocks, /ScratchBlocks\.ScratchMsgs\.locales\['pt-br'\] = estPortugueseBlockMessages/);
+assert.match(transformedBlocks, /from 'openblock-l10n\/editor\/blocks\/pt-br\.json'/);
 const toolboxLoader = require('./est-toolbox-loader');
 const transformedToolbox = toolboxLoader(
     "import {eventBlock} from './libraries/devices/index.jsx';\n" +
     "before\n    return everything.join('\\n');\nafter"
 );
-assert.match(transformedToolbox, /getEstToolboxCategories\(\), gap, variablesXML, gap, myBlocksXML/);
+assert.match(transformedToolbox, /getEstToolboxCategories\(undefined, categoriesXML.some\(category => category.id === "vision"\)\), gap, variablesXML, gap, myBlocksXML/);
 assert.ok(!transformedToolbox.includes('eventBlock'));
 const codeGeneratorLoader = require('./est-code-generator-loader');
 const defaultLanguageSource = "before\n    return 'null';\nafter";
@@ -2582,9 +2598,10 @@ assert.ok(!transformedMenuBar.includes('this.props.onClickInstallDriver'));
 assert.ok(!transformedMenuBar.includes('CommunityButton'));
 assert.ok(!transformedMenuBar.includes('community.openblock.cc'));
 assert.ok(!transformedMenuBar.includes('this.handleCheckUpdate'));
-assert.match(transformedMenuBar, /<EstStatusPanel \/>\s*<EstHardwareStatusButton \/>/);
+assert.match(transformedMenuBar, /<HardwareMenu \/>/);
 assert.match(transformedMenuBar, /import EstCodeDrawerToggle from 'est-code-drawer-toggle';/);
-assert.match(transformedMenuBar, /import EstHardwareStatusButton from 'est-hardware-status-button';/);
+assert.match(transformedMenuBar, /import EstCameraButton from 'est-camera-button';/);
+assert.match(transformedMenuBar, /import HardwareMenu from 'est-hardware-menu';/);
 assert.match(transformedMenuBar, /import EstLanguageMenu from 'est-language-menu';/);
 assert.match(transformedMenuBar, /import EstMenuBarLayout from 'est-menu-bar-layout';/);
 assert.match(transformedMenuBar, /import estMenuLogo from 'est-menu-logo';/);
@@ -2600,6 +2617,7 @@ const openBlockMenuBarSource = fs.readFileSync(path.resolve(
     'menu-bar.jsx'
 ), 'utf8');
 const transformedFullMenuBar = menuBarLoader(openBlockMenuBarSource);
+assert.match(transformedFullMenuBar, /<EstCameraButton \/>\s*<EstCodeDrawerToggle \/>/);
 babel.transformSync(transformedFullMenuBar, {
     babelrc: false,
     presets: ['@babel/preset-react']
@@ -2683,7 +2701,7 @@ for (const removedObsoleteMenuToken of [
 assert.match(transformedFullMenuBar, /<ProjectTitleInput/);
 assert.match(transformedFullMenuBar, /<SB3Downloader>/);
 assert.match(transformedFullMenuBar, /requestNewProject/);
-assert.match(transformedFullMenuBar, /<EstStatusPanel \/>\s*<EstHardwareStatusButton \/>/);
+assert.match(transformedFullMenuBar, /<HardwareMenu \/>/);
 assert.match(transformedFullMenuBar, /<EstLanguageMenu[\s\S]*open=\{this\.props\.languageMenuOpen\}/);
 assert.match(transformedFullMenuBar, /onMouseUp=\{this\.handleLanguageMouseUp\}/);
 assert.ok(!transformedFullMenuBar.includes("import LanguageSelector from '../../containers/language-selector.jsx';"));
@@ -2697,7 +2715,7 @@ assert.match(
     /<div className=\{styles\.tailMenu\}>[\s\S]*<EstCodeDrawerToggle \/>[\s\S]*<\/div>/
 );
 assert.strictEqual((transformedFullMenuBar.match(/<EstCodeDrawerToggle \/>/g) || []).length, 1);
-assert.strictEqual((transformedFullMenuBar.match(/<EstHardwareStatusButton \/>/g) || []).length, 1);
+assert.strictEqual((transformedFullMenuBar.match(/<HardwareMenu \/>/g) || []).length, 1);
 assert.ok(!transformedFullMenuBar.includes("import openblockLogo from './openblock-logo.svg';"));
 assert.ok(!transformedFullMenuBar.includes("import openblockLogoSmall from './openblock-logo-small.svg';"));
 assert.match(transformedFullMenuBar, /alt="EST Studio"/);
@@ -2869,7 +2887,7 @@ const estProgramControlsSource = fs.readFileSync(path.resolve(
     'renderer',
     'EstProgramControls.jsx'
 ), 'utf8');
-assert.match(estProgramControlsSource, /SLOT_OPTIONS = \[0, 1, 2, 3, 4, 5, 6, 7\]/);
+assert.match(estProgramControlsSource, /getHardwareProfile\('est'\)\.programSlots/);
 assert.match(estProgramControlsSource, /download: 'est-download-program'/);
 assert.match(estProgramControlsSource, /run: 'est-run-program'/);
 assert.match(estProgramControlsSource, /stop: 'est-stop-program'/);
@@ -2972,11 +2990,11 @@ assert.match(estHardwareStatusButtonSource, /ipcRenderer\.removeListener\('est-f
 assert.match(estHardwareStatusButtonSource, /firmware\.audioSyncRunning/);
 assert.match(estHardwareStatusButtonSource, /firmware\.updateWithAudioDone/);
 assert.match(estHardwareStatusButtonSource, /dialog\.showMessageBox\(remote\.getCurrentWindow\(\)/);
-assert.match(estHardwareStatusButtonSource, /includeProgramStatus: true/);
-assert.match(estHardwareStatusButtonSource, /REFRESH_INTERVAL_MS = 3000/);
+assert.match(estHardwareStatusButtonSource, /est-hardware-status/);
+assert.match(estHardwareStatusButtonSource, /REFRESH_INTERVAL_MS = 250/);
 assert.match(estHardwareStatusButtonSource, /PANEL_DEFAULT_WIDTH = 600/);
 assert.match(estHardwareStatusButtonSource, /PANEL_DEFAULT_HEIGHT = 420/);
-assert.match(estHardwareStatusButtonSource, /isProgramRunning\(this\.state\.status\)/);
+assert.match(estHardwareStatusButtonSource, /status.statusPollingDeferred/);
 assert.match(estHardwareStatusButtonSource, /getEstText\('hardware\.runningNotice'/);
 assert.match(estHardwareStatusButtonSource, /getEstText\('programControls\.usbDisconnected'/);
 assert.match(estHardwareStatusButtonSource, /stripRemoteErrorPrefix/);
@@ -3392,8 +3410,11 @@ assert.ok(!transformedProjectFileSources.downloader.includes('.ob`;'));
 assert.match(transformedProjectFileSources.uploader, /accept = '\.ests'/);
 assert.match(transformedProjectFileSources.uploader, /\/\^\(\.\*\)\\\.ests\$\/i/);
 assert.ok(!transformedProjectFileSources.uploader.includes("accept = '.ob,.sb,.sb2,.sb3'"));
-assert.match(transformedProjectFileSources.titled, /DEFAULT_PROJECT_TITLE = 'EST Studio Project'/);
-assert.match(transformedProjectFileSources.titled, /newTitle = DEFAULT_PROJECT_TITLE/);
+assert.match(transformedProjectFileSources.titled, /defaultMessage: 'EST Studio Project'/);
+assert.match(
+    transformedProjectFileSources.titled,
+    /newTitle = this\.props\.intl\.formatMessage\(messages\.defaultProjectTitle\)/
+);
 assert.ok(!transformedProjectFileSources.titled.includes('EST作品'));
 assert.ok(!transformedProjectFileSources.titled.includes('EST專案'));
 assert.strictEqual('示例工程.ests'.match(/^(.*)\.ests$/i)[1], '示例工程');
@@ -3521,10 +3542,47 @@ const openBlockExtensionManagerSource = fs.readFileSync(path.resolve(
 const transformedExtensionManager = extensionManagerLoader(openBlockExtensionManagerSource);
 assert.match(transformedExtensionManager, /const builtinExtensions = \{\};/);
 assert.match(transformedExtensionManager, /const builtinDevices = \{\};/);
-assert.match(transformedExtensionManager, /estExtensionLibrary\.map/);
+assert.match(transformedExtensionManager, /estExtensionRegistry\.getHardwareExtensions\(\)\.map/);
 assert.doesNotMatch(transformedExtensionManager, /fetch\(`\$\{localResourcesServerUrl\}extensions\//);
 assert.ok(!transformedExtensionManager.includes('scratch3_music'));
 assert.ok(!transformedExtensionManager.includes('devices/arduinoUno'));
+assert.match(transformedExtensionManager, /estExtensionRegistry\.loadVisionExtension\(this.runtime\)/);
+const visionExtensionRegistry = require('../src/renderer/est-extensions/library.js');
+assert.strictEqual(visionExtensionRegistry.default.length, 1);
+assert.strictEqual(visionExtensionRegistry.default[0].extensionId, 'vision');
+assert.strictEqual(visionExtensionRegistry.VISION_BLOCK_IDS.length, 12);
+assert.ok(visionExtensionRegistry.VISION_BLOCK_IDS.every(id => !id.startsWith('event_')));
+const visionExtensionEvents = [];
+const visionExtensionState = new Set();
+const extensionRuntime = {
+    constructor: {DEVICE_EXTENSION_ADDED: 'DEVICE_EXTENSION_ADDED'},
+    isDeviceExtensionLoaded: id => visionExtensionState.has(id),
+    addDeviceExtension: (id, xml) => {
+        assert.strictEqual(xml, '<category id="vision"/>');
+        visionExtensionState.add(id);
+    },
+    emit: event => visionExtensionEvents.push(event),
+    emitProjectChanged: () => visionExtensionEvents.push('PROJECT_CHANGED')
+};
+visionExtensionRegistry.loadVisionExtension(extensionRuntime);
+visionExtensionRegistry.loadVisionExtension(extensionRuntime);
+assert.deepStrictEqual([...visionExtensionState], ['vision']);
+assert.deepStrictEqual(visionExtensionEvents, ['DEVICE_EXTENSION_ADDED', 'PROJECT_CHANGED']);
+const plainExtensionProject = {targets: [{blocks: {}}]};
+['state', 'gesture', 'face', 'pose'].forEach(kind => {
+    const oldProject = {targets: [{blocks: {hat: {opcode: `event_vision_${kind}`}}}]};
+    const before = JSON.stringify(oldProject);
+    assert.throws(() => visionExtensionRegistry.restoreVisionExtension(oldProject));
+    assert.strictEqual(JSON.stringify(oldProject), before);
+});
+assert.strictEqual(visionExtensionRegistry.restoreVisionExtension(plainExtensionProject), plainExtensionProject);
+visionExtensionRegistry.VISION_BLOCK_IDS.forEach(opcode => {
+    const oldProject = {targets: [{blocks: {block: {opcode}}}], deviceExtensions: ['other']};
+    const restored = visionExtensionRegistry.restoreVisionExtension(oldProject);
+    assert.deepStrictEqual(restored.deviceExtensions, ['other', 'vision']);
+    assert.deepStrictEqual(oldProject.deviceExtensions, ['other'], 'migration must not mutate input');
+    assert.strictEqual(visionExtensionRegistry.restoreVisionExtension(restored), restored);
+});
 const headlessCostumeLoader = require('./est-headless-costume-loader');
 const openBlockLoadCostumeSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -3750,6 +3808,15 @@ assert.match(transformedProgramMode, /const initialState = \{\s*isRealtimeMode: 
 assert.ok(!transformedProgramMode.includes('isSupportSwitchMode: action.state'));
 const nativeEditorsLoader = require('./openblock-native-editors-loader');
 const transformNativeEditor = (resourcePath, source) => nativeEditorsLoader.call({resourcePath}, source);
+const transformedExtensionLibraryContainer = transformNativeEditor(
+    '/node_modules/openblock-gui/src/containers/extension-library.jsx',
+    fs.readFileSync(path.resolve(__dirname, '../node_modules/openblock-gui/src/containers/extension-library.jsx'), 'utf8')
+);
+assert.match(transformedExtensionLibraryContainer, /autoClose\s/);
+assert.match(transformedExtensionLibraryContainer, /isUnloadble=\{false\}/);
+assert.match(transformedExtensionLibraryContainer, /this.props.onCategorySelected\(id\)/);
+assert.doesNotMatch(transformedExtensionLibraryContainer, /unloadDeviceExtension/);
+assert.doesNotMatch(transformedExtensionLibraryContainer, /autoClose=\{false\}/);
 const transformedPromptComponent = transformNativeEditor(
     '/node_modules/openblock-gui/src/components/prompt/prompt.jsx',
     `const PromptComponent = props => (
@@ -3842,6 +3909,14 @@ const transformedNativeCallbacks = transformNativeEditor(
     `import DeviceLibrary from './device-library.jsx';
 import {closeExtensionLibrary, openSoundRecorder, openConnectionModal, closeDeviceLibrary} from '../reducers/modals';
 before
+    componentDidUpdate (prevProps) {
+        if (this.props.isVisible === prevProps.isVisible) {
+            return;
+        }
+    }
+    setLocale (refreshWorkspace = true) {
+        this.ScratchBlocks.ScratchMsgs.setLocale(this.props.locale);
+    }
     handleOpenSoundRecorder () {
         this.props.onOpenSoundRecorder();
     }
@@ -3909,6 +3984,35 @@ assert.match(
     );
 });
 const runtimeLoader = require('./est-vm-runtime-loader');
+const localizedBlocksContainer = transformNativeEditor(
+    '/node_modules/openblock-gui/src/containers/blocks.jsx',
+    fs.readFileSync(path.resolve(__dirname, '../node_modules/openblock-gui/src/containers/blocks.jsx'), 'utf8')
+);
+assert.match(localizedBlocksContainer,
+    /defineEstBlocksWithLocale\(this.ScratchBlocks, this.props.locale\);\s+this.ScratchBlocks.ScratchMsgs.setLocale/);
+const localeAst = babel.parseSync(localizedBlocksContainer, {
+    babelrc: false, configFile: false, parserOpts: {plugins: ['jsx']}
+});
+const localeUpdate = localeAst.program.body.find(node => node.type === 'ClassDeclaration' && node.id.name === 'Blocks')
+    .body.body.find(node => node.key.name === 'componentDidUpdate');
+const localeUpdateCode = babel.transformFromAstSync(babel.types.file(babel.types.program([
+    babel.types.expressionStatement(babel.types.functionExpression(null, localeUpdate.params, localeUpdate.body))
+])), null, {babelrc: false, configFile: false}).code;
+const callLocaleUpdate = new Function('return ' + localeUpdateCode)();
+let localeRefreshCount = 0;
+const localeInstance = {
+    props: {locale: 'pt-br', isVisible: true, isRealtimeMode: false, toolboxXML: 'same'},
+    _programMode: false,
+    _renderedToolboxXML: 'same',
+    setLocale: () => { localeRefreshCount++; }
+};
+callLocaleUpdate.call(localeInstance, {...localeInstance.props, locale: 'zh-cn'});
+assert.strictEqual(localeRefreshCount, 1, 'visible editor must refresh language without switching tabs');
+callLocaleUpdate.call(localeInstance, {...localeInstance.props});
+assert.strictEqual(localeRefreshCount, 1, 'unrelated updates must not rebuild blocks');
+localeInstance.props.isVisible = false;
+callLocaleUpdate.call(localeInstance, {...localeInstance.props, locale: 'en'});
+assert.strictEqual(localeRefreshCount, 1, 'hidden editor defers refresh until visible');
 const transformedRuntime = runtimeLoader(
     `before
         this._isRealtimeMode = true;
@@ -4337,6 +4441,41 @@ const createDeferred = () => {
         resolve = resolvePromise;
     });
     return {promise, resolve};
+};
+
+const testHardwareMonitor = async () => {
+    const transport = new ProgramTestTransport({firmwareVersion: 'M1.28H', protocolMinor: 31});
+    let enumerations = 0;
+    const service = new EstDeviceService({transportFactory: {
+        listDevices: () => { enumerations++; return []; }
+    }});
+    service.transport = transport;
+    service.device = {maxInputReportSize: 1024, productId: 0x5750, vendorId: 0x0483};
+    await service.getStatus();
+    const a = service.getHardwareStatus();
+    const b = service.getHardwareStatus();
+    assert.strictEqual(a, b, 'monitor requests coalesce');
+    assert.strictEqual((await a).state, 'connected');
+    service.pythonProgramActive = true;
+    transport.python.state = 3;
+    const start = transport.actions.length;
+    const live = await service.getHardwareStatus();
+    assert.strictEqual(live.status.programStatus.state, 3);
+    assert.ok(!live.status.statusPollingDeferred, 'protocol 1.31 returns live ports while running');
+    assert.deepStrictEqual(transport.actions.slice(start), ['25:0', '36:0']);
+    const held = createDeferred();
+    const download = service._withVisionSuspended(() => held.promise);
+    const beforeBusy = transport.actions.length;
+    assert.deepStrictEqual(await service.getHardwareStatus(), {state: 'busy'});
+    assert.strictEqual(transport.actions.length, beforeBusy, 'monitor cannot enter download queue');
+    held.resolve();
+    await download;
+    assert.strictEqual(service.pendingCommands, 0);
+    await service.autoConnect({reuseConnection: true});
+    assert.strictEqual(enumerations, 0, 'reuse a live HID connection without enumeration');
+    service.transport = null;
+    service.device = null;
+    assert.deepStrictEqual(await service.getHardwareStatus(), {state: 'not-found'});
 };
 
 class QueueTestTransport {
@@ -5133,13 +5272,14 @@ const validateEstDefaultProject = () => new Promise((resolve, reject) => {
 validateEstDefaultProject()
     .then(() => testCommandQueue())
     .then(() => testUsbPortInformation())
+    .then(() => testHardwareMonitor())
     .then(() => testProgramDownloadRunAndStop())
     .then(() => testLargeProgramCapacityAndSyntax())
     .then(() => testProgramStatusTimeoutPreservesStopTransport())
     .then(() => testUsbDisconnectClearsStaleTransport())
     .then(() => testBuiltInMotorBlock())
     .then(() => console.log(
-        'EST protocol, queue, 81 EST blocks, and native operator/data/procedure tests passed'
+        'EST protocol, queue, 93 EST blocks, and native operator/data/procedure tests passed'
     ))
     .catch(error => {
         console.error(error);

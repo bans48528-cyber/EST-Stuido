@@ -116,6 +116,34 @@ ipcMain.handle('test-capture', async (event, name, rectangle) => {
     }
 });
 ipcMain.handle('test-resize', (event, width, height) => window.setContentSize(width, height));
+ipcMain.handle('test-python', (event, name, source) => {
+    const {spawnSync} = require('child_process');
+    const candidates = process.env.PYTHON ? [{command: process.env.PYTHON, args: []}] :
+        [{command: 'python', args: []}, {command: 'python3', args: []}, {command: 'py', args: ['-3']}];
+    const python = candidates.find(candidate => spawnSync(candidate.command, candidate.args.concat('--version'),
+        {windowsHide: true, timeout: 5000}).status === 0);
+    assert.ok(python, 'Python 3 is required for real generated-code syntax validation');
+    fs.writeFileSync(path.join(output, `${name}.py`), source);
+    const result = spawnSync(python.command, python.args.concat(path.resolve(__dirname, '../check-python-syntax.py')), {
+        input: JSON.stringify({cases: [{name, source}]}),
+        encoding: 'utf8',
+        windowsHide: true,
+        timeout: 10000,
+        env: {...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1'}
+    });
+    assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+    console.log(`Real Blockly Python syntax passed: ${name}`);
+    const simulationScript = path.join(__dirname, 'check-generated-program.py');
+    const simulated = spawnSync(python.command, python.args.concat(simulationScript), {
+        input: JSON.stringify({name, source}),
+        encoding: 'utf8',
+        windowsHide: true,
+        timeout: 10000,
+        env: {...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1'}
+    });
+    assert.strictEqual(simulated.status, 0, simulated.stdout + simulated.stderr);
+    console.log(`Simulated Python execution passed: ${simulated.stdout.trim()}`);
+});
 app.whenReady().then(async () => {
     window = new BrowserWindow({
         show: false,

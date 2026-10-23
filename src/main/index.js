@@ -25,6 +25,11 @@ import {
 } from './est/build-library-service';
 import {flashEstFirmware} from './est/firmware-update-service';
 import {createNodeHidEstTransportFactory} from './est/transports/node-hid';
+import {EstVisionSimulator} from './est/vision-simulator';
+import {VisionCameraSource} from './est/vision-camera-source';
+import {VisionWindowManager} from './est/vision-window';
+import {HardwareSession} from './hardware/session';
+import {HardwareDraftStore} from './hardware/drafts';
 
 import formatMessage from 'format-message';
 import openBlockDesktopLocales from 'openblock-l10n/locales/desktop-msgs';
@@ -33,9 +38,25 @@ import estDesktopMessageOverrides from './est-desktop-message-overrides.json';
 const estDeviceService = new EstDeviceService({
     transportFactory: createNodeHidEstTransportFactory()
 });
+const estVisionSimulator = new EstVisionSimulator(estDeviceService);
+const estVisionCamera = new VisionCameraSource(estDeviceService, estVisionSimulator);
 const estStudioAppId = 'com.eststudio.desktop';
 const estFirmwareUpdateState = {
     inProgress: false
+};
+const hardwareSession = new HardwareSession({
+    service: estDeviceService,
+    stopSources: () => {
+        estVisionCamera.stop();
+        estVisionSimulator.stop({clear: false});
+        estVisionWindow.close(); // eslint-disable-line no-use-before-define
+    },
+    isFirmwareBusy: () => estFirmwareUpdateState.inProgress
+});
+let hardwareDrafts;
+const getHardwareDrafts = () => {
+    if (!hardwareDrafts) hardwareDrafts = new HardwareDraftStore(path.join(app.getPath('userData'), 'hardware-drafts'));
+    return hardwareDrafts;
 };
 const EST_RECENT_PROJECTS_FILE = 'est-recent-projects.json';
 const EST_RECENT_PROJECT_LIMIT = 16;
@@ -584,6 +605,15 @@ const devToolKey = ((process.platform === 'darwin') ?
 const _windows = {};
 
 const displayPermissionDeniedWarning = (browserWindow, permissionType) => {
+    if (permissionType === 'camera' && estVisionWindow.owns(browserWindow.webContents)) {
+        dialog.showMessageBox(browserWindow, {
+            type: 'warning',
+            title: estVisionWindow.text('camera.permission.title'),
+            message: estVisionWindow.text('camera.error.denied'),
+            buttons: [estVisionWindow.text('camera.permission.ok')]
+        });
+        return;
+    }
     let title;
     let message;
     switch (permissionType) {
@@ -687,8 +717,7 @@ const askForMediaAccess = mediaType => {
 };
 
 const handlePermissionRequest = async (webContents, permission, callback, details) => {
-    if (webContents !== _windows.main.webContents) {
-        // deny: request came from somewhere other than the main window's web contents
+    if ((!_windows.main || webContents !== _windows.main.webContents) && !estVisionWindow.owns(webContents)) {
         return callback(false);
     }
     if (!details.isMainFrame) {
@@ -719,7 +748,8 @@ const handlePermissionRequest = async (webContents, permission, callback, detail
             return callback(false);
         }
     }
-    const parentWindow = _windows.main; // if we ever allow media in non-main windows we'll also need to change this
+    const parentWindow = BrowserWindow.fromWebContents(webContents);
+    if (estVisionWindow.owns(webContents) && askForMicrophone) return callback(false);
     if (askForMicrophone) {
         const microphoneResult = await askForMediaAccess('microphone');
         if (!microphoneResult) {
@@ -802,6 +832,11 @@ const createWindow = ({search = null, url = 'index.html', ...browserWindowOption
 
     return window;
 };
+
+const estVisionWindow = new VisionWindowManager({
+    createWindow,
+    stopSource: owner => estVisionCamera.stop(owner)
+});
 
 const createAboutWindow = () => {
     const window = createWindow({
@@ -1021,6 +1056,8 @@ app.on('before-quit', event => {
     }
     event.preventDefault();
     isQuitting = true;
+    estVisionWindow.close();
+    estVisionSimulator.stop({clear: false});
     estDeviceService.shutdown()
         .catch(error => console.error('EST shutdown failed', error))
         .finally(() => app.quit());
@@ -1069,6 +1106,7 @@ app.on('ready', () => {
     _windows.loading.once('show', () => {
         _windows.main = createMainWindow();
         _windows.main.on('closed', () => {
+            estVisionWindow.close();
             delete _windows.main;
         });
 
@@ -1233,37 +1271,137 @@ const requireNoFirmwareUpdate = () => {
     }
 };
 
+const requireMainHardwareWindow = event => {
+    if (!_windows.main || event.sender !== _windows.main.webContents) throw new Error('HARDWARE_BUSY');
+};
+ipcMain.handle('hardware-state', event => {
+    requireMainHardwareWindow(event);
+    return hardwareSession.getState();
+});
+ipcMain.handle('hardware-select', (event, request) => {
+    requireMainHardwareWindow(event);
+    return hardwareSession.select(request);
+});
+ipcMain.handle('hardware-draft-write', (event, request) => {
+    requireMainHardwareWindow(event);
+    return getHardwareDrafts().write(request);
+});
+ipcMain.handle('hardware-draft-read', (event, hardwareId) => {
+    requireMainHardwareWindow(event);
+    return getHardwareDrafts().read(hardwareId);
+});
+const hardwareUnavailableState = () => ({state: 'hardware-unavailable', compatible: false, status: null});
+const canUseEstAdapter = () => !hardwareSession.switching && hardwareSession.hardwareId === 'est';
+
 ipcMain.handle('est-list-devices', () => (
-    estFirmwareUpdateState.inProgress ? [] : estDeviceService.listDevices()
+    estFirmwareUpdateState.inProgress || !canUseEstAdapter() ? [] :
+        hardwareSession.background(() => estDeviceService.listDevices())
 ));
 ipcMain.handle('est-connect', (event, device) => {
+    hardwareSession.requireAdapter();
     requireNoFirmwareUpdate();
-    return estDeviceService.connect(device);
+    return hardwareSession.operation(() => estDeviceService.connect(device));
 });
-ipcMain.handle('est-disconnect', () => estDeviceService.disconnect());
+ipcMain.handle('est-disconnect', () => {
+    hardwareSession.requireAdapter();
+    return hardwareSession.operation(() => estDeviceService.disconnect());
+});
 ipcMain.handle('est-get-status', (event, options) => (
-    estFirmwareUpdateState.inProgress ? firmwareUpdateConnectionState() : estDeviceService.getStatus(options)
+    canUseEstAdapter() ? (
+        estFirmwareUpdateState.inProgress ? firmwareUpdateConnectionState() :
+            hardwareSession.background(() => estDeviceService.getStatus(options))) : hardwareUnavailableState()
+));
+ipcMain.handle('est-hardware-status', () => (
+    canUseEstAdapter() ? (
+        estFirmwareUpdateState.inProgress ? {state: 'busy'} :
+            hardwareSession.background(() => estDeviceService.getHardwareStatus())) : hardwareUnavailableState()
 ));
 ipcMain.handle('est-auto-connect', (event, options) => (
-    estFirmwareUpdateState.inProgress ? firmwareUpdateConnectionState() : estDeviceService.autoConnect(options)
+    canUseEstAdapter() ? (
+        estFirmwareUpdateState.inProgress ? firmwareUpdateConnectionState() :
+            hardwareSession.background(() => estDeviceService.autoConnect(options))) : hardwareUnavailableState()
 ));
 ipcMain.handle('est-download-program', (event, request) => {
     requireNoFirmwareUpdate();
-    return estDeviceService.downloadProgram(request);
+    return hardwareSession.operation(() => estDeviceService.downloadProgram(request));
 });
 ipcMain.handle('est-run-program', (event, request) => {
     requireNoFirmwareUpdate();
-    return estDeviceService.runProgram(request);
+    return hardwareSession.operation(() => estDeviceService.runProgram(request));
 });
 ipcMain.handle('est-stop-program', () => {
     requireNoFirmwareUpdate();
-    return estDeviceService.stopCurrentProgram();
+    return hardwareSession.operation(() => estDeviceService.stopCurrentProgram());
 });
+ipcMain.handle('est-vision-status', () => {
+    hardwareSession.requireAdapter();
+    requireNoFirmwareUpdate();
+    return estDeviceService.getVisionStatus();
+});
+ipcMain.handle('est-vision-update', (event, sample) => {
+    hardwareSession.requireAdapter();
+    requireNoFirmwareUpdate();
+    estVisionCamera.requireAvailable();
+    return estDeviceService.updateVisionSample(sample);
+});
+ipcMain.handle('est-vision-clear', (event, reason) => {
+    hardwareSession.requireAdapter();
+    requireNoFirmwareUpdate();
+    estVisionCamera.requireAvailable();
+    return estDeviceService.clearVision(reason);
+});
+ipcMain.handle('est-vision-simulator-start', (event, options) => {
+    hardwareSession.requireAdapter();
+    requireNoFirmwareUpdate();
+    estVisionCamera.requireAvailable();
+    return estVisionSimulator.start(options);
+});
+ipcMain.handle('est-vision-window-open', (event, locale) => {
+    if (!_windows.main || event.sender !== _windows.main.webContents) throw new Error('无效的摄像头窗口请求');
+    estVisionWindow.open(locale);
+});
+ipcMain.handle('est-vision-window-locale', (event, locale) => {
+    if (_windows.main && event.sender === _windows.main.webContents) estVisionWindow.setLocale(locale);
+});
+ipcMain.on('est-vision-window-ready', event => {
+    if (estVisionWindow.owns(event.sender)) estVisionWindow.setLocale();
+});
+ipcMain.handle('est-vision-window-close', event => {
+    if (estVisionWindow.owns(event.sender)) estVisionWindow.close();
+});
+ipcMain.handle('est-vision-camera-state', () => (canUseEstAdapter() ? estDeviceService.getVisionPublisherState() :
+    {connected: false, supported: false, multiSupported: false, paused: true}));
+ipcMain.handle('est-vision-camera-start', (event, options) => {
+    hardwareSession.requireAdapter();
+    if (!estVisionWindow.owns(event.sender) &&
+        (!_windows.main || event.sender !== _windows.main.webContents)) throw new Error('摄像头窗口已关闭');
+    requireNoFirmwareUpdate();
+    return estVisionCamera.start(event.sender.id, options);
+});
+ipcMain.handle('est-vision-camera-frame', (event, token, sample) => {
+    hardwareSession.requireAdapter();
+    requireNoFirmwareUpdate();
+    return estVisionCamera.frame(event.sender.id, token, sample);
+});
+ipcMain.handle('est-vision-camera-stop', (event, token) => estVisionCamera.stop(event.sender.id, token));
+ipcMain.handle('est-vision-simulator-stop', () => {
+    estVisionCamera.requireAvailable();
+    return estVisionSimulator.stop();
+});
+ipcMain.handle('est-vision-simulator-no-target', () => {
+    hardwareSession.requireAdapter();
+    estVisionCamera.requireAvailable();
+    return estVisionSimulator.noTarget();
+});
+ipcMain.handle('est-vision-simulator-status', () => estVisionSimulator.getState());
 ipcMain.handle('est-flash-firmware', async (event, request) => {
+    hardwareSession.requireAdapter();
     if (estFirmwareUpdateState.inProgress) {
         throw new Error('EST firmware update is already in progress');
     }
     estFirmwareUpdateState.inProgress = true;
+    estVisionSimulator.stop({clear: false});
+    estDeviceService.suspendVision();
     try {
         await estDeviceService.disconnect();
         return await flashEstFirmware(request, progress => {
@@ -1273,6 +1411,7 @@ ipcMain.handle('est-flash-firmware', async (event, request) => {
         });
     } finally {
         estFirmwareUpdateState.inProgress = false;
+        estDeviceService.resumeVision();
     }
 });
 

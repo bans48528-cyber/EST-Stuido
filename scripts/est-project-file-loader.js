@@ -44,8 +44,6 @@ const transformUploader = source => {
 };
 
 const transformDefaultTitle = source => {
-    const intlImportMarker =
-        "import {defineMessages, injectIntl, intlShape} from 'react-intl';";
     const messagesMarker = `const messages = defineMessages({
     defaultProjectTitle: {
         id: 'gui.gui.defaultProjectTitle',
@@ -53,20 +51,11 @@ const transformDefaultTitle = source => {
         defaultMessage: 'OpenBlock Project'
     }
 });`;
-    const defaultTitleMarker =
-        '                newTitle = this.props.intl.formatMessage(messages.defaultProjectTitle);';
-    if (!source.includes(intlImportMarker) || !source.includes(messagesMarker) ||
-        !source.includes(defaultTitleMarker)) {
+    if (!source.includes(messagesMarker)) {
         throw new Error('Unable to locate the OpenBlock default project title logic.');
     }
-    const defaultTitleHelper = "const DEFAULT_PROJECT_TITLE = 'EST Studio Project';";
     return source
-        .replace(intlImportMarker, "import {injectIntl, intlShape} from 'react-intl';")
-        .replace(messagesMarker, defaultTitleHelper)
-        .replace(
-            defaultTitleMarker,
-            '                newTitle = DEFAULT_PROJECT_TITLE;'
-        );
+        .replace(messagesMarker, messagesMarker.replace('OpenBlock Project', 'EST Studio Project'));
 };
 
 module.exports = function (source) {

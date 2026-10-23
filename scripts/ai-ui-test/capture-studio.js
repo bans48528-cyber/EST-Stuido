@@ -20,7 +20,8 @@ if (!process.versions.electron) {
     remote.initialize();
     let window;
     let completeReply;
-    const ir = {version: 1,
+    const coverage = process.env.EST_AI_CAPTURE_COVERAGE === '1';
+    const ir = coverage ? require('./coverage-fixture').makeCoverageIr() : {version: 1,
         mode: 'insert',
         stacks: [{event: {type: 'event_program_start'},
             body: [
@@ -44,7 +45,9 @@ if (!process.versions.electron) {
         'est-ai-generate': () => new Promise(resolve => {
             completeReply = () => resolve({ok: true,
                 data: {content: JSON.stringify({
-                    message: '已经搭好了：B、C 电机前进一圈，等待一秒，然后停止。可以先查看积木，再放入工作区。', ir
+                    message: coverage ? '已搭好计数、列表、带参数的自定义积木，以及爱心绘图。确认后可放入工作区。' :
+                        '已经搭好了：B、C 电机前进一圈，等待一秒，然后停止。可以先查看积木，再放入工作区。',
+                    ir
                 })}});
         }),
         'est-ai-cancel': () => ({ok: true})
@@ -84,6 +87,9 @@ if (!process.versions.electron) {
             await evaluate("window.dispatchEvent(new CustomEvent('est-home-set-locale', " +
                 "{detail: {locale: 'zh-cn'}}));");
             await pause(700);
+            await evaluate(`window.estCurrentLocale = 'zh-cn';
+                document.documentElement.lang = 'zh-cn';
+                window.dispatchEvent(new CustomEvent('est-locale-changed', {detail: {locale: 'zh-cn'}}));`);
             const buttonRectangle = await evaluate(`(() => {
                 const rect = document.querySelector('.est-menu-bar-ai-button').getBoundingClientRect();
                 return {x: Math.floor(rect.x) - 10, y: 0, width: Math.ceil(rect.width) + 20, height: 58};
@@ -104,11 +110,13 @@ if (!process.versions.electron) {
             assert.strictEqual(initialLayout.count, 1);
             assert.ok(initialLayout.width >= 150 && initialLayout.width <= 166);
             await capture('studio-wide-idle');
+            const requestText = coverage ? '生成随机计数存入列表，用带参数的自定义积木显示，再画爱心。' :
+                '使用 B、C 端口的驱动电机，前进一圈，等待一秒，然后停止。';
             // Use the real input and send action, with the model response held by the IPC fixture.
             await evaluate(`(() => {
                 const input = document.querySelector('[role=dialog] textarea');
                 Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input,
-                    '使用 B、C 端口的驱动电机，前进一圈，等待一秒，然后停止。');
+                    ${JSON.stringify(requestText)});
                 input.dispatchEvent(new Event('input', {bubbles: true}));
             })()`);
             await evaluate('document.querySelector("button[aria-label=发送]").click()');
@@ -133,7 +141,8 @@ if (!process.versions.electron) {
             })()`);
             assert.strictEqual(narrowLayout.label, 'none');
             assert.strictEqual(narrowLayout.count, 1);
-            assert.strictEqual(narrowLayout.height, initialLayout.height);
+            assert.ok(Math.abs(narrowLayout.height - initialLayout.height) < 0.01,
+                'Menu height must stay unchanged (allow subpixel rounding)');
             assert.ok(narrowLayout.width <= 42 && narrowLayout.noOverlap && narrowLayout.noOverflow,
                 JSON.stringify(narrowLayout));
             await capture('studio-narrow');

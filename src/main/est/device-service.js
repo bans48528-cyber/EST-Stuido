@@ -1,10 +1,16 @@
 import {
     CAPABILITY_MOTOR_TYPE,
     CAPABILITY_LARGE_PYTHON_PROGRAM,
+    CAPABILITY_VISION_INPUT,
+    CAPABILITY_VISION_INPUT_MULTI,
     COMMAND_PERSISTENT_PROGRAM,
     COMMAND_PYTHON_PROGRAM,
     COMMAND_DEVICE_STATUS,
     COMMAND_MOTOR_TYPE,
+    COMMAND_VISION_SENSOR,
+    EST_PROTOCOL_MAJOR,
+    EST_VISION_MULTI_PROTOCOL_MINOR,
+    EST_VISION_PROTOCOL_MINOR,
     FRAGMENT_WRITE_DELAY_MS,
     HID_READ_TIMEOUT_MS,
     LEGACY_REPORT_SIZE,
@@ -24,7 +30,17 @@ import {
     PYTHON_PROGRAM_STATE_READY,
     PYTHON_PROGRAM_STATE_RUNNING,
     PYTHON_PROGRAM_STATE_STOPPED,
-    PYTHON_PROGRAM_STATE_TIMED_OUT
+    PYTHON_PROGRAM_STATE_TIMED_OUT,
+    VISION_SENSOR_CLEAR_REASON_DISCONNECT,
+    VISION_SENSOR_CLEAR_REASON_INITIALIZE,
+    VISION_SENSOR_CLEAR_REASON_NO_TARGET,
+    VISION_SENSOR_CLEAR_REASON_PROGRAM_STOPPED,
+    VISION_SENSOR_CLEAR_REASON_PROGRAM_TRANSITION,
+    VISION_SENSOR_DEFAULT_ID,
+    VISION_SENSOR_DEFAULT_TTL_MS,
+    VISION_SENSOR_REQUEST_TIMEOUT_MS,
+    VISION_SENSOR_SEND_INTERVAL_MS,
+    VISION_SENSOR_TARGET_MASK_ALL
 } from './constants';
 import {validateMicroPythonSourceSyntax} from './python-syntax-service';
 import {
@@ -36,6 +52,12 @@ import {
     buildPythonProgramRunFrame,
     buildPythonProgramStatusFrame,
     buildPythonProgramStopFrame,
+    buildVisionSensorClearFrame,
+    buildVisionSensorMultiClearFrame,
+    buildVisionSensorMultiStatusFrame,
+    buildVisionSensorMultiUpdateFrame,
+    buildVisionSensorStatusFrame,
+    buildVisionSensorUpdateFrame,
     buildFrame,
     capabilityNamesFor,
     checkProgramFirmwareCompatibility,
@@ -48,6 +70,7 @@ import {
     parseMotorTypeResponse,
     parsePersistentProgramResponse,
     parsePythonProgramResponse,
+    parseVisionSensorResponse,
     programMinimumFirmwareVersionForSource,
     programRequiredCapabilitiesForSource,
     programUnsupportedRuntimeFeaturesForSource,
@@ -60,13 +83,46 @@ const EST_USB_DISCONNECTED_MESSAGE = 'EST USB 连接已断开，请重新连接 
 const PROGRAM_UNSUPPORTED_RUNTIME_MESSAGE =
     '当前 EST 固件尚未实现这个程序使用的积木接口，已阻止下载。请删除或替换这些积木，等待后续固件开放对应能力。';
 const PROGRAM_LARGE_SOURCE_MIN_FIRMWARE_VERSION = 'M1.26A';
+const VISION_TARGET_BITS = Object.freeze({left: 1, right: 2, pose: 4, face: 8});
+
+const normalizeVisionResult = sample => ({
+    classId: sample.classId,
+    confidencePermille: sample.confidencePermille,
+    centerX: sample.centerX,
+    centerY: sample.centerY,
+    width: sample.width,
+    height: sample.height
+});
+
+const normalizeVisionFrame = (frame = {}) => {
+    const enabled = frame.enabled || {};
+    const sourceTargets = frame.targets || {};
+    let enabledMask = Number.isInteger(frame.enabledMask) ? frame.enabledMask : 0;
+    let validMask = Number.isInteger(frame.validMask) ? frame.validMask : 0;
+    const targets = {};
+    for (const [target, [name, bit]] of Object.entries(VISION_TARGET_BITS).entries()) {
+        if (!Number.isInteger(frame.enabledMask) && enabled[name]) enabledMask |= bit;
+        const sample = sourceTargets[name] || sourceTargets[target];
+        if (!Number.isInteger(frame.validMask) && sample) validMask |= bit;
+        if (sample) targets[name] = normalizeVisionResult(sample);
+    }
+    const normalized = {
+        ttlMs: typeof frame.ttlMs === 'undefined' ? VISION_SENSOR_DEFAULT_TTL_MS : frame.ttlMs,
+        enabledMask,
+        validMask,
+        targets
+    };
+    buildVisionSensorMultiUpdateFrame({...normalized, sequence: 0});
+    return normalized;
+};
 
 const isEstCommandTimeoutError = error =>
     Boolean(error && /^Timed out waiting for EST command /.test(String(error.message || error)));
 
 const normalizeStatusOptions = options => ({
     includeProgramStatus: Boolean(options && options.includeProgramStatus),
-    includePortInfo: Boolean(options && options.includePortInfo)
+    includePortInfo: Boolean(options && options.includePortInfo),
+    reuseConnection: Boolean(options && options.reuseConnection)
 });
 
 const programFirmwareUpgradeError = compatibility => {
@@ -93,6 +149,8 @@ export class EstDeviceService {
         fragmentWriteDelayMs = FRAGMENT_WRITE_DELAY_MS,
         programStatusRequestTimeoutMs = PROGRAM_STATUS_REQUEST_TIMEOUT_MS,
         programStatusPollIntervalMs = PROGRAM_STATUS_POLL_INTERVAL_MS,
+        visionRequestTimeoutMs = VISION_SENSOR_REQUEST_TIMEOUT_MS,
+        visionSendIntervalMs = VISION_SENSOR_SEND_INTERVAL_MS,
         syntaxChecker = validateMicroPythonSourceSyntax
     } = {}) {
         this.transportFactory = transportFactory;
@@ -100,15 +158,31 @@ export class EstDeviceService {
         this.fragmentWriteDelayMs = fragmentWriteDelayMs;
         this.programStatusRequestTimeoutMs = programStatusRequestTimeoutMs;
         this.programStatusPollIntervalMs = programStatusPollIntervalMs;
+        this.visionRequestTimeoutMs = visionRequestTimeoutMs;
+        this.visionSendIntervalMs = visionSendIntervalMs;
         this.syntaxChecker = syntaxChecker;
         this.transport = null;
         this.device = null;
         this.firmwareVersion = null;
         this.commandQueue = Promise.resolve();
+        this.pendingCommands = 0;
+        this.hardwareStatusPromise = null;
         this.autoConnectPromise = null;
         this.lastDeviceStatus = null;
         this.pythonProgramActive = false;
         this.shuttingDown = false;
+        this.visionLatest = null;
+        this.visionRevision = 0;
+        this.visionLastSentRevision = 0;
+        this.visionSequence = 0;
+        this.visionDispatchQueued = false;
+        this.visionInFlight = false;
+        this.visionPauseDepth = 0;
+        this.visionTimer = null;
+        this.visionNextSendAt = 0;
+        this.visionLastResponse = null;
+        this.visionLastError = null;
+        this.visionConnectionNeedsClear = false;
     }
 
     async listDevices () {
@@ -117,6 +191,286 @@ export class EstDeviceService {
         }
         const devices = await this.transportFactory.listDevices();
         return devices.filter(isEstDevice);
+    }
+
+    getVisionPublisherState () {
+        return {
+            supported: this._visionSupported(),
+            multiSupported: this._visionMultiSupported(),
+            connected: Boolean(this.transport && this.device),
+            programRunning: this.pythonProgramActive,
+            paused: this.visionPauseDepth > 0,
+            pending: Boolean(
+                this.visionLatest && this.visionLatest.revision > this.visionLastSentRevision
+            ),
+            inFlight: this.visionInFlight,
+            sequence: this.visionSequence,
+            lastResponse: this.visionLastResponse,
+            lastError: this.visionLastError
+        };
+    }
+
+    updateVisionSample (sample = {}) {
+        const normalized = {
+            sensorId: typeof sample.sensorId === 'undefined' ? VISION_SENSOR_DEFAULT_ID : sample.sensorId,
+            ttlMs: typeof sample.ttlMs === 'undefined' ? VISION_SENSOR_DEFAULT_TTL_MS : sample.ttlMs,
+            classId: sample.classId,
+            confidencePermille: sample.confidencePermille,
+            centerX: sample.centerX,
+            centerY: sample.centerY,
+            width: sample.width,
+            height: sample.height
+        };
+        buildVisionSensorUpdateFrame({...normalized, sequence: 0});
+        this.visionRevision++;
+        this.visionLatest = {
+            kind: 'update',
+            revision: this.visionRevision,
+            storedAt: Date.now(),
+            sample: normalized
+        };
+        this._scheduleVisionDispatch();
+        return this.getVisionPublisherState();
+    }
+
+    updateVisionFrame (frame = {}) {
+        const normalized = normalizeVisionFrame(frame);
+        this.visionRevision++;
+        this.visionLatest = {
+            kind: 'multi-update',
+            revision: this.visionRevision,
+            storedAt: Date.now(),
+            sample: normalized
+        };
+        this._scheduleVisionDispatch();
+        return this.getVisionPublisherState();
+    }
+
+    clearVision (reason = VISION_SENSOR_CLEAR_REASON_NO_TARGET,
+        targetMask = VISION_SENSOR_TARGET_MASK_ALL) {
+        buildVisionSensorClearFrame({reason, sequence: 0});
+        buildVisionSensorMultiClearFrame({reason, sequence: 0, targetMask});
+        this.visionRevision++;
+        this.visionLatest = {
+            kind: 'clear',
+            reason,
+            targetMask,
+            revision: this.visionRevision,
+            storedAt: Date.now()
+        };
+        this._scheduleVisionDispatch();
+        return this.getVisionPublisherState();
+    }
+
+    getVisionStatus () {
+        return this._enqueueCommand(async () => {
+            await this._requireVisionSupportNow();
+            return this._visionActionNow(this._visionMultiSupported() ?
+                buildVisionSensorMultiStatusFrame() : buildVisionSensorStatusFrame());
+        });
+    }
+
+    suspendVision () {
+        this.visionPauseDepth++;
+        this._cancelVisionTimer();
+        return this.getVisionPublisherState();
+    }
+
+    resumeVision () {
+        if (this.visionPauseDepth > 0) {
+            this.visionPauseDepth--;
+        }
+        this._scheduleVisionDispatch();
+        return this.getVisionPublisherState();
+    }
+
+    _visionSupported () {
+        const status = this.lastDeviceStatus;
+        return Boolean(
+            status &&
+            status.protocolMajor === EST_PROTOCOL_MAJOR &&
+            status.protocolMinor >= EST_VISION_PROTOCOL_MINOR &&
+            (status.capabilities & CAPABILITY_VISION_INPUT) !== 0
+        );
+    }
+
+    _visionMultiSupported () {
+        const status = this.lastDeviceStatus;
+        return Boolean(
+            status &&
+            status.protocolMajor === EST_PROTOCOL_MAJOR &&
+            status.protocolMinor >= EST_VISION_MULTI_PROTOCOL_MINOR &&
+            (status.capabilities & CAPABILITY_VISION_INPUT_MULTI) !== 0
+        );
+    }
+
+    async _requireVisionSupportNow () {
+        if (!this.lastDeviceStatus && !this.pythonProgramActive) {
+            await this._getStatusNow();
+        }
+        if (!this._visionSupported()) {
+            throw new Error(
+                `EST firmware does not support vision input; protocol ${EST_PROTOCOL_MAJOR}.` +
+                `${EST_VISION_PROTOCOL_MINOR} and capability vision-input are required`
+            );
+        }
+    }
+
+    async _clearVisionAfterConnectNow () {
+        if (!this.visionConnectionNeedsClear) {
+            return null;
+        }
+        if (!this._visionSupported()) {
+            this.visionConnectionNeedsClear = false;
+            return null;
+        }
+        const cleared = await this._tryClearVisionOnDeviceNow(
+            VISION_SENSOR_CLEAR_REASON_INITIALIZE
+        );
+        if (cleared) {
+            this.visionConnectionNeedsClear = false;
+        }
+        return cleared;
+    }
+
+    _cancelVisionTimer () {
+        if (this.visionTimer) {
+            clearTimeout(this.visionTimer);
+            this.visionTimer = null;
+        }
+    }
+
+    _scheduleVisionDispatch () {
+        if (
+            this.visionTimer ||
+            this.visionDispatchQueued ||
+            this.visionPauseDepth > 0 ||
+            !this.pythonProgramActive ||
+            !this.transport ||
+            !this._visionSupported() ||
+            !this.visionLatest ||
+            this.visionLatest.revision <= this.visionLastSentRevision
+        ) {
+            return;
+        }
+        const delayMs = Math.max(0, this.visionNextSendAt - Date.now());
+        this.visionTimer = setTimeout(() => {
+            this.visionTimer = null;
+            if (this.visionPauseDepth > 0 || !this.pythonProgramActive || !this.transport) {
+                return;
+            }
+            this.visionDispatchQueued = true;
+            this._enqueueCommand(() => this._dispatchLatestVisionNow())
+                .catch(error => {
+                    this.visionLastError = error.message;
+                })
+                .finally(() => {
+                    this.visionDispatchQueued = false;
+                    this._scheduleVisionDispatch();
+                });
+        }, delayMs);
+    }
+
+    _nextVisionSequence () {
+        this.visionSequence = (this.visionSequence + 1) >>> 0;
+        if (this.visionSequence === 0) {
+            this.visionSequence = 1;
+        }
+        return this.visionSequence;
+    }
+
+    async _dispatchLatestVisionNow () {
+        if (
+            this.visionPauseDepth > 0 ||
+            !this.pythonProgramActive ||
+            !this.transport ||
+            !this._visionSupported()
+        ) {
+            return null;
+        }
+        const latest = this.visionLatest;
+        if (!latest || latest.revision <= this.visionLastSentRevision) {
+            return null;
+        }
+        if ((latest.kind === 'update' || latest.kind === 'multi-update') &&
+            Date.now() - latest.storedAt >= latest.sample.ttlMs) {
+            this.visionLastSentRevision = latest.revision;
+            return null;
+        }
+        const sequence = this._nextVisionSequence();
+        let frame;
+        if (latest.kind === 'multi-update') {
+            if (!this._visionMultiSupported()) {
+                throw new Error(
+                    `EST firmware does not support multi-target vision; protocol ${EST_PROTOCOL_MAJOR}.` +
+                    `${EST_VISION_MULTI_PROTOCOL_MINOR} and capability vision-input-multi are required`
+                );
+            }
+            frame = buildVisionSensorMultiUpdateFrame({...latest.sample, sequence});
+        } else if (latest.kind === 'update') {
+            frame = buildVisionSensorUpdateFrame({...latest.sample, sequence});
+        } else {
+            frame = this._visionMultiSupported() ?
+                buildVisionSensorMultiClearFrame({
+                    reason: latest.reason,
+                    sequence,
+                    targetMask: latest.targetMask
+                }) :
+                buildVisionSensorClearFrame({reason: latest.reason, sequence});
+        }
+        try {
+            const response = await this._visionActionNow(frame);
+            if (response.sequence !== sequence) {
+                throw new Error(
+                    `EST vision response sequence ${response.sequence} does not match ${sequence}`
+                );
+            }
+            this.visionLastResponse = response;
+            this.visionLastError = null;
+            return response;
+        } finally {
+            this.visionLastSentRevision = latest.revision;
+            this.visionNextSendAt = Date.now() + this.visionSendIntervalMs;
+        }
+    }
+
+    async _visionActionNow (frame) {
+        this.visionInFlight = true;
+        try {
+            const report = await this._requestFrameNow(
+                frame,
+                COMMAND_VISION_SENSOR,
+                this.visionRequestTimeoutMs
+            );
+            const response = parseVisionSensorResponse(report);
+            if (!response) {
+                throw new Error('EST returned an invalid vision sensor status');
+            }
+            if (response.result !== 1) {
+                throw new Error(
+                    `EST rejected vision sensor action ${response.acceptedAction}; error=${response.error}`
+                );
+            }
+            return response;
+        } finally {
+            this.visionInFlight = false;
+        }
+    }
+
+    async _clearVisionOnDeviceNow (reason) {
+        if (!this.transport || !this._visionSupported()) {
+            return null;
+        }
+        const sequence = this._nextVisionSequence();
+        const response = await this._visionActionNow(this._visionMultiSupported() ?
+            buildVisionSensorMultiClearFrame({reason, sequence}) :
+            buildVisionSensorClearFrame({reason, sequence}));
+        if (response.sequence !== sequence) {
+            throw new Error(`EST vision CLEAR response sequence does not match ${sequence}`);
+        }
+        this.visionLastResponse = response;
+        this.visionLastError = null;
+        return response;
     }
 
     connect (device) {
@@ -130,6 +484,8 @@ export class EstDeviceService {
             }
             this.transport = await this.transportFactory.open(device);
             this.device = device;
+            this.visionSequence = 0;
+            this.visionConnectionNeedsClear = true;
             try {
                 const firmwareVersion = await this._requestNow(0x01);
                 this.firmwareVersion = firmwareVersion;
@@ -142,16 +498,23 @@ export class EstDeviceService {
     }
 
     disconnect () {
-        return this._enqueueCommand(() => this._disconnectNow());
+        return this._withVisionSuspended(() => this._disconnectNow());
     }
 
-    async _disconnectNow () {
+    async _disconnectNow (clearVision = true) {
         const transport = this.transport;
+        if (clearVision) {
+            await this._tryClearVisionOnDeviceNow(VISION_SENSOR_CLEAR_REASON_DISCONNECT);
+        }
         this.transport = null;
         this.device = null;
         this.firmwareVersion = null;
         this.lastDeviceStatus = null;
         this.pythonProgramActive = false;
+        this.visionConnectionNeedsClear = false;
+        this._cancelVisionTimer();
+        this.visionLatest = null;
+        this.visionLastSentRevision = this.visionRevision;
         if (transport && typeof transport.close === 'function') {
             try {
                 await transport.close();
@@ -166,6 +529,19 @@ export class EstDeviceService {
         return this._enqueueCommand(() => this._getStatusNow(statusOptions));
     }
 
+    getHardwareStatus () {
+        if (this.hardwareStatusPromise) return this.hardwareStatusPromise;
+        if (this.shuttingDown || this.visionPauseDepth || this.pendingCommands) {
+            return Promise.resolve({state: 'busy'});
+        }
+        if (!this.transport || !this.device) return Promise.resolve({state: 'not-found'});
+        this.hardwareStatusPromise = this._enqueueCommand(async () => {
+            const status = await this._getStatusNow({includeProgramStatus: true, hardwareMonitor: true});
+            return {state: 'connected', status};
+        }).finally(() => { this.hardwareStatusPromise = null; });
+        return this.hardwareStatusPromise;
+    }
+
     _decorateDeviceStatus (status) {
         return {
             ...status,
@@ -176,16 +552,22 @@ export class EstDeviceService {
 
     async _getStatusNow (options = {}) {
         const {includeProgramStatus, includePortInfo} = normalizeStatusOptions(options);
-        if (this.pythonProgramActive && this.transport) {
+        const monitor = Boolean(options.hardwareMonitor);
+        const livePorts = monitor && this.lastDeviceStatus && this.lastDeviceStatus.protocolMajor === 1 &&
+            this.lastDeviceStatus.protocolMinor >= 31;
+        if (this.pythonProgramActive && this.transport && !livePorts) {
             return this._getProgramStatusSnapshotNow();
         }
         try {
-            const response = await this._requestNow(COMMAND_DEVICE_STATUS);
+            const response = monitor ? (await this._requestFrameNow(
+                buildFrame(COMMAND_DEVICE_STATUS), COMMAND_DEVICE_STATUS, 300
+            )) : await this._requestNow(COMMAND_DEVICE_STATUS);
             const status = parseDeviceStatusResponse(response);
             if (!status) {
                 throw new Error('EST returned an invalid device status snapshot');
             }
             this.lastDeviceStatus = this._decorateDeviceStatus(status);
+            await this._clearVisionAfterConnectNow();
             if (includePortInfo && (status.capabilities & CAPABILITY_MOTOR_TYPE) !== 0) {
                 try {
                     const motorTypeReport = await this._requestFrameNow(
@@ -206,7 +588,7 @@ export class EstDeviceService {
                 try {
                     const programStatus = await this._pythonProgramActionNow(
                         buildPythonProgramStatusFrame(),
-                        this.programStatusRequestTimeoutMs
+                        monitor ? Math.min(300, this.programStatusRequestTimeoutMs) : this.programStatusRequestTimeoutMs
                     );
                     this._updatePythonProgramActivity(programStatus);
                     return {...this.lastDeviceStatus, programStatus};
@@ -293,6 +675,9 @@ export class EstDeviceService {
 
     async _autoConnect (options = {}) {
         try {
+            if (options.reuseConnection && this.transport && this.device) {
+                return await this._getActiveProgramConnectionNow(options);
+            }
             if (this.pythonProgramActive && this.transport && this.device) {
                 return await this._getActiveProgramConnectionNow(options);
             }
@@ -388,19 +773,19 @@ export class EstDeviceService {
     }
 
     uploadPython (source) {
-        return this._enqueueCommand(() => this._uploadPythonNow(source));
+        return this._withVisionSuspended(() => this._uploadPythonNow(source));
     }
 
     saveProgramToSlot (source, slot, programName = `Program ${slot}`) {
-        return this._enqueueCommand(() => this._saveProgramToSlotNow(source, slot, programName));
+        return this._withVisionSuspended(() => this._saveProgramToSlotNow(source, slot, programName));
     }
 
     downloadProgram ({source, slot, programName = `Program ${slot}`} = {}) {
-        return this._enqueueCommand(() => this._saveProgramToSlotNow(source, slot, programName));
+        return this._withVisionSuspended(() => this._saveProgramToSlotNow(source, slot, programName));
     }
 
     loadAndRunProgram (slot, timeoutMs = PYTHON_PROGRAM_NO_TIMEOUT_MS) {
-        return this._enqueueCommand(() => this._loadAndRunProgramNow(slot, timeoutMs));
+        return this._withVisionSuspended(() => this._loadAndRunProgramNow(slot, timeoutMs));
     }
 
     runProgram ({
@@ -409,7 +794,7 @@ export class EstDeviceService {
         programName = `Program ${slot}`,
         timeoutMs = PYTHON_PROGRAM_NO_TIMEOUT_MS
     } = {}) {
-        return this._enqueueCommand(async () => {
+        return this._withVisionSuspended(async () => {
             const download = await this._saveProgramToSlotNow(source, slot, programName);
             // SAVE verifies the persistent copy and leaves the same source valid in RAM.
             // Run that copy directly instead of reading the slot back from flash.
@@ -421,11 +806,22 @@ export class EstDeviceService {
     }
 
     stopCurrentProgram () {
-        return this._enqueueCommand(() => this._stopCurrentProgramNow());
+        return this._withVisionSuspended(async () => {
+            const status = await this._stopCurrentProgramNow();
+            await this._tryClearVisionOnDeviceNow(VISION_SENSOR_CLEAR_REASON_PROGRAM_STOPPED);
+            return status;
+        });
+    }
+
+    _withVisionSuspended (operation) {
+        this.suspendVision();
+        const queuedOperation = this._enqueueCommand(operation);
+        return queuedOperation.finally(() => this.resumeVision());
     }
 
     _enqueueCommand (operation) {
-        const queuedOperation = this.commandQueue.then(operation);
+        this.pendingCommands++;
+        const queuedOperation = this.commandQueue.then(operation).finally(() => { this.pendingCommands--; });
         this.commandQueue = queuedOperation.catch(() => null);
         return queuedOperation;
     }
@@ -482,6 +878,7 @@ export class EstDeviceService {
             );
         }
         await this._stopCurrentProgramNow();
+        await this._tryClearVisionOnDeviceNow(VISION_SENSOR_CLEAR_REASON_PROGRAM_TRANSITION);
         const sourceCrc32 = crc32(sourceBytes);
         let status = await this._pythonProgramActionNow(
             buildPythonProgramBeginFrame(sourceBytes.length, sourceCrc32)
@@ -573,6 +970,7 @@ export class EstDeviceService {
     }
 
     async _runReadyProgramNow (timeoutMs) {
+        await this._tryClearVisionOnDeviceNow(VISION_SENSOR_CLEAR_REASON_PROGRAM_TRANSITION);
         const runFrame = buildPythonProgramRunFrame(timeoutMs);
         let runStatus;
         try {
@@ -636,6 +1034,20 @@ export class EstDeviceService {
 
     _updatePythonProgramActivity (status) {
         this.pythonProgramActive = this._pythonProgramActive(status);
+        if (this.pythonProgramActive) {
+            this._scheduleVisionDispatch();
+        } else {
+            this._cancelVisionTimer();
+        }
+    }
+
+    async _tryClearVisionOnDeviceNow (reason) {
+        try {
+            return await this._clearVisionOnDeviceNow(reason);
+        } catch (error) {
+            this.visionLastError = error.message;
+            return null;
+        }
     }
 
     async _pythonProgramActionNow (frame, timeoutMs = this.requestTimeoutMs) {
@@ -755,7 +1167,7 @@ export class EstDeviceService {
             throw new Error(`Timed out waiting for EST command 0x${command.toString(16)}`);
         } catch (error) {
             if (isTransportDisconnectError(error)) {
-                await this._disconnectNow();
+                await this._disconnectNow(false);
                 throw new Error(EST_USB_DISCONNECTED_MESSAGE);
             }
             throw error;

@@ -43,7 +43,20 @@ if (typeof TextEncoder === 'undefined') {
         transformedSb1StartIndex
     );
 
-    return `${withoutTextEncoding.slice(0, transformedSb1StartIndex)};${withoutTextEncoding.slice(
+    const transformed = `${withoutTextEncoding.slice(0, transformedSb1StartIndex)};${withoutTextEncoding.slice(
         transformedSb1EndIndex + '\n            });'.length
     )}`;
+    return transformed
+        .replace('return StringUtil.stringify(sb3.serialize(this.runtime));',
+            `return StringUtil.stringify(require('est-hardware-project').serializeHardwareProject(
+            sb3.serialize(this.runtime), this.runtime));`)
+        .replace('    deserializeProject (projectJSON, zip) {',
+            `    deserializeProject (projectJSON, zip) {
+        projectJSON = require('est-extension-library').restoreVisionExtension(projectJSON);
+        return require('est-hardware-project').loadHardwareProject(this, projectJSON,
+            () => this.deserializeHardwareProject(projectJSON, zip));
+    }
+
+    deserializeHardwareProject (projectJSON, zip) {
+        this.extensionManager.clearDeviceExtension();`);
 };

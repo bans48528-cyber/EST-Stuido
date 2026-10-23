@@ -22,6 +22,8 @@ module.exports = function (source) {
     }
 
     return source
+        .replace('return this.generateXMLfromBlockInfo(target, this._blockInfo);',
+            'return this.generateXMLfromBlockInfo(target, this._blockInfo).concat(_loadedDeviceExtensionsInfo);')
         .replace(initialRealtimeMode, '        this._isRealtimeMode = false;')
         .replace(
             finalCorePackage,

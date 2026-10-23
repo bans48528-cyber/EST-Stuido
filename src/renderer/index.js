@@ -21,6 +21,9 @@ case 'loading':
 case 'app':
     routeModulePromise = import('./app.jsx');
     break;
+case 'vision':
+    routeModulePromise = import('./vision.jsx');
+    break;
 case 'about':
     routeModulePromise = import('./about.jsx');
     break;

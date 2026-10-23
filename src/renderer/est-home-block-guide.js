@@ -177,6 +177,15 @@ const EST_HOME_BLOCK_GUIDE_CATEGORIES = [
         ]
     },
     {
+        id: 'vision',
+        title: 'category.vision',
+        modes: ['home.blockGuide.mode.vision.target'],
+        items: ['vision_valid', 'vision_gesture',
+            'vision_class', 'vision_position', 'vision_wait_state', 'vision_wait_gesture',
+            'vision_face_detected', 'vision_face_action', 'vision_wait_face',
+            'vision_pose_detected', 'vision_pose_action', 'vision_wait_pose']
+    },
+    {
         id: 'operators',
         title: 'home.blockGuide.category.operators',
         modes: [
@@ -243,7 +252,7 @@ const EST_HOME_BLOCK_GUIDE_CATEGORIES = [
 ];
 
 const EST_HOME_CUSTOM_BLOCK_IDS = EST_HOME_BLOCK_GUIDE_CATEGORIES
-    .slice(0, 7)
+    .filter(category => !['operators', 'variables', 'myBlocks'].includes(category.id))
     .reduce((ids, category) => ids.concat(category.items), []);
 
 export {

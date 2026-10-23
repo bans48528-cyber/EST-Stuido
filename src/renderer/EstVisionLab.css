@@ -1,0 +1,218 @@
+.lab {
+    position: fixed;
+    inset: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    background: #f4f7fa;
+    color: #182235;
+    font-family: "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+}
+
+.body { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 0 12px 12px; }
+
+.header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+    padding: 0 8px 0 14px;
+    border-bottom: 1px solid #d7dee7;
+    background: #ffffff;
+    user-select: none;
+}
+
+.header h1 { margin: 0; font-size: 15px; }
+
+.closeButton {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.closeButton:hover { background: #edf2f7; }
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+}
+
+.toolbar label { font-size: 12px; font-weight: 700; }
+.toolbar select {
+    flex: 1 1 160px;
+    min-width: 0;
+    width: 160px;
+    height: 30px;
+    padding: 0 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 12px;
+    text-overflow: ellipsis;
+}
+
+.startButton,
+.stopButton {
+    min-height: 30px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 6px;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.startButton { background: #1caf72; }
+.stopButton { background: #eb5a59; }
+.startButton:disabled,
+.stopButton:disabled { opacity: 0.55; cursor: default; }
+
+.workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 120px;
+    gap: 12px;
+    min-height: 0;
+    padding: 0;
+}
+
+.preview {
+    position: relative;
+    align-self: start;
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid #c9d4df;
+    border-radius: 4px;
+    background: #121820;
+    aspect-ratio: 4 / 3;
+}
+
+.preview video,
+.preview canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+.preview canvas { transform: none; pointer-events: none; }
+
+.cameraIdle {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #aeb8c6;
+    font-size: 12px;
+    padding: 12px;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.recognition { display: flex; flex-direction: column; gap: 16px; padding-top: 14px; }
+.recognitionToggle { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 12px; cursor: pointer; }
+.recognitionToggle span { min-width: 0; overflow-wrap: anywhere; }
+.recognitionToggle input {
+    appearance: none;
+    position: relative;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 20px;
+    margin: 0;
+    border: 0;
+    border-radius: 10px;
+    background: #d1d6db;
+    cursor: pointer;
+}
+.recognitionToggle input::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    top: 3px;
+    left: 3px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+    transition: transform 140ms ease;
+}
+.recognitionToggle input:checked { background: #159fd6; }
+.recognitionToggle input:checked::after { transform: translateX(16px); }
+.recognitionToggle input:disabled { cursor: default; opacity: 0.7; }
+.lab button:focus-visible, .lab input:focus-visible, .lab select:focus-visible, .lab summary:focus-visible {
+    outline: 2px solid #159fd6;
+    outline-offset: 2px;
+}
+
+.results {
+    margin-top: 12px;
+    padding: 10px 0 0;
+    border-top: 1px solid #dce3e9;
+}
+
+.results h2 { margin: 0 0 6px; font-size: 13px; }
+.resultGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
+
+.resultRow {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) auto;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+}
+
+.resultRow span { color: #738096; font-size: 12px; overflow-wrap: anywhere; }
+.resultRow strong { overflow-wrap: anywhere; font-size: 12px; font-weight: 500; }
+.resultRow small { color: #26885f; font-weight: 700; }
+
+.metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.metrics span {
+    min-width: 0;
+    padding: 5px 0;
+    color: #6b778b;
+    text-align: center;
+    font-size: 11px;
+}
+
+.metrics b { display: block; color: #243247; font-size: 13px; }
+.metrics span { overflow-wrap: anywhere; }
+.startButton, .stopButton { max-width: 100%; padding: 6px 10px; overflow-wrap: anywhere; }
+.loadingStatus > div { min-width: 0; overflow-wrap: anywhere; }
+.publisher { margin: 8px 0 0; padding-top: 8px; border-top: 1px solid #dce3e9; color: #52627a; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.error { margin: 10px 0 0; padding: 8px; border: 1px solid #efaaa6; border-radius: 6px; background: #fff0ef; color: #b73532; font-size: 12px; overflow-wrap: anywhere; }
+.loadingStatus { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 10px; border: 1px solid #b7d9eb; border-radius: 6px; background: #eaf5fc; font-size: 12px; }
+.loadingStatus strong, .loadingStatus div > span { display: block; line-height: 1.6; }
+.loadingStatus div > span { color: #52627a; }
+.spinner { width: 18px; height: 18px; flex: 0 0 18px; border: 2px solid #b7d9eb; border-top-color: #159fd6; border-radius: 50%; animation: modelSpin 1s linear infinite; }
+@keyframes modelSpin { to { transform: rotate(360deg); } }
+
+@media (max-width: 450px) {
+    .workspace { grid-template-columns: minmax(0, 1fr); }
+    .recognition { flex-direction: row; flex-wrap: wrap; gap: 10px 16px; padding-top: 0; }
+    .recognitionToggle { flex: 1 1 calc(50% - 16px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .recognitionToggle input::after { transition: none; }
+    .spinner { animation: none; }
+}

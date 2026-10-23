@@ -35,6 +35,8 @@ import sensorUltrasonicBlockIconCentered from './est-sensor-ultrasonic-icon-cent
 import steeringArrowIcon from './steering-arrow.svg';
 import workspaceRedoIcon from './workspace-redo.svg';
 import workspaceUndoIcon from './workspace-undo.svg';
+import {VISION_BLOCK_IDS} from '../est-extensions/library';
+import {FACE_ACTIONS, POSE_ACTIONS} from '../est-vision/visual-classes';
 import {
     EST_DEFAULT_LOCALE,
     EST_LOCALE_CHANGED_EVENT,
@@ -53,7 +55,8 @@ const CATEGORY_COLOURS = {
     sound: {primary: '#BF70E7', secondary: '#A239D8', tertiary: '#763696'},
     event: {primary: '#F5C400', secondary: '#D9B100', tertiary: '#B89A00'},
     control: {primary: '#FFB515', secondary: '#E39B00', tertiary: '#C18401'},
-    sensing: {primary: '#1DCCF0', secondary: '#00A8C9', tertiary: '#008AA6'}
+    sensing: {primary: '#1DCCF0', secondary: '#00A8C9', tertiary: '#008AA6'},
+    vision: {primary: '#159C8A', secondary: '#108574', tertiary: '#086757'}
 };
 
 const CATEGORY_BLOCK_IDS = {
@@ -151,7 +154,8 @@ const CATEGORY_BLOCK_IDS = {
         'sensor_wait_gyro',
         'sensor_timer',
         'sensor_timer_reset'
-    ]
+    ],
+    vision: VISION_BLOCK_IDS
 };
 
 const ALL_EST_BLOCK_IDS = Object.values(CATEGORY_BLOCK_IDS).reduce(
@@ -371,6 +375,22 @@ const sensorGyroIcon = blockIcon('EST_SENSOR_GYRO_ICON', sensorGyroBlockIcon, 'i
     centeredSrc: sensorGyroBlockIconCentered
 });
 const dropdown = (name, options) => ({type: 'field_dropdown', name, options});
+const visionGestureFields = locale => [
+    dropdown('SIDE', [[getEstText('vision.left', locale), 'left'], [getEstText('vision.right', locale), 'right']]),
+    dropdown('GESTURE', ['palm', 'fist', 'thumb', 'point', 'victory', 'other'].map((name, i) => (
+        [getEstText(`vision.${name}`, locale), String(i + 1)]
+    )))
+];
+const visionTargetOptions = locale => [
+    [getEstText('vision.left', locale), 'left'],
+    [getEstText('vision.right', locale), 'right'],
+    [getEstText('vision.pose', locale), 'pose'],
+    [getEstText('vision.face', locale), 'face']
+];
+const visionTargetFields = locale => [dropdown('TARGET', visionTargetOptions(locale))];
+const visionStateFields = locale => [dropdown('TARGET', visionTargetOptions(locale)), dropdown('STATE', [
+    [getEstText('vision.valid', locale), 'valid'], [getEstText('vision.invalid', locale), 'invalid']
+])];
 const valueInput = (name, check) => {
     const input = {type: 'input_value', name};
     // OpenBlock variables report String, so EST numeric inputs stay untyped at
@@ -388,7 +408,8 @@ const categoryForStyle = style => {
         sound: 'sounds',
         event: 'events',
         control: 'control',
-        sensing: 'sensing'
+        sensing: 'sensing',
+        vision: 'vision'
     };
     return categories[style];
 };
@@ -1146,6 +1167,39 @@ const makeSensorDefinitions = (ScratchBlocks, locale = getCurrentEstLocale()) =>
     ];
 };
 
+const makeVisionDefinitions = (ScratchBlocks, locale) => {
+    return [
+        booleanReporterWithIcon(ScratchBlocks, 'vision', 'vision_valid', sensorHostIcon,
+            getEstText('block.vision.valid', locale), visionTargetFields(locale)),
+        booleanReporterWithIcon(ScratchBlocks, 'vision', 'vision_gesture', sensorHostIcon,
+            getEstText('block.vision.gesture', locale), visionGestureFields(locale)),
+        reporterWithIcon(ScratchBlocks, 'vision', 'vision_class', sensorHostIcon,
+            getEstText('block.vision.class', locale), visionTargetFields(locale)),
+        reporterWithIcon(ScratchBlocks, 'vision', 'vision_position', sensorHostIcon,
+            getEstText('block.vision.position', locale), [
+                dropdown('TARGET', visionTargetOptions(locale)),
+                dropdown('PROPERTY', ['x', 'y', 'width', 'height'].map((name, i) =>
+                    [getEstText('vision.' + name, locale), String(i + 3)]))
+            ]),
+        commandWithIcon('vision', 'vision_wait_state', sensorHostIcon,
+            getEstText('block.vision.waitState', locale), visionStateFields(locale)),
+        commandWithIcon('vision', 'vision_wait_gesture', sensorHostIcon,
+            getEstText('block.vision.waitGesture', locale), visionGestureFields(locale)),
+        ...['face', 'pose'].reduce((definitions, kind) => {
+            const fields = () => [dropdown('ACTION', (kind === 'face' ? FACE_ACTIONS : POSE_ACTIONS)
+                .map(action => [getEstText(`vision.${kind}.${action.id}`, locale), action.id]))];
+            return definitions.concat([
+                booleanReporterWithIcon(ScratchBlocks, 'vision', `vision_${kind}_detected`, sensorHostIcon,
+                    getEstText(`block.vision.${kind}.detected`, locale)),
+                booleanReporterWithIcon(ScratchBlocks, 'vision', `vision_${kind}_action`, sensorHostIcon,
+                    getEstText(`block.vision.${kind}.action`, locale), fields()),
+                commandWithIcon('vision', `vision_wait_${kind}`, sensorHostIcon,
+                    getEstText(`block.vision.${kind}.wait`, locale), fields())
+            ]);
+        }, [])
+    ];
+};
+
 const makeEstBlockDefinitions = (ScratchBlocks, locale = getCurrentEstLocale()) => [
     makeSteeringPickerDefinition(ScratchBlocks),
     makeMotorPortPickerDefinition(ScratchBlocks, 'motor', EST_MOTOR_PORT_PICKER_ID),
@@ -1157,7 +1211,8 @@ const makeEstBlockDefinitions = (ScratchBlocks, locale = getCurrentEstLocale()) 
     ...makeSoundDefinitions(locale),
     ...makeEventDefinitions(locale),
     ...makeControlDefinitions(locale),
-    ...makeSensorDefinitions(ScratchBlocks, locale)
+    ...makeSensorDefinitions(ScratchBlocks, locale),
+    ...makeVisionDefinitions(ScratchBlocks, locale)
 ];
 
 const registeredTargets = new WeakSet();
@@ -1389,7 +1444,7 @@ const configureEstWorkspaceControls = ScratchBlocks => {
     configuredZoomControlTypes.add(ZoomControls);
 };
 
-const defineEstBlocksWithLocale = (ScratchBlocks, locale = getCurrentEstLocale()) => {
+export const defineEstBlocksWithLocale = (ScratchBlocks, locale = getCurrentEstLocale()) => {
     const definitions = makeEstBlockDefinitions(ScratchBlocks, locale);
     EST_REPLACED_OPENBLOCK_BLOCK_IDS.forEach(blockId => {
         if (ScratchBlocks.Blocks &&
@@ -1433,7 +1488,7 @@ const registerEstLocaleListener = ScratchBlocks => {
     registeredLocaleListeners.add(ScratchBlocks);
 };
 
-export const registerEstBlocks = ScratchBlocks => {
+export const registerEstBlocks = (ScratchBlocks, locale = EST_DEFAULT_LOCALE) => {
     configureEstWorkspaceControls(ScratchBlocks);
     configureDisplayImageDropdownThumbnails(ScratchBlocks);
     configureEstDataCategory(ScratchBlocks);
@@ -1442,7 +1497,7 @@ export const registerEstBlocks = ScratchBlocks => {
     registerEstSteeringField(ScratchBlocks);
     registerEstDisplayBitmapField(ScratchBlocks);
     registerEstInfraredChannelMigrationExtension(ScratchBlocks);
-    defineEstBlocksWithLocale(ScratchBlocks);
+    defineEstBlocksWithLocale(ScratchBlocks, locale);
     registerEstLocaleListener(ScratchBlocks);
     registeredTargets.add(ScratchBlocks);
 };

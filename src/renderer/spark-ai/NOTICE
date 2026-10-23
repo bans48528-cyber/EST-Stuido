@@ -1,0 +1,16 @@
+Source provenance
+
+catalog.json and source-generators.js are derived from the user-supplied Spark AI
+1.1.9 visible-block extraction dated 2026-10-23. Original source/API ownership
+is retained; these files do not assert a new license for the supplied software.
+
+The extracted upstream Blockly/OpenBlock Python generator sources include:
+Copyright 2012 Google Inc.
+Copyright 2021 openblock.cc.
+Licensed under the Apache License, Version 2.0.
+https://www.apache.org/licenses/LICENSE-2.0
+
+EST Studio uses its installed Blockly.Generator for traversal and precedence.
+Integration adaptations and corrections are maintained separately in blocks.js,
+matrix-field.js and python-generator.js. The original source mappings remain
+reproducible through scripts/import-spark-ai-blocks.js.

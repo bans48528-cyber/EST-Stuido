@@ -7,6 +7,7 @@ import {
     makeEstBlockDefinitions
 } from '../est-blocks/definitions';
 import {EST_PIANO_MIN_MIDI_NOTE, EST_PIANO_MAX_MIDI_NOTE} from '../est-blocks/piano-resources';
+import {EST_AI_NATIVE_SPECS, getEstAiProcedureInputs} from './est-native-spec';
 
 export const EST_AI_IR_VERSION = 1;
 export const EST_AI_MAX_STACKS = 8;
@@ -110,6 +111,10 @@ const specFromDefinition = definition => {
                     kind: 'enum',
                     values: argument.options.map(option => String(option[1]))
                 };
+            } else if (definition.type === 'display_draw' && argument.name === 'BITMAP') {
+                fields.BITMAP = {kind: 'bitmap',
+                    default: 'v1:',
+                    format: '{rows:["010","111"],x:0,y:0,scale:1}; 0=white,1=black; canvas=180x128'};
             } else if (argument.type === 'input_statement') {
                 branches[argument.name] = inputDescriptorFor(definition.type, argument);
             } else if (argument.type === 'input_value') {
@@ -251,11 +256,12 @@ const estDefinitions = makeEstBlockDefinitions(BLOCK_SHAPES)
 export const EST_AI_BLOCK_SPEC = Object.freeze(estDefinitions.reduce((spec, definition) => {
     spec[definition.type] = Object.freeze(specFromDefinition(definition));
     return spec;
-}, {...nativeOperatorSpecs}));
+}, {...nativeOperatorSpecs, ...EST_AI_NATIVE_SPECS}));
 
 export const EST_AI_ALLOWED_BLOCK_IDS = Object.freeze(Object.keys(EST_AI_BLOCK_SPEC));
 
-const categoryOrder = ['event', 'movement', 'motor', 'display', 'sound', 'control', 'sensing', 'operators'];
+const categoryOrder = ['event', 'movement', 'motor', 'display', 'sound', 'control', 'sensing', 'vision',
+    'operators', 'variables', 'procedures'];
 
 export const EST_AI_RULE_CATEGORIES = Object.freeze(categoryOrder.reduce((categories, category) => {
     categories[category] = Object.freeze(EST_AI_ALLOWED_BLOCK_IDS.filter(
@@ -276,3 +282,10 @@ export const getEstAiBlockSpecsForCategories = categories => {
 export const getEstAiBlockSpec = type => (
     Object.prototype.hasOwnProperty.call(EST_AI_BLOCK_SPEC, type) ? EST_AI_BLOCK_SPEC[type] : null
 );
+
+export const getEstAiNodeSpec = (node, procedures = []) => {
+    const base = getEstAiBlockSpec(node.type);
+    if (node.type !== 'procedures_call') return base;
+    const procedure = procedures.find(item => item.name === (node.fields && node.fields.PROCEDURE));
+    return procedure ? {...base, inputs: getEstAiProcedureInputs(procedure)} : base;
+};

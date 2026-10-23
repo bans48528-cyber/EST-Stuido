@@ -14,6 +14,7 @@ import {createEstProgramStackPreviews} from '../../src/renderer/est-ai/est-progr
 import {EST_AI_IMPORT_REQUEST_EVENT, importEstBlockIrToWorkspace} from '../../src/renderer/est-ai/est-ai-workspace';
 import styles from '../../src/renderer/EstAiPanel.css';
 import mascotStyles from '../../src/renderer/EstAiMascot.css';
+import {runCoverageUiTests} from './coverage-ui';
 
 const delay = () => new Promise(resolve => setTimeout(resolve, 40));
 const settlePaint = () => new Promise(resolve => setTimeout(resolve, 220));
@@ -304,6 +305,7 @@ window.runEstAiUiTests = async () => {
         assert.ok(panel.state.messages[panel.state.messages.length - 1].error);
         await until(() => mascot().dataset.state === 'idle');
     }
+    await runCoverageUiTests({workspace, panel, until});
     ReactDOM.unmountComponentAtNode(document.getElementById('root'));
     workspace.dispose();
     return 'EST AI UI passed: real SVG previews, insert/replace undo, menu layering, focus, IME, drag and resize';

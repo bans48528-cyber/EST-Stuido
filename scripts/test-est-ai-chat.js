@@ -13,6 +13,7 @@ const originalLoad = Module._load;
 const originalJs = Module._extensions['.js'];
 const originalJsx = Module._extensions['.jsx'];
 const originalSvg = Module._extensions['.svg'];
+Module._extensions['.png'] = (module, filename) => { module.exports = filename; };
 const originalCss = Module._extensions['.css'];
 const invocations = [];
 let invoke = async () => ({ok: true, data: {configured: false}});
@@ -77,6 +78,8 @@ const customConfig = {
 };
 const {EstAiPanel} = require('../src/renderer/EstAiPanel.jsx');
 const validContent = JSON.stringify({message: '已生成程序。', ir: SAMPLE_IR});
+const {makeCoverageIr} = require('./ai-ui-test/coverage-fixture');
+const {EST_AI_RULE_CATEGORY_IDS} = require('../src/renderer/est-ai/est-block-spec');
 const deferred = () => {
     let resolve;
     const promise = new Promise(done => {
@@ -169,9 +172,12 @@ const run = async () => {
         const cancelled = requestEstAiCompletion({...transportInput, signal: controller.signal});
         controller.abort();
         await assert.rejects(cancelled, /取消/);
-        global.setTimeout = callback => originalTimeout(callback, 1);
+        global.setTimeout = (callback, milliseconds) => {
+            assert.strictEqual(milliseconds, 480000);
+            return originalTimeout(callback, 1);
+        };
         await assert.rejects(requestEstAiCompletion(transportInput), error => {
-            assert.match(error.message, /90 秒/);
+            assert.match(error.message, /8 分钟/);
             assert.strictEqual(error.code, 'REQUEST_TIMEOUT');
             return true;
         });
@@ -194,6 +200,32 @@ const run = async () => {
     assert.match(partialPrompt, /control_wait_seconds/);
     assert.doesNotMatch(partialPrompt, /display_image_for/);
     assert.doesNotMatch(partialPrompt, /sensor_touch_pressed/);
+    assert.doesNotMatch(partialPrompt, /IR.variables|IR.procedures|BITMAP accepts/);
+    const completeCategories = selectEstAiRuleCategories([{role: 'user',
+        text: '生成随机变量存入列表，用带参数的自定义积木显示，再画爱心'}]);
+    for (const category of ['variables', 'procedures', 'operators', 'control', 'display']) {
+        assert.ok(completeCategories.includes(category), `Missing selected category: ${category}`);
+    }
+    const fullPrompt = buildEstAiSystemPrompt('zh-cn', completeCategories);
+    assert.match(fullPrompt, /IR.variables/);
+    assert.match(fullPrompt, /IR.procedures/);
+    assert.match(fullPrompt, /display_draw.fields.BITMAP/);
+    assert.doesNotMatch(fullPrompt, /custom procedures.*not supported/);
+    assert.ok(Buffer.byteLength(fullPrompt) < 100000);
+    const allRules = buildEstAiSystemPrompt('zh-cn', EST_AI_RULE_CATEGORY_IDS);
+    assert.ok(allRules.length < 100000 && Buffer.byteLength(allRules) < 200000,
+        'Full catalog must fit within the service limits');
+    for (const [text, category] of [['随机数', 'operators'], ['取整', 'operators'], ['画爱心', 'display'],
+        ['create a list', 'variables'], ['custom block with arguments', 'procedures']]) {
+        assert.ok(selectEstAiRuleCategories([{role: 'user', text}]).includes(category));
+    }
+    const fullReply = parseEstAiReply(JSON.stringify({message: '完成', ir: makeCoverageIr()}));
+    assert.strictEqual(fullReply.ir.variables.length, 2);
+    assert.strictEqual(fullReply.ir.procedures.length, 1);
+    const followUp = selectEstAiRuleCategories([
+        {role: 'assistant', text: '完成', ir: fullReply.ir}, {role: 'user', text: '把次数改为 5'}
+    ]);
+    assert.ok(['variables', 'procedures', 'display', 'operators'].every(category => followUp.includes(category)));
     const hardwareContext = createEstAiHardwareContext({
         state: 'connected',
         status: {
@@ -229,6 +261,35 @@ const run = async () => {
     assert.deepStrictEqual(normalizeEstAiConfig({...customConfig, provider: 'custom'}), customConfig,
         'Legacy custom provider must migrate to optional manual setup');
     assert.match(parseEstAiReply(validContent).compiled.xml, /drive_move_for/);
+    const commaReply = validContent.replace(/\]\}/g, ',]}');
+    assert.deepStrictEqual(parseEstAiReply(commaReply).ir, parseEstAiReply(validContent).ir);
+    const punctuationMessage = '保留 ,] 和 ,} 以及 "引号" 与 \\ 路径';
+    assert.strictEqual(parseEstAiReply(`${JSON.stringify({message: punctuationMessage, ir: null}).slice(0, -1)},}`)
+        .message, punctuationMessage, 'Normalization must not alter string contents');
+    assert.throws(() => parseEstAiReply('{"message":"bad","ir":]}'), error => error.code === 'AI_JSON_SYNTAX');
+    assert.throws(() => parseEstAiReply('{"message":"bad","ir":undefined}'));
+    let syntaxAttempts = 0;
+    const recovered = await generateEstAiReply({
+        id: 'syntax-repair',
+        messages: [{role: 'user', text: '前进一圈'}],
+        locale: 'zh-cn',
+        invoke: async (channel, request) => {
+            syntaxAttempts++;
+            if (syntaxAttempts > 1) {
+                assert.strictEqual(request.messages.length, 4, 'Only the latest invalid response is retained');
+                assert.match(request.messages[3].content, /complete corrected JSON/);
+            }
+            return {ok: true, data: {content: syntaxAttempts < 3 ? '{"message":"bad","ir":]}' : validContent}};
+        }
+    });
+    assert.ok(recovered.compiled);
+    assert.strictEqual(syntaxAttempts, 3);
+    await assert.rejects(generateEstAiReply({
+        id: 'syntax-exhausted',
+        messages: [{role: 'user', text: '前进一圈'}],
+        locale: 'zh-cn',
+        invoke: async () => ({ok: true, data: {content: '{"message":"bad","ir":]}'}})
+    }), /模型连续返回了无效 JSON/);
     assert.strictEqual(parseEstAiReply('{"message":"需要什么端口？","ir":null}').compiled, null);
     for (const content of [
         'not JSON', '{"message":"empty"}', '{"message":"","ir":null}',
@@ -241,6 +302,50 @@ const run = async () => {
                 ...SAMPLE_IR, stacks: [{event: {type: '__proto__'}, body: []}]
             }})
     ]) assert.throws(() => parseEstAiReply(content));
+
+    // Regression: a clarification with ir:null must not drop the original task's rules.
+    const followerMessages = [{role: 'user', text: '我要一个C电机监控B电机位置角度，并实时跟随的程序'}];
+    const followerCategories = ['event', 'motor', 'control', 'operators'];
+    assert.deepStrictEqual(selectEstAiRuleCategories(followerMessages), followerCategories);
+    const clarification = await generateEstAiReply({
+        id: 'follower-clarification',
+        locale: 'zh-cn',
+        messages: followerMessages,
+        invoke: async () => ({ok: true,
+            data: {content: JSON.stringify({
+                message: 'B 和 C 是否各接一台独立电机，同向还是反向？', ir: null
+            })}})
+    });
+    followerMessages.push({role: 'assistant', text: clarification.message, ir: clarification.ir});
+    followerMessages.push({role: 'user', text: 'B 和 C 各接一台独立电机 同向跟踪'});
+    assert.deepStrictEqual(selectEstAiRuleCategories(followerMessages), followerCategories);
+    await generateEstAiReply({
+        id: 'follower-confirmed',
+        locale: 'zh-cn',
+        messages: followerMessages,
+        invoke: async (channel, request) => {
+            const prompt = request.messages[0].content;
+            assert.match(prompt, /motor_degrees/);
+            assert.match(prompt, /control_forever/);
+            assert.match(prompt, /operator_subtract/);
+            assert.doesNotMatch(prompt, /sensor_touch_pressed/);
+            assert.strictEqual(request.messages[1].content, followerMessages[0].text);
+            assert.strictEqual(request.messages[3].content, followerMessages[2].text);
+            return {ok: true, data: {content: JSON.stringify({message: '已确认端口和方向。', ir: null})}};
+        }
+    });
+    assert.deepStrictEqual(selectEstAiRuleCategories(followerMessages.concat(
+        {role: 'assistant', text: '确认使用当前位置？', ir: null}, {role: 'user', text: '是的'}
+    )), followerCategories);
+    assert.deepStrictEqual(selectEstAiRuleCategories([
+        {role: 'user', text: '电机角度实时跟随', localOnly: true},
+        {role: 'assistant', text: '失败', ir: SAMPLE_IR, error: true},
+        {role: 'user', text: '你好'}
+    ]), []);
+    assert.deepStrictEqual(selectEstAiRuleCategories([]), []);
+    assert.deepStrictEqual(selectEstAiRuleCategories(followerMessages.concat(
+        Array.from({length: 12}, () => ({role: 'user', text: '你好'}))
+    )), []);
 
     let attempts = 0;
     const reply = await generateEstAiReply({

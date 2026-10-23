@@ -9,7 +9,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const rendererRoot = path.join(root, 'src', 'renderer');
 const originalLoader = Module._extensions['.js'];
 Module._extensions['.js'] = (module, filename) => {
-    if (!filename.startsWith(rendererRoot)) return originalLoader(module, filename);
+    if (!filename.startsWith(path.join(root, 'src'))) return originalLoader(module, filename);
     const transformed = babel.transformSync(fs.readFileSync(filename, 'utf8'), {
         babelrc: false,
         plugins: ['@babel/plugin-transform-modules-commonjs']
@@ -50,7 +50,20 @@ for (const asset of [
     'editor-screenshot.png',
     'home-guide-ai-welcome.png',
     'home-guide-ai-settings.png',
-    'home-guide-ai-conversation.png'
+    'home-guide-ai-conversation.png',
+    'home-guide-vision-camera.png',
+    'home-guide-est-host-home.png',
+    'home-guide-est-host-programs.png',
+    'home-guide-est-host-ports.png',
+    'home-guide-est-host-settings.png',
+    'home-guide-est-host-home-en.png',
+    'home-guide-est-host-programs-en.png',
+    'home-guide-est-host-ports-en.png',
+    'home-guide-est-host-settings-en.png',
+    'home-guide-est-host-home-pt-br.png',
+    'home-guide-est-host-programs-pt-br.png',
+    'home-guide-est-host-ports-pt-br.png',
+    'home-guide-est-host-settings-pt-br.png'
 ]) {
     const assetPath = path.join(root, 'src', 'renderer', 'est-home-assets', asset);
     assert.ok(fs.existsSync(assetPath), `missing home asset: ${asset}`);
@@ -107,8 +120,21 @@ assert.match(homeSource, /est-home-cancel-build-library-download/);
 assert.match(homeSource, /buildLibraryInstalled/);
 assert.match(homeSource, /est-home-open-build-guide/);
 assert.match(homeSource, /const INFO_DIALOGS =/);
+assert.match(homeSource, /home\.dialog\.est\.overviewTitle/);
+assert.match(homeSource, /est-build-library\/thumbnails\/basic-01\.jpg/);
+assert.match(homeSource, /home\.dialog\.vision\.startTitle/);
+assert.match(homeSource, /home-guide-vision-camera\.png/);
+assert.match(homeSource, /guide\.action === 'vision'/);
+assert.match(homeSource, /this\.props\.onOpenVision\(\)/);
 assert.match(homeSource, /home\.dialog\.interaction\.connectTitle/);
+assert.match(homeSource, /home\.dialog\.interaction\.hostTitle/);
 assert.match(homeSource, /home\.dialog\.hardware\.sensorTitle/);
+for (const section of ['hostHome', 'hostPrograms', 'hostPorts', 'hostRemote', 'hostMotor', 'hostSettings']) {
+    assert.ok(
+        homeSource.includes(`home.dialog.hardware.${section}Title`),
+        `missing hub UI guide section: ${section}`
+    );
+}
 assert.match(homeSource, /home\.dialog\.hardware\.firmwareTitle/);
 assert.match(homeSource, /home\.dialog\.hardware\.firmwareNote/);
 assert.match(homeSource, /home\.dialog\.blocks\.lead/);
@@ -130,6 +156,7 @@ assert.match(homeStyles, /overflow-y: auto/);
 assert.match(homeStyles, /\.guideSections/);
 assert.match(homeStyles, /\.guideNote/);
 assert.match(homeStyles, /\.guideFigure/);
+assert.match(homeStyles, /\.guideAction/);
 assert.match(homeStyles, /\.guideBackdrop/);
 assert.match(homeStyles, /\.guideScroller/);
 assert.match(homeStyles, /\.guideDialog[\s\S]*?overflow: hidden/);
@@ -167,8 +194,8 @@ for (const item of EST_HOME_BUILD_ITEMS) {
     }
 }
 
-assert.strictEqual(EST_HOME_CUSTOM_BLOCK_IDS.length, 81);
-assert.strictEqual(EST_HOME_BLOCK_GUIDE_CATEGORIES.length, 10);
+assert.strictEqual(EST_HOME_CUSTOM_BLOCK_IDS.length, 93);
+assert.strictEqual(EST_HOME_BLOCK_GUIDE_CATEGORIES.length, 11);
 assert.ok(
     EST_HOME_BLOCK_GUIDE_CATEGORIES.every(category => category.modes && category.modes.length),
     'every block category should explain its modes or parameters'
@@ -177,7 +204,7 @@ const documentedBlockIds = EST_HOME_BLOCK_GUIDE_CATEGORIES.reduce(
     (ids, category) => ids.concat(category.items),
     []
 );
-assert.strictEqual(documentedBlockIds.length, 114);
+assert.strictEqual(documentedBlockIds.length, 126);
 assert.strictEqual(new Set(documentedBlockIds).size, documentedBlockIds.length);
 for (const blockId of documentedBlockIds) {
     const messageId = `home.blockGuide.${blockId}`;
@@ -273,22 +300,85 @@ for (const messageId of [
     'home.build.resumeButton',
     'home.build.cancelButton',
     'home.build.downloadFailed',
+    'home.more.est',
+    'home.more.vision',
     'home.more.interaction',
     'home.more.hardware',
     'home.more.blocks',
     'home.more.ai',
     'home.more.software',
     'home.more.about',
+    'home.dialog.est.controller4',
+    'home.dialog.est.hardware3',
+    'home.dialog.est.programming4',
+    'home.dialog.est.smart2',
+    'home.dialog.est.use3',
+    'home.dialog.vision.program2',
+    'home.dialog.vision.firmware2',
+    'home.dialog.vision.privacy1',
     'home.dialog.interaction.program1',
+    'home.dialog.interaction.vision1',
     'home.dialog.hardware.output1',
+    'home.dialog.hardware.sensor5',
     'home.dialog.blocks.category8',
+    'home.dialog.blocks.category11',
     'home.dialog.ai.setup1',
     'home.dialog.ai.apply5',
+    'home.dialog.ai.scope5',
     'home.dialog.ai.privacy2',
     'home.dialog.software.file2',
+    'home.dialog.software.workspace4',
     'home.dialog.about.foundation3'
 ]) {
     assert.ok(i18nSource.includes(`'${messageId}'`), `missing home message: ${messageId}`);
+}
+for (const messageId of [
+    'home.more.est',
+    'home.dialog.est.lead',
+    'home.dialog.est.overviewImageCaption',
+    'home.dialog.est.controller2',
+    'home.dialog.est.hardware3',
+    'home.dialog.est.programming1',
+    'home.dialog.est.smart2',
+    'home.dialog.est.useNote',
+    'home.more.vision',
+    'home.dialog.vision.lead',
+    'home.dialog.vision.startImageCaption',
+    'home.dialog.vision.mode1',
+    'home.dialog.vision.program2',
+    'home.dialog.vision.firmware2',
+    'home.dialog.vision.privacy1',
+    'home.dialog.vision.troubleshoot4',
+    'home.dialog.interaction.vision1',
+    'home.dialog.interaction.host2',
+    'home.dialog.hardware.sensor5',
+    'home.dialog.hardware.hostHome4',
+    'home.dialog.hardware.hostPrograms3',
+    'home.dialog.hardware.hostPorts3',
+    'home.dialog.hardware.hostRemote2',
+    'home.dialog.hardware.hostMotorNote',
+    'home.dialog.hardware.hostSettings3',
+    'home.dialog.ai.scope5',
+    'home.dialog.software.workspace4'
+]) {
+    for (const locale of ['zh-cn', 'en']) {
+        assert.notStrictEqual(
+            getEstText(messageId, locale),
+            messageId,
+            `missing ${locale} home message: ${messageId}`
+        );
+    }
+}
+for (const messageId of new Set(
+    homeSource.match(/home\.dialog\.(?:hardware\.host|interaction\.host)[A-Za-z0-9]+/g) || []
+)) {
+    for (const locale of ['zh-cn', 'en']) {
+        assert.notStrictEqual(
+            getEstText(messageId, locale),
+            messageId,
+            `missing ${locale} hub UI guide message: ${messageId}`
+        );
+    }
 }
 assert.doesNotMatch(i18nSource, /home\.dialog\.(interaction|hardware|blocks|about)\.body/);
 

@@ -15,6 +15,7 @@ const EST_GUI_CLEANUP_LOADER = path.resolve(__dirname, './scripts/est-gui-cleanu
 const EST_GUI_CONTAINER_LOADER = path.resolve(__dirname, './scripts/est-gui-container-loader.js');
 const EST_APP_STATE_LOADER = path.resolve(__dirname, './scripts/est-app-state-loader.js');
 const EST_LOCALES_LOADER = path.resolve(__dirname, './scripts/est-locales-loader.js');
+const EST_BLOCK_LOCALES_LOADER = path.resolve(__dirname, './scripts/est-block-locales-loader.js');
 const EST_LOCAL_PROJECT_FETCHER_LOADER = path.resolve(
     __dirname,
     './scripts/est-local-project-fetcher-loader.js'
@@ -60,6 +61,9 @@ const EST_PYTHON_GENERATOR = path.resolve(__dirname, './src/renderer/est-blocks/
 const EST_EXTENSION_LIBRARY = path.resolve(__dirname, './src/renderer/est-extensions/library.js');
 const EST_DEFAULT_PROJECT = path.resolve(__dirname, './src/renderer/est-project/default-project.js');
 const EST_AI_WORKSPACE = path.resolve(__dirname, './src/renderer/est-ai/est-ai-workspace.js');
+const HARDWARE_MENU = path.resolve(__dirname, './src/renderer/hardware/HardwareMenu.jsx');
+const HARDWARE_PROJECT = path.resolve(__dirname, './src/renderer/hardware/project.js');
+const HARDWARE_CONTEXT = path.resolve(__dirname, './src/renderer/hardware/context.js');
 
 // PostCss
 const autoprefixer = require('autoprefixer');
@@ -170,6 +174,11 @@ const makeConfig = function (defaultConfig, options) {
                     loader: EST_LOCALES_LOADER
                 },
                 {
+                    test: /node_modules[/\\]openblock-l10n[/\\]locales[/\\]blocks-msgs\.js$/,
+                    enforce: 'pre',
+                    loader: EST_BLOCK_LOCALES_LOADER
+                },
+                {
                     test: /node_modules[/\\]openblock-gui[/\\]src[/\\]lib[/\\]project-fetcher-hoc\.jsx$/,
                     enforce: 'pre',
                     loader: EST_LOCAL_PROJECT_FETCHER_LOADER
@@ -252,7 +261,7 @@ const makeConfig = function (defaultConfig, options) {
                 },
                 {
                     // eslint-disable-next-line max-len
-                    test: /node_modules[/\\]openblock-gui[/\\]src[/\\](?:containers[/\\](?:blocks|prompt)|components[/\\](?:prompt[/\\]prompt|custom-procedures[/\\]custom-procedures))\.jsx$/,
+                    test: /node_modules[/\\]openblock-gui[/\\]src[/\\](?:containers[/\\](?:blocks|prompt|extension-library)|components[/\\](?:prompt[/\\]prompt|custom-procedures[/\\]custom-procedures))\.jsx$/,
                     enforce: 'pre',
                     loader: OPENBLOCK_NATIVE_EDITORS_LOADER
                 },
@@ -326,6 +335,7 @@ const makeConfig = function (defaultConfig, options) {
                 'est-hardware-status-button$': EST_HARDWARE_STATUS_BUTTON,
                 'est-code-drawer$': EST_CODE_DRAWER,
                 'est-code-drawer-toggle$': EST_CODE_DRAWER_TOGGLE,
+                'est-camera-button$': path.resolve(__dirname, 'src/renderer/EstCameraButton.jsx'),
                 'est-language-menu$': EST_LANGUAGE_MENU,
                 'est-menu-bar-layout$': EST_MENU_BAR_LAYOUT,
                 'est-menu-logo$': EST_MENU_LOGO,
@@ -336,7 +346,13 @@ const makeConfig = function (defaultConfig, options) {
                 'est-python-generator$': EST_PYTHON_GENERATOR,
                 'est-extension-library$': EST_EXTENSION_LIBRARY,
                 'est-default-project$': EST_DEFAULT_PROJECT,
-                'est-ai-workspace$': EST_AI_WORKSPACE
+                'est-ai-workspace$': EST_AI_WORKSPACE,
+                'est-hardware-menu$': HARDWARE_MENU,
+                'est-hardware-project$': HARDWARE_PROJECT,
+                'est-hardware-context$': HARDWARE_CONTEXT,
+                'est-hardware-code-drafts$': path.resolve(__dirname, './src/renderer/hardware/code-drafts.js'),
+                'spark-ai-blocks$': path.resolve(__dirname, './src/renderer/spark-ai/blocks.js'),
+                'spark-ai-python-generator$': path.resolve(__dirname, './src/renderer/spark-ai/python-generator.js')
             }
         }
     });

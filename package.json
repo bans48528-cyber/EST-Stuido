@@ -3,7 +3,7 @@
   "productName": "EST Studio",
   "description": "EST graphical programming desktop application based on OpenBlock",
   "author": "Openblock.cc Team <contact@openblock.cc> (http://www.openblock.cc/)",
-  "version": "2.8.35",
+  "version": "2.8.49",
   "license": "MIT",
   "scripts": {
     "postinstall": "electron-builder install-app-deps && node scripts/ensure-electron-native-arch.js",
@@ -13,6 +13,9 @@
     "start": "mkdirp ./dist && node scripts/launch-openblock.js",
     "ensure:native": "node scripts/ensure-electron-native-arch.js",
     "check:hid": "node scripts/check-est-hid.js",
+    "check:vision-hid": "node scripts/check-est-vision-hid.js",
+    "check:vision-stress": "node scripts/check-est-vision-stress-hid.js",
+    "check:vision-camera": "electron scripts/check-est-independent-vision-electron.js --guided",
     "compile": "mkdirp ./dist && node scripts/compile-openblock.js",
     "build": "npm run build:dev",
     "build:dev": "npm run compile && npm run doBuild -- --mode=dev",
@@ -24,8 +27,9 @@
     "publish": "npm run clean && npm run compile && npm run doBuild -- --mode=publish",
     "test": "npm run test:lint",
     "test:lint": "eslint --cache --color --ext .jsx,.js src scripts",
-    "test:est": "node scripts/test-est-protocol.js && node scripts/test-est-python-generation.js && node scripts/test-est-build-library.js && node scripts/test-est-home.js && node scripts/test-est-ai-ir.js && node scripts/test-est-ai-chat.js",
+    "test:est": "node scripts/test-est-protocol.js && node scripts/test-est-hardware-refresh.js && node scripts/test-est-hardware-selection.js && node scripts/test-est-vision.js && node scripts/test-est-holistic.js && node scripts/test-est-independent-vision.js && node scripts/test-est-camera-i18n.js && node scripts/test-est-python-generation.js && node scripts/test-est-build-library.js && node scripts/test-est-home.js && node scripts/test-est-ai-ir.js && node scripts/test-est-ai-chat.js",
     "test:python": "node scripts/test-est-python-generation.js",
+    "test:spark": "node scripts/test-spark-ai-blocks.js",
     "test:ai-ui": "node scripts/test-est-ai-ui.js"
   },
   "repository": {
@@ -37,6 +41,10 @@
   },
   "homepage": "https://github.com/bans48528-cyber/EST-Stuido#readme",
   "dependencies": {
+    "@mediapipe/face_mesh": "0.4.1633559619",
+    "@mediapipe/hands": "0.4.1675469240",
+    "@mediapipe/holistic": "^0.5.1675471629",
+    "@mediapipe/pose": "0.5.1675469404",
     "bytes": "^3.1.2",
     "extract-zip": "^1.7.0",
     "node-hid": "^2.1.2",

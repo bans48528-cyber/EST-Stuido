@@ -1,0 +1,3236 @@
+{
+  "source": {
+    "software": "Spark AI 1.1.9",
+    "extraction": "2026-10-23",
+    "fixed": 66,
+    "conditional": 13
+  },
+  "blocks": [
+    {
+      "id": "motor_specifiedunit",
+      "category": "motor",
+      "definition": {
+        "message0": "%1 %2 电机 %3 以 %4 %%功率转动 %5 秒",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGcgaWQ9IlhNTElEXzAwMDAwMDY0MzMyNjU2NTQyNDY2MTkwNzYwMDAwMDAzODg1NjYzNjIwODU2NTg5NzQ5XyI+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTExLjM0LDIuODdjLTQuNjgsMC04LjQ3LDMuNzktOC40Nyw4LjQ3YzAsNC42OCwzLjc5LDguNDcsOC40Nyw4LjQ3YzQuNjgsMCw4LjQ3LTMuNzksOC40Ny04LjQ3DQoJCUMxOS44MSw2LjY2LDE2LjAyLDIuODcsMTEuMzQsMi44N3ogTTUuNjksMTMuNDZjLTEuMTcsMC0yLjEyLTAuOTUtMi4xMi0yLjEyYzAtMS4xNywwLjk1LTIuMTIsMi4xMi0yLjEyDQoJCWMxLjE3LDAsMi4xMiwwLjk1LDIuMTIsMi4xMkM3LjgxLDEyLjUxLDYuODYsMTMuNDYsNS42OSwxMy40NnogTTExLjM0LDE5LjFjLTEuMTcsMC0yLjEyLTAuOTUtMi4xMi0yLjEyDQoJCWMwLTEuMTcsMC45NS0yLjEyLDIuMTItMi4xMmMxLjE3LDAsMi4xMiwwLjk1LDIuMTIsMi4xMkMxMy40NiwxOC4xNSwxMi41MSwxOS4xLDExLjM0LDE5LjF6IE0xMy4xNywxMC42NHYxLjQxaC0xLjEzdjEuMTNoLTEuNDENCgkJdi0xLjEzSDkuNXYtMS40MWgxLjEzVjkuNWgxLjQxdjEuMTNIMTMuMTd6IE0xMS4zNCw3LjgxYy0xLjE3LDAtMi4xMi0wLjk1LTIuMTItMi4xMmMwLTEuMTcsMC45NS0yLjEyLDIuMTItMi4xMg0KCQljMS4xNywwLDIuMTIsMC45NSwyLjEyLDIuMTJDMTMuNDYsNi44NiwxMi41MSw3LjgxLDExLjM0LDcuODF6IE0xNi45OCwxMy40NmMtMS4xNywwLTIuMTItMC45NS0yLjEyLTIuMTINCgkJYzAtMS4xNywwLjk1LTIuMTIsMi4xMi0yLjEyYzEuMTcsMCwyLjEyLDAuOTUsMi4xMiwyLjEyQzE5LjEsMTIuNTEsMTguMTUsMTMuNDYsMTYuOTgsMTMuNDZ6Ii8+DQo8L2c+DQo8L3N2Zz4NCg==",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "input_value",
+            "name": "POWER"
+          },
+          {
+            "type": "input_value",
+            "name": "COUNT"
+          }
+        ],
+        "category": "motor",
+        "extensions": [
+          "colours_motion",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "motor_box",
+          "fields": {
+            "MOTOR": "E"
+          }
+        },
+        {
+          "name": "POWER",
+          "type": "math_-100to100_number",
+          "fields": {
+            "NUM": "50"
+          }
+        },
+        {
+          "name": "COUNT",
+          "type": "math_number",
+          "fields": {
+            "NUM": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "motor_startWithPower",
+      "category": "motor",
+      "definition": {
+        "message0": "%1 %2 电机 %3 以 %4 %%功率转动",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGcgaWQ9IlhNTElEXzAwMDAwMDY0MzMyNjU2NTQyNDY2MTkwNzYwMDAwMDAzODg1NjYzNjIwODU2NTg5NzQ5XyI+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTExLjM0LDIuODdjLTQuNjgsMC04LjQ3LDMuNzktOC40Nyw4LjQ3YzAsNC42OCwzLjc5LDguNDcsOC40Nyw4LjQ3YzQuNjgsMCw4LjQ3LTMuNzksOC40Ny04LjQ3DQoJCUMxOS44MSw2LjY2LDE2LjAyLDIuODcsMTEuMzQsMi44N3ogTTUuNjksMTMuNDZjLTEuMTcsMC0yLjEyLTAuOTUtMi4xMi0yLjEyYzAtMS4xNywwLjk1LTIuMTIsMi4xMi0yLjEyDQoJCWMxLjE3LDAsMi4xMiwwLjk1LDIuMTIsMi4xMkM3LjgxLDEyLjUxLDYuODYsMTMuNDYsNS42OSwxMy40NnogTTExLjM0LDE5LjFjLTEuMTcsMC0yLjEyLTAuOTUtMi4xMi0yLjEyDQoJCWMwLTEuMTcsMC45NS0yLjEyLDIuMTItMi4xMmMxLjE3LDAsMi4xMiwwLjk1LDIuMTIsMi4xMkMxMy40NiwxOC4xNSwxMi41MSwxOS4xLDExLjM0LDE5LjF6IE0xMy4xNywxMC42NHYxLjQxaC0xLjEzdjEuMTNoLTEuNDENCgkJdi0xLjEzSDkuNXYtMS40MWgxLjEzVjkuNWgxLjQxdjEuMTNIMTMuMTd6IE0xMS4zNCw3LjgxYy0xLjE3LDAtMi4xMi0wLjk1LTIuMTItMi4xMmMwLTEuMTcsMC45NS0yLjEyLDIuMTItMi4xMg0KCQljMS4xNywwLDIuMTIsMC45NSwyLjEyLDIuMTJDMTMuNDYsNi44NiwxMi41MSw3LjgxLDExLjM0LDcuODF6IE0xNi45OCwxMy40NmMtMS4xNywwLTIuMTItMC45NS0yLjEyLTIuMTINCgkJYzAtMS4xNywwLjk1LTIuMTIsMi4xMi0yLjEyYzEuMTcsMCwyLjEyLDAuOTUsMi4xMiwyLjEyQzE5LjEsMTIuNTEsMTguMTUsMTMuNDYsMTYuOTgsMTMuNDZ6Ii8+DQo8L2c+DQo8L3N2Zz4NCg==",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "input_value",
+            "name": "POWER"
+          }
+        ],
+        "category": "motor",
+        "extensions": [
+          "colours_motion",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "motor_box",
+          "fields": {
+            "MOTOR": "E"
+          }
+        },
+        {
+          "name": "POWER",
+          "type": "math_-100to100_number",
+          "fields": {
+            "NUM": "50"
+          }
+        }
+      ]
+    },
+    {
+      "id": "motor_stop",
+      "category": "motor",
+      "definition": {
+        "message0": "%1 %2 电机%3 关闭电机",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGcgaWQ9IlhNTElEXzAwMDAwMDY0MzMyNjU2NTQyNDY2MTkwNzYwMDAwMDAzODg1NjYzNjIwODU2NTg5NzQ5XyI+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTExLjM0LDIuODdjLTQuNjgsMC04LjQ3LDMuNzktOC40Nyw4LjQ3YzAsNC42OCwzLjc5LDguNDcsOC40Nyw4LjQ3YzQuNjgsMCw4LjQ3LTMuNzksOC40Ny04LjQ3DQoJCUMxOS44MSw2LjY2LDE2LjAyLDIuODcsMTEuMzQsMi44N3ogTTUuNjksMTMuNDZjLTEuMTcsMC0yLjEyLTAuOTUtMi4xMi0yLjEyYzAtMS4xNywwLjk1LTIuMTIsMi4xMi0yLjEyDQoJCWMxLjE3LDAsMi4xMiwwLjk1LDIuMTIsMi4xMkM3LjgxLDEyLjUxLDYuODYsMTMuNDYsNS42OSwxMy40NnogTTExLjM0LDE5LjFjLTEuMTcsMC0yLjEyLTAuOTUtMi4xMi0yLjEyDQoJCWMwLTEuMTcsMC45NS0yLjEyLDIuMTItMi4xMmMxLjE3LDAsMi4xMiwwLjk1LDIuMTIsMi4xMkMxMy40NiwxOC4xNSwxMi41MSwxOS4xLDExLjM0LDE5LjF6IE0xMy4xNywxMC42NHYxLjQxaC0xLjEzdjEuMTNoLTEuNDENCgkJdi0xLjEzSDkuNXYtMS40MWgxLjEzVjkuNWgxLjQxdjEuMTNIMTMuMTd6IE0xMS4zNCw3LjgxYy0xLjE3LDAtMi4xMi0wLjk1LTIuMTItMi4xMmMwLTEuMTcsMC45NS0yLjEyLDIuMTItMi4xMg0KCQljMS4xNywwLDIuMTIsMC45NSwyLjEyLDIuMTJDMTMuNDYsNi44NiwxMi41MSw3LjgxLDExLjM0LDcuODF6IE0xNi45OCwxMy40NmMtMS4xNywwLTIuMTItMC45NS0yLjEyLTIuMTINCgkJYzAtMS4xNywwLjk1LTIuMTIsMi4xMi0yLjEyYzEuMTcsMCwyLjEyLDAuOTUsMi4xMiwyLjEyQzE5LjEsMTIuNTEsMTguMTUsMTMuNDYsMTYuOTgsMTMuNDZ6Ii8+DQo8L2c+DQo8L3N2Zz4NCg==",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          }
+        ],
+        "category": "motor",
+        "extensions": [
+          "colours_motion",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "motor_box",
+          "fields": {
+            "MOTOR": "E"
+          }
+        }
+      ]
+    },
+    {
+      "id": "motor_specified_manner",
+      "category": "motor",
+      "definition": {
+        "message0": "%1 %2 电机%3 将电机设置为停止时 %4",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGcgaWQ9IlhNTElEXzAwMDAwMDY0MzMyNjU2NTQyNDY2MTkwNzYwMDAwMDAzODg1NjYzNjIwODU2NTg5NzQ5XyI+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTExLjM0LDIuODdjLTQuNjgsMC04LjQ3LDMuNzktOC40Nyw4LjQ3YzAsNC42OCwzLjc5LDguNDcsOC40Nyw4LjQ3YzQuNjgsMCw4LjQ3LTMuNzksOC40Ny04LjQ3DQoJCUMxOS44MSw2LjY2LDE2LjAyLDIuODcsMTEuMzQsMi44N3ogTTUuNjksMTMuNDZjLTEuMTcsMC0yLjEyLTAuOTUtMi4xMi0yLjEyYzAtMS4xNywwLjk1LTIuMTIsMi4xMi0yLjEyDQoJCWMxLjE3LDAsMi4xMiwwLjk1LDIuMTIsMi4xMkM3LjgxLDEyLjUxLDYuODYsMTMuNDYsNS42OSwxMy40NnogTTExLjM0LDE5LjFjLTEuMTcsMC0yLjEyLTAuOTUtMi4xMi0yLjEyDQoJCWMwLTEuMTcsMC45NS0yLjEyLDIuMTItMi4xMmMxLjE3LDAsMi4xMiwwLjk1LDIuMTIsMi4xMkMxMy40NiwxOC4xNSwxMi41MSwxOS4xLDExLjM0LDE5LjF6IE0xMy4xNywxMC42NHYxLjQxaC0xLjEzdjEuMTNoLTEuNDENCgkJdi0xLjEzSDkuNXYtMS40MWgxLjEzVjkuNWgxLjQxdjEuMTNIMTMuMTd6IE0xMS4zNCw3LjgxYy0xLjE3LDAtMi4xMi0wLjk1LTIuMTItMi4xMmMwLTEuMTcsMC45NS0yLjEyLDIuMTItMi4xMg0KCQljMS4xNywwLDIuMTIsMC45NSwyLjEyLDIuMTJDMTMuNDYsNi44NiwxMi41MSw3LjgxLDExLjM0LDcuODF6IE0xNi45OCwxMy40NmMtMS4xNywwLTIuMTItMC45NS0yLjEyLTIuMTINCgkJYzAtMS4xNywwLjk1LTIuMTIsMi4xMi0yLjEyYzEuMTcsMCwyLjEyLDAuOTUsMi4xMiwyLjEyQzE5LjEsMTIuNTEsMTguMTUsMTMuNDYsMTYuOTgsMTMuNDZ6Ii8+DQo8L2c+DQo8L3N2Zz4NCg==",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "action",
+            "options": [
+              [
+                "制动",
+                "1"
+              ],
+              [
+                "惯性滑行",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "category": "motor",
+        "extensions": [
+          "colours_motion",
+          "shape_statement"
+        ]
+      },
+      "fields": {
+        "action": "1"
+      },
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "motor_box",
+          "fields": {
+            "MOTOR": "E"
+          }
+        }
+      ]
+    },
+    {
+      "id": "combined_motor_starting",
+      "category": "combined_motor",
+      "definition": {
+        "message0": "%1 %2 将组合电机设置为 %3 转动方向为 %4",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik05LjgyLDUuOTJjLTMuODMsMC02LjkzLDMuMS02LjkzLDYuOTRjMCwzLjgzLDMuMSw2LjkzLDYuOTMsNi45M2MzLjgzLDAsNi45NC0zLjEsNi45NC02LjkzDQoJCQlDMTYuNzYsOS4wMiwxMy42Niw1LjkyLDkuODIsNS45MnogTTUuMiwxNC41OWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzNjMC0wLjk2LDAuNzgtMS43MywxLjczLTEuNzMNCgkJCWMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0M2Ljk0LDEzLjgxLDYuMTYsMTQuNTksNS4yLDE0LjU5eiBNOS44MiwxOS4yMWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzMNCgkJCWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0MxMS41NiwxOC40MywxMC43OCwxOS4yMSw5LjgyLDE5LjIxeiBNMTEuMzMsMTIuMjh2MS4xNkgxMC40djAuOTJIOS4yNQ0KCQkJdi0wLjkySDguMzJ2LTEuMTZoMC45M3YtMC45M2gxLjE2djAuOTNIMTEuMzN6IE05LjgyLDkuOTZjLTAuOTYsMC0xLjczLTAuNzgtMS43My0xLjczYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczDQoJCQljMC45NiwwLDEuNzMsMC43OCwxLjczLDEuNzNDMTEuNTYsOS4xOCwxMC43OCw5Ljk2LDkuODIsOS45NnogTTE0LjQ1LDE0LjU5Yy0wLjk2LDAtMS43My0wLjc4LTEuNzMtMS43Mw0KCQkJYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczYzAuOTYsMCwxLjczLDAuNzgsMS43MywxLjczQzE2LjE4LDEzLjgxLDE1LjQxLDE0LjU5LDE0LjQ1LDE0LjU5eiIvPg0KCTwvZz4NCgk8Zz4NCgkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEyLjg1LDIuODljLTIuNDEsMC00LjU0LDEuMjMtNS43OCwzLjFjMC44NS0wLjM0LDEuNzgtMC41MywyLjc1LTAuNTNjMC40NiwwLDAuOSwwLjA0LDEuMzQsMC4xMg0KCQkJYy0wLjAzLTAuMTItMC4wNC0wLjI1LTAuMDQtMC4zOWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuNi0wLjMsMS4xMy0wLjc2LDEuNDQNCgkJCWMwLjg5LDAuNTcsMS42NCwxLjMzLDIuMjIsMi4yMWMwLjMxLTAuNDYsMC44NC0wLjc2LDEuNDQtMC43NmMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuOTYtMC43OCwxLjczLTEuNzMsMS43Mw0KCQkJYy0wLjEzLDAtMC4yNi0wLjAxLTAuMzktMC4wNGMwLjA4LDAuNDMsMC4xMiwwLjg4LDAuMTIsMS4zNGMwLDAuOTctMC4xOSwxLjktMC41MywyLjc1YzEuODctMS4yNCwzLjEtMy4zNywzLjEtNS43OA0KCQkJQzE5Ljc5LDYsMTYuNjgsMi44OSwxMi44NSwyLjg5eiIvPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "STATUS",
+            "options": [
+              [
+                "全部正向",
+                "3"
+              ],
+              [
+                "左电机反向",
+                "0"
+              ],
+              [
+                "右电机反向",
+                "1"
+              ],
+              [
+                "全部反向",
+                "2"
+              ]
+            ]
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "fields": {
+        "STATUS": "3"
+      },
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "combined_motor_box",
+          "fields": {
+            "MOTOR": "E+F"
+          }
+        }
+      ]
+    },
+    {
+      "id": "combined_motor_stopping",
+      "category": "combined_motor",
+      "definition": {
+        "message0": "%1 %2 将组合电机设置为停止使 %3",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik05LjgyLDUuOTJjLTMuODMsMC02LjkzLDMuMS02LjkzLDYuOTRjMCwzLjgzLDMuMSw2LjkzLDYuOTMsNi45M2MzLjgzLDAsNi45NC0zLjEsNi45NC02LjkzDQoJCQlDMTYuNzYsOS4wMiwxMy42Niw1LjkyLDkuODIsNS45MnogTTUuMiwxNC41OWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzNjMC0wLjk2LDAuNzgtMS43MywxLjczLTEuNzMNCgkJCWMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0M2Ljk0LDEzLjgxLDYuMTYsMTQuNTksNS4yLDE0LjU5eiBNOS44MiwxOS4yMWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzMNCgkJCWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0MxMS41NiwxOC40MywxMC43OCwxOS4yMSw5LjgyLDE5LjIxeiBNMTEuMzMsMTIuMjh2MS4xNkgxMC40djAuOTJIOS4yNQ0KCQkJdi0wLjkySDguMzJ2LTEuMTZoMC45M3YtMC45M2gxLjE2djAuOTNIMTEuMzN6IE05LjgyLDkuOTZjLTAuOTYsMC0xLjczLTAuNzgtMS43My0xLjczYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczDQoJCQljMC45NiwwLDEuNzMsMC43OCwxLjczLDEuNzNDMTEuNTYsOS4xOCwxMC43OCw5Ljk2LDkuODIsOS45NnogTTE0LjQ1LDE0LjU5Yy0wLjk2LDAtMS43My0wLjc4LTEuNzMtMS43Mw0KCQkJYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczYzAuOTYsMCwxLjczLDAuNzgsMS43MywxLjczQzE2LjE4LDEzLjgxLDE1LjQxLDE0LjU5LDE0LjQ1LDE0LjU5eiIvPg0KCTwvZz4NCgk8Zz4NCgkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEyLjg1LDIuODljLTIuNDEsMC00LjU0LDEuMjMtNS43OCwzLjFjMC44NS0wLjM0LDEuNzgtMC41MywyLjc1LTAuNTNjMC40NiwwLDAuOSwwLjA0LDEuMzQsMC4xMg0KCQkJYy0wLjAzLTAuMTItMC4wNC0wLjI1LTAuMDQtMC4zOWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuNi0wLjMsMS4xMy0wLjc2LDEuNDQNCgkJCWMwLjg5LDAuNTcsMS42NCwxLjMzLDIuMjIsMi4yMWMwLjMxLTAuNDYsMC44NC0wLjc2LDEuNDQtMC43NmMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuOTYtMC43OCwxLjczLTEuNzMsMS43Mw0KCQkJYy0wLjEzLDAtMC4yNi0wLjAxLTAuMzktMC4wNGMwLjA4LDAuNDMsMC4xMiwwLjg4LDAuMTIsMS4zNGMwLDAuOTctMC4xOSwxLjktMC41MywyLjc1YzEuODctMS4yNCwzLjEtMy4zNywzLjEtNS43OA0KCQkJQzE5Ljc5LDYsMTYuNjgsMi44OSwxMi44NSwyLjg5eiIvPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "status",
+            "options": [
+              [
+                "制动",
+                "1"
+              ],
+              [
+                "惯性滑行",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "fields": {
+        "status": "1"
+      },
+      "inputs": []
+    },
+    {
+      "id": "combined_mov_dir_power_seconds",
+      "category": "combined_motor",
+      "definition": {
+        "type": "combined_mov_dir_power_seconds",
+        "message0": "%1 %2 %3 以功率 %4%% 转动 %5 秒",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik05LjgyLDUuOTJjLTMuODMsMC02LjkzLDMuMS02LjkzLDYuOTRjMCwzLjgzLDMuMSw2LjkzLDYuOTMsNi45M2MzLjgzLDAsNi45NC0zLjEsNi45NC02LjkzDQoJCQlDMTYuNzYsOS4wMiwxMy42Niw1LjkyLDkuODIsNS45MnogTTUuMiwxNC41OWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzNjMC0wLjk2LDAuNzgtMS43MywxLjczLTEuNzMNCgkJCWMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0M2Ljk0LDEzLjgxLDYuMTYsMTQuNTksNS4yLDE0LjU5eiBNOS44MiwxOS4yMWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzMNCgkJCWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0MxMS41NiwxOC40MywxMC43OCwxOS4yMSw5LjgyLDE5LjIxeiBNMTEuMzMsMTIuMjh2MS4xNkgxMC40djAuOTJIOS4yNQ0KCQkJdi0wLjkySDguMzJ2LTEuMTZoMC45M3YtMC45M2gxLjE2djAuOTNIMTEuMzN6IE05LjgyLDkuOTZjLTAuOTYsMC0xLjczLTAuNzgtMS43My0xLjczYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczDQoJCQljMC45NiwwLDEuNzMsMC43OCwxLjczLDEuNzNDMTEuNTYsOS4xOCwxMC43OCw5Ljk2LDkuODIsOS45NnogTTE0LjQ1LDE0LjU5Yy0wLjk2LDAtMS43My0wLjc4LTEuNzMtMS43Mw0KCQkJYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczYzAuOTYsMCwxLjczLDAuNzgsMS43MywxLjczQzE2LjE4LDEzLjgxLDE1LjQxLDE0LjU5LDE0LjQ1LDE0LjU5eiIvPg0KCTwvZz4NCgk8Zz4NCgkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEyLjg1LDIuODljLTIuNDEsMC00LjU0LDEuMjMtNS43OCwzLjFjMC44NS0wLjM0LDEuNzgtMC41MywyLjc1LTAuNTNjMC40NiwwLDAuOSwwLjA0LDEuMzQsMC4xMg0KCQkJYy0wLjAzLTAuMTItMC4wNC0wLjI1LTAuMDQtMC4zOWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuNi0wLjMsMS4xMy0wLjc2LDEuNDQNCgkJCWMwLjg5LDAuNTcsMS42NCwxLjMzLDIuMjIsMi4yMWMwLjMxLTAuNDYsMC44NC0wLjc2LDEuNDQtMC43NmMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuOTYtMC43OCwxLjczLTEuNzMsMS43Mw0KCQkJYy0wLjEzLDAtMC4yNi0wLjAxLTAuMzktMC4wNGMwLjA4LDAuNDMsMC4xMiwwLjg4LDAuMTIsMS4zNGMwLDAuOTctMC4xOSwxLjktMC41MywyLjc1YzEuODctMS4yNCwzLjEtMy4zNywzLjEtNS43OA0KCQkJQzE5Ljc5LDYsMTYuNjgsMi44OSwxMi44NSwyLjg5eiIvPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "DIRECTION",
+            "options": [
+              [
+                {
+                  "src": "data:image/svg+xml;base64,PHN2ZyB0PSIxNzA1NjU0NDk2Nzk1IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjEwNDQ2IiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PHBhdGggZD0iTTQ4MCA4OTZWMjUwLjRMMjM3LjYgNDkzLjYgMTkyIDQ0OGwyNzQuNC0yNzQuNEw1MTIgMTI4bDQ1LjYgNDUuNkw4MzIgNDQ4bC00NS42IDQ1LjZMNTQ0IDI1MC40Vjg5NmgtNjR6IiBwLWlkPSIxMDQ0NyIgZmlsbD0iI2ZmZmZmZiI+PC9wYXRoPjwvc3ZnPg==",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "前进"
+                },
+                "advance"
+              ],
+              [
+                {
+                  "src": "data:image/svg+xml;base64,PHN2ZyB0PSIxNzA1NjU0NTE4NDg0IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjExNDgxIiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PHBhdGggZD0iTTU0NCAxMjh2NjQ1LjZsMjQyLjQtMjQyLjRMODMyIDU3NmwtMjc0LjQgMjc0LjRMNTEyIDg5NmwtNDUuNi00NS42TDE5MiA1NzZsNDUuNi00NS42TDQ4MCA3NzMuNlYxMjhoNjR6IiBwLWlkPSIxMTQ4MiIgZmlsbD0iI2ZmZmZmZiI+PC9wYXRoPjwvc3ZnPg==",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "后退"
+                },
+                "retreat"
+              ],
+              [
+                {
+                  "src": "data:image/svg+xml;base64,PHN2ZyB0PSIxNzA1NjUzNjEwOTIwIiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjUyMjMiIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cGF0aCBkPSJNODk2IDU0NEgyNTAuNGwyNDIuNCAyNDIuNEw0NDggODMyIDE3My42IDU1Ny42IDEyOCA1MTJsNDUuNi00NS42TDQ0OCAxOTJsNDUuNiA0NS42TDI1MC40IDQ4MEg4OTZ2NjR6IiBwLWlkPSI1MjI0IiBmaWxsPSIjZmZmZmZmIj48L3BhdGg+PC9zdmc+",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "向左转"
+                },
+                "left"
+              ],
+              [
+                {
+                  "src": "data:image/svg+xml;base64,PHN2ZyB0PSIxNzA1NjUzNTg2ODA4IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjQyMDgiIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cGF0aCBkPSJNMTI4IDQ4MGg2NDUuNkw1MzAuNCAyMzcuNiA1NzYgMTkybDI3NC40IDI3NC40TDg5NiA1MTJsLTQ1LjYgNDUuNkw1NzYgODMybC00NS42LTQ1LjZMNzczLjYgNTQ0SDEyOHYtNjR6IiBwLWlkPSI0MjA5IiBmaWxsPSIjZmZmZmZmIj48L3BhdGg+PC9zdmc+",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "向右转"
+                },
+                "right"
+              ]
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "POWER"
+          },
+          {
+            "type": "input_value",
+            "name": "SECONDS"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "fields": {
+        "DIRECTION": "advance"
+      },
+      "inputs": [
+        {
+          "name": "POWER",
+          "type": "math_-100to100_number",
+          "fields": {
+            "NUM": "50"
+          }
+        },
+        {
+          "name": "SECONDS",
+          "type": "math_number",
+          "fields": {
+            "NUM": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "combined_mov_dir_power",
+      "category": "combined_motor",
+      "definition": {
+        "type": "combined_mov_dir_power",
+        "message0": "%1 %2 %3 以功率 %4 %% 移动",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik05LjgyLDUuOTJjLTMuODMsMC02LjkzLDMuMS02LjkzLDYuOTRjMCwzLjgzLDMuMSw2LjkzLDYuOTMsNi45M2MzLjgzLDAsNi45NC0zLjEsNi45NC02LjkzDQoJCQlDMTYuNzYsOS4wMiwxMy42Niw1LjkyLDkuODIsNS45MnogTTUuMiwxNC41OWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzNjMC0wLjk2LDAuNzgtMS43MywxLjczLTEuNzMNCgkJCWMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0M2Ljk0LDEzLjgxLDYuMTYsMTQuNTksNS4yLDE0LjU5eiBNOS44MiwxOS4yMWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzMNCgkJCWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0MxMS41NiwxOC40MywxMC43OCwxOS4yMSw5LjgyLDE5LjIxeiBNMTEuMzMsMTIuMjh2MS4xNkgxMC40djAuOTJIOS4yNQ0KCQkJdi0wLjkySDguMzJ2LTEuMTZoMC45M3YtMC45M2gxLjE2djAuOTNIMTEuMzN6IE05LjgyLDkuOTZjLTAuOTYsMC0xLjczLTAuNzgtMS43My0xLjczYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczDQoJCQljMC45NiwwLDEuNzMsMC43OCwxLjczLDEuNzNDMTEuNTYsOS4xOCwxMC43OCw5Ljk2LDkuODIsOS45NnogTTE0LjQ1LDE0LjU5Yy0wLjk2LDAtMS43My0wLjc4LTEuNzMtMS43Mw0KCQkJYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczYzAuOTYsMCwxLjczLDAuNzgsMS43MywxLjczQzE2LjE4LDEzLjgxLDE1LjQxLDE0LjU5LDE0LjQ1LDE0LjU5eiIvPg0KCTwvZz4NCgk8Zz4NCgkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEyLjg1LDIuODljLTIuNDEsMC00LjU0LDEuMjMtNS43OCwzLjFjMC44NS0wLjM0LDEuNzgtMC41MywyLjc1LTAuNTNjMC40NiwwLDAuOSwwLjA0LDEuMzQsMC4xMg0KCQkJYy0wLjAzLTAuMTItMC4wNC0wLjI1LTAuMDQtMC4zOWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuNi0wLjMsMS4xMy0wLjc2LDEuNDQNCgkJCWMwLjg5LDAuNTcsMS42NCwxLjMzLDIuMjIsMi4yMWMwLjMxLTAuNDYsMC44NC0wLjc2LDEuNDQtMC43NmMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuOTYtMC43OCwxLjczLTEuNzMsMS43Mw0KCQkJYy0wLjEzLDAtMC4yNi0wLjAxLTAuMzktMC4wNGMwLjA4LDAuNDMsMC4xMiwwLjg4LDAuMTIsMS4zNGMwLDAuOTctMC4xOSwxLjktMC41MywyLjc1YzEuODctMS4yNCwzLjEtMy4zNywzLjEtNS43OA0KCQkJQzE5Ljc5LDYsMTYuNjgsMi44OSwxMi44NSwyLjg5eiIvPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "DIRECTION",
+            "options": [
+              [
+                {
+                  "src": "data:image/svg+xml;base64,PHN2ZyB0PSIxNzA1NjU0NDk2Nzk1IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjEwNDQ2IiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PHBhdGggZD0iTTQ4MCA4OTZWMjUwLjRMMjM3LjYgNDkzLjYgMTkyIDQ0OGwyNzQuNC0yNzQuNEw1MTIgMTI4bDQ1LjYgNDUuNkw4MzIgNDQ4bC00NS42IDQ1LjZMNTQ0IDI1MC40Vjg5NmgtNjR6IiBwLWlkPSIxMDQ0NyIgZmlsbD0iI2ZmZmZmZiI+PC9wYXRoPjwvc3ZnPg==",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "前进"
+                },
+                "advance"
+              ],
+              [
+                {
+                  "src": "data:image/svg+xml;base64,PHN2ZyB0PSIxNzA1NjU0NTE4NDg0IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjExNDgxIiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PHBhdGggZD0iTTU0NCAxMjh2NjQ1LjZsMjQyLjQtMjQyLjRMODMyIDU3NmwtMjc0LjQgMjc0LjRMNTEyIDg5NmwtNDUuNi00NS42TDE5MiA1NzZsNDUuNi00NS42TDQ4MCA3NzMuNlYxMjhoNjR6IiBwLWlkPSIxMTQ4MiIgZmlsbD0iI2ZmZmZmZiI+PC9wYXRoPjwvc3ZnPg==",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "后退"
+                },
+                "retreat"
+              ],
+              [
+                {
+                  "src": "data:image/svg+xml;base64,PHN2ZyB0PSIxNzA1NjUzNjEwOTIwIiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjUyMjMiIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cGF0aCBkPSJNODk2IDU0NEgyNTAuNGwyNDIuNCAyNDIuNEw0NDggODMyIDE3My42IDU1Ny42IDEyOCA1MTJsNDUuNi00NS42TDQ0OCAxOTJsNDUuNiA0NS42TDI1MC40IDQ4MEg4OTZ2NjR6IiBwLWlkPSI1MjI0IiBmaWxsPSIjZmZmZmZmIj48L3BhdGg+PC9zdmc+",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "向左转"
+                },
+                "left"
+              ],
+              [
+                {
+                  "src": "data:image/svg+xml;base64,PHN2ZyB0PSIxNzA1NjUzNTg2ODA4IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjQyMDgiIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cGF0aCBkPSJNMTI4IDQ4MGg2NDUuNkw1MzAuNCAyMzcuNiA1NzYgMTkybDI3NC40IDI3NC40TDg5NiA1MTJsLTQ1LjYgNDUuNkw1NzYgODMybC00NS42LTQ1LjZMNzczLjYgNTQ0SDEyOHYtNjR6IiBwLWlkPSI0MjA5IiBmaWxsPSIjZmZmZmZmIj48L3BhdGg+PC9zdmc+",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "向右转"
+                },
+                "right"
+              ]
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "POWER"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "fields": {
+        "DIRECTION": "advance"
+      },
+      "inputs": [
+        {
+          "name": "POWER",
+          "type": "math_-100to100_number",
+          "fields": {
+            "NUM": "50"
+          }
+        }
+      ]
+    },
+    {
+      "id": "combined_motor_stop",
+      "category": "combined_motor",
+      "definition": {
+        "message0": "%1 %2 停止运动",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik05LjgyLDUuOTJjLTMuODMsMC02LjkzLDMuMS02LjkzLDYuOTRjMCwzLjgzLDMuMSw2LjkzLDYuOTMsNi45M2MzLjgzLDAsNi45NC0zLjEsNi45NC02LjkzDQoJCQlDMTYuNzYsOS4wMiwxMy42Niw1LjkyLDkuODIsNS45MnogTTUuMiwxNC41OWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzNjMC0wLjk2LDAuNzgtMS43MywxLjczLTEuNzMNCgkJCWMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0M2Ljk0LDEzLjgxLDYuMTYsMTQuNTksNS4yLDE0LjU5eiBNOS44MiwxOS4yMWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzMNCgkJCWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0MxMS41NiwxOC40MywxMC43OCwxOS4yMSw5LjgyLDE5LjIxeiBNMTEuMzMsMTIuMjh2MS4xNkgxMC40djAuOTJIOS4yNQ0KCQkJdi0wLjkySDguMzJ2LTEuMTZoMC45M3YtMC45M2gxLjE2djAuOTNIMTEuMzN6IE05LjgyLDkuOTZjLTAuOTYsMC0xLjczLTAuNzgtMS43My0xLjczYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczDQoJCQljMC45NiwwLDEuNzMsMC43OCwxLjczLDEuNzNDMTEuNTYsOS4xOCwxMC43OCw5Ljk2LDkuODIsOS45NnogTTE0LjQ1LDE0LjU5Yy0wLjk2LDAtMS43My0wLjc4LTEuNzMtMS43Mw0KCQkJYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczYzAuOTYsMCwxLjczLDAuNzgsMS43MywxLjczQzE2LjE4LDEzLjgxLDE1LjQxLDE0LjU5LDE0LjQ1LDE0LjU5eiIvPg0KCTwvZz4NCgk8Zz4NCgkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEyLjg1LDIuODljLTIuNDEsMC00LjU0LDEuMjMtNS43OCwzLjFjMC44NS0wLjM0LDEuNzgtMC41MywyLjc1LTAuNTNjMC40NiwwLDAuOSwwLjA0LDEuMzQsMC4xMg0KCQkJYy0wLjAzLTAuMTItMC4wNC0wLjI1LTAuMDQtMC4zOWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuNi0wLjMsMS4xMy0wLjc2LDEuNDQNCgkJCWMwLjg5LDAuNTcsMS42NCwxLjMzLDIuMjIsMi4yMWMwLjMxLTAuNDYsMC44NC0wLjc2LDEuNDQtMC43NmMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuOTYtMC43OCwxLjczLTEuNzMsMS43Mw0KCQkJYy0wLjEzLDAtMC4yNi0wLjAxLTAuMzktMC4wNGMwLjA4LDAuNDMsMC4xMiwwLjg4LDAuMTIsMS4zNGMwLDAuOTctMC4xOSwxLjktMC41MywyLjc1YzEuODctMS4yNCwzLjEtMy4zNywzLjEtNS43OA0KCQkJQzE5Ljc5LDYsMTYuNjgsMi44OSwxMi44NSwyLjg5eiIvPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "combined_motor_startWithPowerObj",
+      "category": "combined_motor",
+      "definition": {
+        "message0": "%1 %2 以左功率 %3 %% 和右功率 %4 %%移动 %5 秒",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik05LjgyLDUuOTJjLTMuODMsMC02LjkzLDMuMS02LjkzLDYuOTRjMCwzLjgzLDMuMSw2LjkzLDYuOTMsNi45M2MzLjgzLDAsNi45NC0zLjEsNi45NC02LjkzDQoJCQlDMTYuNzYsOS4wMiwxMy42Niw1LjkyLDkuODIsNS45MnogTTUuMiwxNC41OWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzNjMC0wLjk2LDAuNzgtMS43MywxLjczLTEuNzMNCgkJCWMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0M2Ljk0LDEzLjgxLDYuMTYsMTQuNTksNS4yLDE0LjU5eiBNOS44MiwxOS4yMWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzMNCgkJCWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0MxMS41NiwxOC40MywxMC43OCwxOS4yMSw5LjgyLDE5LjIxeiBNMTEuMzMsMTIuMjh2MS4xNkgxMC40djAuOTJIOS4yNQ0KCQkJdi0wLjkySDguMzJ2LTEuMTZoMC45M3YtMC45M2gxLjE2djAuOTNIMTEuMzN6IE05LjgyLDkuOTZjLTAuOTYsMC0xLjczLTAuNzgtMS43My0xLjczYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczDQoJCQljMC45NiwwLDEuNzMsMC43OCwxLjczLDEuNzNDMTEuNTYsOS4xOCwxMC43OCw5Ljk2LDkuODIsOS45NnogTTE0LjQ1LDE0LjU5Yy0wLjk2LDAtMS43My0wLjc4LTEuNzMtMS43Mw0KCQkJYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczYzAuOTYsMCwxLjczLDAuNzgsMS43MywxLjczQzE2LjE4LDEzLjgxLDE1LjQxLDE0LjU5LDE0LjQ1LDE0LjU5eiIvPg0KCTwvZz4NCgk8Zz4NCgkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEyLjg1LDIuODljLTIuNDEsMC00LjU0LDEuMjMtNS43OCwzLjFjMC44NS0wLjM0LDEuNzgtMC41MywyLjc1LTAuNTNjMC40NiwwLDAuOSwwLjA0LDEuMzQsMC4xMg0KCQkJYy0wLjAzLTAuMTItMC4wNC0wLjI1LTAuMDQtMC4zOWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuNi0wLjMsMS4xMy0wLjc2LDEuNDQNCgkJCWMwLjg5LDAuNTcsMS42NCwxLjMzLDIuMjIsMi4yMWMwLjMxLTAuNDYsMC44NC0wLjc2LDEuNDQtMC43NmMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuOTYtMC43OCwxLjczLTEuNzMsMS43Mw0KCQkJYy0wLjEzLDAtMC4yNi0wLjAxLTAuMzktMC4wNGMwLjA4LDAuNDMsMC4xMiwwLjg4LDAuMTIsMS4zNGMwLDAuOTctMC4xOSwxLjktMC41MywyLjc1YzEuODctMS4yNCwzLjEtMy4zNywzLjEtNS43OA0KCQkJQzE5Ljc5LDYsMTYuNjgsMi44OSwxMi44NSwyLjg5eiIvPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "POWER_ONE"
+          },
+          {
+            "type": "input_value",
+            "name": "POWER_TWO"
+          },
+          {
+            "type": "input_value",
+            "name": "COUNT"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "POWER_ONE",
+          "type": "math_-100to100_number",
+          "fields": {
+            "NUM": "50"
+          }
+        },
+        {
+          "name": "POWER_TWO",
+          "type": "math_-100to100_number",
+          "fields": {
+            "NUM": "50"
+          }
+        },
+        {
+          "name": "COUNT",
+          "type": "math_number",
+          "fields": {
+            "NUM": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "combined_motor_startWithPower",
+      "category": "combined_motor",
+      "definition": {
+        "message0": "%1 %2 以左功率 %3 %% 右功率 %4 %%移动",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik05LjgyLDUuOTJjLTMuODMsMC02LjkzLDMuMS02LjkzLDYuOTRjMCwzLjgzLDMuMSw2LjkzLDYuOTMsNi45M2MzLjgzLDAsNi45NC0zLjEsNi45NC02LjkzDQoJCQlDMTYuNzYsOS4wMiwxMy42Niw1LjkyLDkuODIsNS45MnogTTUuMiwxNC41OWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzNjMC0wLjk2LDAuNzgtMS43MywxLjczLTEuNzMNCgkJCWMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0M2Ljk0LDEzLjgxLDYuMTYsMTQuNTksNS4yLDE0LjU5eiBNOS44MiwxOS4yMWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzMNCgkJCWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0MxMS41NiwxOC40MywxMC43OCwxOS4yMSw5LjgyLDE5LjIxeiBNMTEuMzMsMTIuMjh2MS4xNkgxMC40djAuOTJIOS4yNQ0KCQkJdi0wLjkySDguMzJ2LTEuMTZoMC45M3YtMC45M2gxLjE2djAuOTNIMTEuMzN6IE05LjgyLDkuOTZjLTAuOTYsMC0xLjczLTAuNzgtMS43My0xLjczYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczDQoJCQljMC45NiwwLDEuNzMsMC43OCwxLjczLDEuNzNDMTEuNTYsOS4xOCwxMC43OCw5Ljk2LDkuODIsOS45NnogTTE0LjQ1LDE0LjU5Yy0wLjk2LDAtMS43My0wLjc4LTEuNzMtMS43Mw0KCQkJYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczYzAuOTYsMCwxLjczLDAuNzgsMS43MywxLjczQzE2LjE4LDEzLjgxLDE1LjQxLDE0LjU5LDE0LjQ1LDE0LjU5eiIvPg0KCTwvZz4NCgk8Zz4NCgkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEyLjg1LDIuODljLTIuNDEsMC00LjU0LDEuMjMtNS43OCwzLjFjMC44NS0wLjM0LDEuNzgtMC41MywyLjc1LTAuNTNjMC40NiwwLDAuOSwwLjA0LDEuMzQsMC4xMg0KCQkJYy0wLjAzLTAuMTItMC4wNC0wLjI1LTAuMDQtMC4zOWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuNi0wLjMsMS4xMy0wLjc2LDEuNDQNCgkJCWMwLjg5LDAuNTcsMS42NCwxLjMzLDIuMjIsMi4yMWMwLjMxLTAuNDYsMC44NC0wLjc2LDEuNDQtMC43NmMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuOTYtMC43OCwxLjczLTEuNzMsMS43Mw0KCQkJYy0wLjEzLDAtMC4yNi0wLjAxLTAuMzktMC4wNGMwLjA4LDAuNDMsMC4xMiwwLjg4LDAuMTIsMS4zNGMwLDAuOTctMC4xOSwxLjktMC41MywyLjc1YzEuODctMS4yNCwzLjEtMy4zNywzLjEtNS43OA0KCQkJQzE5Ljc5LDYsMTYuNjgsMi44OSwxMi44NSwyLjg5eiIvPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "POWER_ONE"
+          },
+          {
+            "type": "input_value",
+            "name": "POWER_TWO"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "POWER_ONE",
+          "type": "math_-100to100_number",
+          "fields": {
+            "NUM": "50"
+          }
+        },
+        {
+          "name": "POWER_TWO",
+          "type": "math_-100to100_number",
+          "fields": {
+            "NUM": "50"
+          }
+        }
+      ]
+    },
+    {
+      "id": "combined_linepatrolInit",
+      "category": "combined_motor",
+      "definition": {
+        "type": "combined_linepatrolInit",
+        "message0": "%1 %2 巡线参数初始化",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik05LjgyLDUuOTJjLTMuODMsMC02LjkzLDMuMS02LjkzLDYuOTRjMCwzLjgzLDMuMSw2LjkzLDYuOTMsNi45M2MzLjgzLDAsNi45NC0zLjEsNi45NC02LjkzDQoJCQlDMTYuNzYsOS4wMiwxMy42Niw1LjkyLDkuODIsNS45MnogTTUuMiwxNC41OWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzNjMC0wLjk2LDAuNzgtMS43MywxLjczLTEuNzMNCgkJCWMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0M2Ljk0LDEzLjgxLDYuMTYsMTQuNTksNS4yLDE0LjU5eiBNOS44MiwxOS4yMWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzMNCgkJCWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0MxMS41NiwxOC40MywxMC43OCwxOS4yMSw5LjgyLDE5LjIxeiBNMTEuMzMsMTIuMjh2MS4xNkgxMC40djAuOTJIOS4yNQ0KCQkJdi0wLjkySDguMzJ2LTEuMTZoMC45M3YtMC45M2gxLjE2djAuOTNIMTEuMzN6IE05LjgyLDkuOTZjLTAuOTYsMC0xLjczLTAuNzgtMS43My0xLjczYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczDQoJCQljMC45NiwwLDEuNzMsMC43OCwxLjczLDEuNzNDMTEuNTYsOS4xOCwxMC43OCw5Ljk2LDkuODIsOS45NnogTTE0LjQ1LDE0LjU5Yy0wLjk2LDAtMS43My0wLjc4LTEuNzMtMS43Mw0KCQkJYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczYzAuOTYsMCwxLjczLDAuNzgsMS43MywxLjczQzE2LjE4LDEzLjgxLDE1LjQxLDE0LjU5LDE0LjQ1LDE0LjU5eiIvPg0KCTwvZz4NCgk8Zz4NCgkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEyLjg1LDIuODljLTIuNDEsMC00LjU0LDEuMjMtNS43OCwzLjFjMC44NS0wLjM0LDEuNzgtMC41MywyLjc1LTAuNTNjMC40NiwwLDAuOSwwLjA0LDEuMzQsMC4xMg0KCQkJYy0wLjAzLTAuMTItMC4wNC0wLjI1LTAuMDQtMC4zOWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuNi0wLjMsMS4xMy0wLjc2LDEuNDQNCgkJCWMwLjg5LDAuNTcsMS42NCwxLjMzLDIuMjIsMi4yMWMwLjMxLTAuNDYsMC44NC0wLjc2LDEuNDQtMC43NmMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuOTYtMC43OCwxLjczLTEuNzMsMS43Mw0KCQkJYy0wLjEzLDAtMC4yNi0wLjAxLTAuMzktMC4wNGMwLjA4LDAuNDMsMC4xMiwwLjg4LDAuMTIsMS4zNGMwLDAuOTctMC4xOSwxLjktMC41MywyLjc1YzEuODctMS4yNCwzLjEtMy4zNywzLjEtNS43OA0KCQkJQzE5Ljc5LDYsMTYuNjgsMi44OSwxMi44NSwyLjg5eiIvPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "combined_linepatrol_ltr",
+      "category": "combined_motor",
+      "definition": {
+        "type": "combined_linepatrol_ltr",
+        "message0": "%1 %2 双巡线 左传感器 %3 右传感器 %4 左功率 %5 右功率 %6 KP %7 KD %8 ",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik05LjgyLDUuOTJjLTMuODMsMC02LjkzLDMuMS02LjkzLDYuOTRjMCwzLjgzLDMuMSw2LjkzLDYuOTMsNi45M2MzLjgzLDAsNi45NC0zLjEsNi45NC02LjkzDQoJCQlDMTYuNzYsOS4wMiwxMy42Niw1LjkyLDkuODIsNS45MnogTTUuMiwxNC41OWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzNjMC0wLjk2LDAuNzgtMS43MywxLjczLTEuNzMNCgkJCWMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0M2Ljk0LDEzLjgxLDYuMTYsMTQuNTksNS4yLDE0LjU5eiBNOS44MiwxOS4yMWMtMC45NiwwLTEuNzMtMC43OC0xLjczLTEuNzMNCgkJCWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M0MxMS41NiwxOC40MywxMC43OCwxOS4yMSw5LjgyLDE5LjIxeiBNMTEuMzMsMTIuMjh2MS4xNkgxMC40djAuOTJIOS4yNQ0KCQkJdi0wLjkySDguMzJ2LTEuMTZoMC45M3YtMC45M2gxLjE2djAuOTNIMTEuMzN6IE05LjgyLDkuOTZjLTAuOTYsMC0xLjczLTAuNzgtMS43My0xLjczYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczDQoJCQljMC45NiwwLDEuNzMsMC43OCwxLjczLDEuNzNDMTEuNTYsOS4xOCwxMC43OCw5Ljk2LDkuODIsOS45NnogTTE0LjQ1LDE0LjU5Yy0wLjk2LDAtMS43My0wLjc4LTEuNzMtMS43Mw0KCQkJYzAtMC45NiwwLjc4LTEuNzMsMS43My0xLjczYzAuOTYsMCwxLjczLDAuNzgsMS43MywxLjczQzE2LjE4LDEzLjgxLDE1LjQxLDE0LjU5LDE0LjQ1LDE0LjU5eiIvPg0KCTwvZz4NCgk8Zz4NCgkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEyLjg1LDIuODljLTIuNDEsMC00LjU0LDEuMjMtNS43OCwzLjFjMC44NS0wLjM0LDEuNzgtMC41MywyLjc1LTAuNTNjMC40NiwwLDAuOSwwLjA0LDEuMzQsMC4xMg0KCQkJYy0wLjAzLTAuMTItMC4wNC0wLjI1LTAuMDQtMC4zOWMwLTAuOTYsMC43OC0xLjczLDEuNzMtMS43M2MwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuNi0wLjMsMS4xMy0wLjc2LDEuNDQNCgkJCWMwLjg5LDAuNTcsMS42NCwxLjMzLDIuMjIsMi4yMWMwLjMxLTAuNDYsMC44NC0wLjc2LDEuNDQtMC43NmMwLjk2LDAsMS43MywwLjc4LDEuNzMsMS43M2MwLDAuOTYtMC43OCwxLjczLTEuNzMsMS43Mw0KCQkJYy0wLjEzLDAtMC4yNi0wLjAxLTAuMzktMC4wNGMwLjA4LDAuNDMsMC4xMiwwLjg4LDAuMTIsMS4zNGMwLDAuOTctMC4xOSwxLjktMC41MywyLjc1YzEuODctMS4yNCwzLjEtMy4zNywzLjEtNS43OA0KCQkJQzE5Ljc5LDYsMTYuNjgsMi44OSwxMi44NSwyLjg5eiIvPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT_ONE"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT_TWO"
+          },
+          {
+            "type": "input_value",
+            "name": "LEFT"
+          },
+          {
+            "type": "input_value",
+            "name": "RIGHT"
+          },
+          {
+            "type": "input_value",
+            "name": "KP"
+          },
+          {
+            "type": "input_value",
+            "name": "KD"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "PORT_ONE",
+          "type": "math_number",
+          "fields": {
+            "NUM": "0"
+          }
+        },
+        {
+          "name": "PORT_TWO",
+          "type": "math_number",
+          "fields": {
+            "NUM": "0"
+          }
+        },
+        {
+          "name": "LEFT",
+          "type": "math_number",
+          "fields": {
+            "NUM": "80"
+          }
+        },
+        {
+          "name": "RIGHT",
+          "type": "math_number",
+          "fields": {
+            "NUM": "80"
+          }
+        },
+        {
+          "name": "KP",
+          "type": "math_number",
+          "fields": {
+            "NUM": "0.1"
+          }
+        },
+        {
+          "name": "KD",
+          "type": "math_number",
+          "fields": {
+            "NUM": "0.6"
+          }
+        }
+      ]
+    },
+    {
+      "id": "matrix_lamp",
+      "category": "matrix",
+      "definition": {
+        "message0": "%1 %2 点亮 %3 颜色",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHJlY3QgeD0iMy4xMyIgeT0iMi45NiIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjkuMDgiIHk9IjIuOTYiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSIxNS4wMyIgeT0iMi45NiIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjMuMTMiIHk9IjkuMDgiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSI5LjA4IiB5PSI5LjA4IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQoJPHJlY3QgeD0iMTUuMDMiIHk9IjkuMDgiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSIzLjEzIiB5PSIxNS4xOSIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjkuMDgiIHk9IjE1LjE5IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQoJPHJlY3QgeD0iMTUuMDMiIHk9IjE1LjE5IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQo8L2c+DQo8L3N2Zz4NCg==",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "field_matrix",
+            "name": "lamp",
+            "matrix": "11111111111111111111111111111111111"
+          }
+        ],
+        "category": "matrix",
+        "extensions": [
+          "colours_matrix",
+          "shape_statement"
+        ]
+      },
+      "fields": {
+        "lamp": "11111111111111111111111111111111111"
+      },
+      "inputs": []
+    },
+    {
+      "id": "matrix_lamp_stop",
+      "category": "matrix",
+      "definition": {
+        "message0": "%1 %2 清除显示内容",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHJlY3QgeD0iMy4xMyIgeT0iMi45NiIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjkuMDgiIHk9IjIuOTYiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSIxNS4wMyIgeT0iMi45NiIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjMuMTMiIHk9IjkuMDgiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSI5LjA4IiB5PSI5LjA4IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQoJPHJlY3QgeD0iMTUuMDMiIHk9IjkuMDgiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSIzLjEzIiB5PSIxNS4xOSIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjkuMDgiIHk9IjE1LjE5IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQoJPHJlY3QgeD0iMTUuMDMiIHk9IjE1LjE5IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQo8L2c+DQo8L3N2Zz4NCg==",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "matrix",
+        "colour": "#9966FF",
+        "secondaryColour": "#774DCB",
+        "extensions": [
+          "colours_matrix",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "matrix_lamp_set",
+      "category": "matrix",
+      "definition": {
+        "message0": "%1 %2 将矩阵灯的亮度设置为 %3",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHJlY3QgeD0iMy4xMyIgeT0iMi45NiIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjkuMDgiIHk9IjIuOTYiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSIxNS4wMyIgeT0iMi45NiIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjMuMTMiIHk9IjkuMDgiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSI5LjA4IiB5PSI5LjA4IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQoJPHJlY3QgeD0iMTUuMDMiIHk9IjkuMDgiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSIzLjEzIiB5PSIxNS4xOSIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjkuMDgiIHk9IjE1LjE5IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQoJPHJlY3QgeD0iMTUuMDMiIHk9IjE1LjE5IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQo8L2c+DQo8L3N2Zz4NCg==",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "brightness",
+            "options": [
+              [
+                "0",
+                "0"
+              ],
+              [
+                "1",
+                "1"
+              ],
+              [
+                "2",
+                "2"
+              ],
+              [
+                "3",
+                "3"
+              ],
+              [
+                "4",
+                "4"
+              ],
+              [
+                "5",
+                "5"
+              ],
+              [
+                "6",
+                "6"
+              ],
+              [
+                "7",
+                "7"
+              ]
+            ]
+          }
+        ],
+        "category": "matrix",
+        "colour": "#9966FF",
+        "secondaryColour": "#774DCB",
+        "extensions": [
+          "colours_matrix",
+          "shape_statement"
+        ]
+      },
+      "fields": {
+        "brightness": "0"
+      },
+      "inputs": []
+    },
+    {
+      "id": "matrix_lamp_text",
+      "category": "matrix",
+      "definition": {
+        "message0": "%1 %2 显示文字 %3",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHJlY3QgeD0iMy4xMyIgeT0iMi45NiIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjkuMDgiIHk9IjIuOTYiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSIxNS4wMyIgeT0iMi45NiIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjMuMTMiIHk9IjkuMDgiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSI5LjA4IiB5PSI5LjA4IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQoJPHJlY3QgeD0iMTUuMDMiIHk9IjkuMDgiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSIzLjEzIiB5PSIxNS4xOSIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjkuMDgiIHk9IjE1LjE5IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQoJPHJlY3QgeD0iMTUuMDMiIHk9IjE1LjE5IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQo8L2c+DQo8L3N2Zz4NCg==",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "matrix_text"
+          }
+        ],
+        "category": "matrix",
+        "colour": "#9966FF",
+        "secondaryColour": "#774DCB",
+        "extensions": [
+          "colours_matrix",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "matrix_text",
+          "type": "text",
+          "fields": {
+            "TEXT": "ABCD"
+          }
+        }
+      ]
+    },
+    {
+      "id": "matrix_lamp_single",
+      "category": "matrix",
+      "definition": {
+        "message0": "%1 %2 将 x %3 y %4 %5",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHJlY3QgeD0iMy4xMyIgeT0iMi45NiIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjkuMDgiIHk9IjIuOTYiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSIxNS4wMyIgeT0iMi45NiIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjMuMTMiIHk9IjkuMDgiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSI5LjA4IiB5PSI5LjA4IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQoJPHJlY3QgeD0iMTUuMDMiIHk9IjkuMDgiIGNsYXNzPSJzdDAiIHdpZHRoPSI0LjUyIiBoZWlnaHQ9IjQuNTIiLz4NCgk8cmVjdCB4PSIzLjEzIiB5PSIxNS4xOSIgY2xhc3M9InN0MCIgd2lkdGg9IjQuNTIiIGhlaWdodD0iNC41MiIvPg0KCTxyZWN0IHg9IjkuMDgiIHk9IjE1LjE5IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQoJPHJlY3QgeD0iMTUuMDMiIHk9IjE1LjE5IiBjbGFzcz0ic3QwIiB3aWR0aD0iNC41MiIgaGVpZ2h0PSI0LjUyIi8+DQo8L2c+DQo8L3N2Zz4NCg==",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "x"
+          },
+          {
+            "type": "input_value",
+            "name": "y"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "switchOnOff",
+            "options": [
+              [
+                "打开",
+                "1"
+              ],
+              [
+                "熄灭",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "category": "matrix",
+        "colour": "#9966FF",
+        "secondaryColour": "#774DCB",
+        "extensions": [
+          "colours_matrix",
+          "shape_statement"
+        ]
+      },
+      "fields": {
+        "switchOnOff": "1"
+      },
+      "inputs": [
+        {
+          "name": "x",
+          "type": "matrix_x",
+          "fields": {
+            "X": "0"
+          }
+        },
+        {
+          "name": "y",
+          "type": "matrix_y",
+          "fields": {
+            "Y": "0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sound_PlayMusic",
+      "category": "sound",
+      "definition": {
+        "message0": "%1 %2 演奏音符 %3 %4 拍",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPHBhdGggY2xhc3M9InN0MCIgZD0iTTExLjE2LDQuNjZsLTAuMTEsMC4yM2wtMy42Myw3Ljc3Yy0wLjA4LTAuMDYtMC4xNi0wLjEyLTAuMjQtMC4xOGMtMC4yMi0wLjE1LTAuNDctMC4yNi0wLjc0LTAuMzQNCgljLTAuMjUtMC4wOC0wLjUzLTAuMTItMC44LTAuMTJjLTAuMDgsMC0wLjE1LDAtMC4yMywwLjAxYy0wLjM0LDAuMDMtMC42NywwLjExLTAuOTcsMC4yNWMtMC4zMSwwLjE0LTAuNTgsMC4zMy0wLjgxLDAuNTgNCgljLTAuMjMsMC4yNS0wLjQxLDAuNTQtMC41MywwLjg2Yy0wLjEyLDAuMzMtMC4xNywwLjY1LTAuMTQsMC45NmMwLjAzLDAuMzEsMC4xMiwwLjYxLDAuMjgsMC44OGMwLjE1LDAuMjcsMC4zNiwwLjUxLDAuNjEsMC43Mw0KCWMwLjI1LDAuMjEsMC41NCwwLjQsMC44OCwwLjU2YzAuMywwLjE0LDAuNiwwLjIxLDAuOTEsMC4yMWMwLjA0LDAsMC4wNywwLDAuMTEsMGMwLjM0LTAuMDIsMC42Ni0wLjExLDAuOTctMC4yNg0KCWMwLjMtMC4xNSwwLjU3LTAuMzYsMC44Mi0wLjYyYzAuMjQtMC4yNiwwLjQ1LTAuNTUsMC42LTAuODdsMC4xNy0wLjM3bDMuNjYtNy45M2w1LjEyLDEuMzVsLTIuNSw1LjMzDQoJYy0wLjI1LTAuMjUtMC41Ni0wLjQ2LTAuOTItMC42M2MtMC4yNi0wLjEyLTAuNTMtMC4xOC0wLjgxLTAuMThjLTAuMDksMC0wLjE3LDAuMDEtMC4yNiwwLjAyYy0wLjM2LDAuMDUtMC43LDAuMTYtMS4wMiwwLjM1DQoJYy0wLjMxLDAuMTgtMC42LDAuNDEtMC44NCwwLjdjLTAuMjUsMC4yOC0wLjQzLDAuNTktMC41NSwwLjkxYy0wLjEyLDAuMzMtMC4xNiwwLjY1LTAuMTEsMC45NWMwLjA1LDAuMywwLjE2LDAuNTcsMC4zMywwLjgyDQoJYzAuMTcsMC4yNCwwLjM5LDAuNDYsMC42NiwwLjY1YzAuMjUsMC4xOCwwLjU0LDAuMzUsMC44NSwwLjQ5YzAuMzYsMC4xNywwLjcxLDAuMjYsMS4wMywwLjI2YzAuMTMsMCwwLjI2LTAuMDEsMC4zOC0wLjA0DQoJYzAuNC0wLjA5LDAuNzUtMC4yNSwxLjAzLTAuNDdjMC4zMi0wLjI0LDAuNi0wLjU1LDAuODUtMC45MmwwLjAxLTAuMDJsMC4wMS0wLjAybDQuMzUtOS4yOWwwLjE2LTAuMzRsLTAuMzYtMC4wOWwtNy45Ni0yLjENCglMMTEuMTYsNC42NnoiLz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "NOTE"
+          },
+          {
+            "type": "input_value",
+            "name": "BEATS"
+          }
+        ],
+        "category": "sounds",
+        "extensions": [
+          "colours_sounds",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "NOTE",
+          "type": "piano",
+          "fields": {
+            "NOTE": "C"
+          }
+        },
+        {
+          "name": "BEATS",
+          "type": "math_number",
+          "fields": {
+            "NUM": "0.25"
+          }
+        }
+      ]
+    },
+    {
+      "id": "event_whenflagclicked",
+      "category": "events",
+      "definition": {
+        "id": "event_whenflagclicked",
+        "message0": "%1 %2 当程序启动时",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iX+WbvuWxgl8xIiBkYXRhLW5hbWU9IuWbvuWxgiAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMi42OCAyMi42OCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogI2ZmZjsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHBvbHlnb24gY2xhc3M9ImNscy0xIiBwb2ludHM9IjE4LjEyIDExLjM0IDQuNTUgMy41MSA0LjU1IDE5LjE3IDE4LjEyIDExLjM0Ii8+Cjwvc3ZnPg==",
+            "width": 32,
+            "height": 32,
+            "alt": "flag"
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "events",
+        "extensions": [
+          "colours_event",
+          "shape_hat"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "control_wait",
+      "category": "control",
+      "definition": {
+        "id": "control_wait",
+        "message0": "等待 %1 秒",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "DURATION"
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "DURATION",
+          "type": "math_positive_number",
+          "fields": {
+            "NUM": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "control_wait_until",
+      "category": "control",
+      "definition": {
+        "message0": "等待 %1",
+        "lastDummyAlign2": "RIGHT",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "CONDITION",
+            "check": "Boolean"
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "control_break",
+      "category": "control",
+      "definition": {
+        "message0": "跳出循环",
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_end"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "control_repeat",
+      "category": "control",
+      "definition": {
+        "id": "control_repeat",
+        "message0": "重复执行 %1 次",
+        "message1": "%1",
+        "message2": "%1",
+        "lastDummyAlign2": "RIGHT",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "TIMES"
+          }
+        ],
+        "args1": [
+          {
+            "type": "input_statement",
+            "name": "SUBSTACK"
+          }
+        ],
+        "args2": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyMS4wLjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0icmVwZWF0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4PSIwcHgiIHk9IjBweCINCgkgdmlld0JveD0iMCAwIDI0IDI0IiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAyNCAyNDsiIHhtbDpzcGFjZT0icHJlc2VydmUiPg0KPHN0eWxlIHR5cGU9InRleHQvY3NzIj4NCgkuc3Qwe2ZpbGw6I0NGOEIxNzt9DQoJLnN0MXtmaWxsOiNGRkZGRkY7fQ0KPC9zdHlsZT4NCjx0aXRsZT5yZXBlYXQ8L3RpdGxlPg0KPHBhdGggY2xhc3M9InN0MCIgZD0iTTIzLjMsMTFjLTAuMywwLjYtMC45LDEtMS41LDFoLTEuNmMtMC4xLDEuMy0wLjUsMi41LTEuMSwzLjZjLTAuOSwxLjctMi4zLDMuMi00LjEsNC4xDQoJYy0xLjcsMC45LTMuNiwxLjItNS41LDAuOWMtMS44LTAuMy0zLjUtMS4xLTQuOS0yLjNjLTAuNy0wLjctMC43LTEuOSwwLTIuNmMwLjYtMC42LDEuNi0wLjcsMi4zLTAuMkg3YzAuOSwwLjYsMS45LDAuOSwyLjksMC45DQoJczEuOS0wLjMsMi43LTAuOWMxLjEtMC44LDEuOC0yLjEsMS44LTMuNWgtMS41Yy0wLjksMC0xLjctMC43LTEuNy0xLjdjMC0wLjQsMC4yLTAuOSwwLjUtMS4ybDQuNC00LjRjMC43LTAuNiwxLjctMC42LDIuNCwwTDIzLDkuMg0KCUMyMy41LDkuNywyMy42LDEwLjQsMjMuMywxMXoiLz4NCjxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0yMS44LDExaC0yLjZjMCwxLjUtMC4zLDIuOS0xLDQuMmMtMC44LDEuNi0yLjEsMi44LTMuNywzLjZjLTEuNSwwLjgtMy4zLDEuMS00LjksMC44Yy0xLjYtMC4yLTMuMi0xLTQuNC0yLjENCgljLTAuNC0wLjMtMC40LTAuOS0wLjEtMS4yYzAuMy0wLjQsMC45LTAuNCwxLjItMC4xbDAsMGMxLDAuNywyLjIsMS4xLDMuNCwxLjFzMi4zLTAuMywzLjMtMWMwLjktMC42LDEuNi0xLjUsMi0yLjYNCgljMC4zLTAuOSwwLjQtMS44LDAuMi0yLjhoLTIuNGMtMC40LDAtMC43LTAuMy0wLjctMC43YzAtMC4yLDAuMS0wLjMsMC4yLTAuNGw0LjQtNC40YzAuMy0wLjMsMC43LTAuMywwLjksMEwyMiw5LjgNCgljMC4zLDAuMywwLjQsMC42LDAuMywwLjlTMjIsMTEsMjEuOCwxMXoiLz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flip_rtl": true
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "TIMES",
+          "type": "math_whole_number",
+          "fields": {
+            "NUM": "10"
+          }
+        }
+      ]
+    },
+    {
+      "id": "control_forever",
+      "category": "control",
+      "definition": {
+        "id": "control_forever",
+        "message0": "重复执行",
+        "message1": "%1",
+        "message2": "%1",
+        "lastDummyAlign2": "RIGHT",
+        "args1": [
+          {
+            "type": "input_statement",
+            "name": "SUBSTACK"
+          }
+        ],
+        "args2": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyMS4wLjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0icmVwZWF0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4PSIwcHgiIHk9IjBweCINCgkgdmlld0JveD0iMCAwIDI0IDI0IiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAyNCAyNDsiIHhtbDpzcGFjZT0icHJlc2VydmUiPg0KPHN0eWxlIHR5cGU9InRleHQvY3NzIj4NCgkuc3Qwe2ZpbGw6I0NGOEIxNzt9DQoJLnN0MXtmaWxsOiNGRkZGRkY7fQ0KPC9zdHlsZT4NCjx0aXRsZT5yZXBlYXQ8L3RpdGxlPg0KPHBhdGggY2xhc3M9InN0MCIgZD0iTTIzLjMsMTFjLTAuMywwLjYtMC45LDEtMS41LDFoLTEuNmMtMC4xLDEuMy0wLjUsMi41LTEuMSwzLjZjLTAuOSwxLjctMi4zLDMuMi00LjEsNC4xDQoJYy0xLjcsMC45LTMuNiwxLjItNS41LDAuOWMtMS44LTAuMy0zLjUtMS4xLTQuOS0yLjNjLTAuNy0wLjctMC43LTEuOSwwLTIuNmMwLjYtMC42LDEuNi0wLjcsMi4zLTAuMkg3YzAuOSwwLjYsMS45LDAuOSwyLjksMC45DQoJczEuOS0wLjMsMi43LTAuOWMxLjEtMC44LDEuOC0yLjEsMS44LTMuNWgtMS41Yy0wLjksMC0xLjctMC43LTEuNy0xLjdjMC0wLjQsMC4yLTAuOSwwLjUtMS4ybDQuNC00LjRjMC43LTAuNiwxLjctMC42LDIuNCwwTDIzLDkuMg0KCUMyMy41LDkuNywyMy42LDEwLjQsMjMuMywxMXoiLz4NCjxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0yMS44LDExaC0yLjZjMCwxLjUtMC4zLDIuOS0xLDQuMmMtMC44LDEuNi0yLjEsMi44LTMuNywzLjZjLTEuNSwwLjgtMy4zLDEuMS00LjksMC44Yy0xLjYtMC4yLTMuMi0xLTQuNC0yLjENCgljLTAuNC0wLjMtMC40LTAuOS0wLjEtMS4yYzAuMy0wLjQsMC45LTAuNCwxLjItMC4xbDAsMGMxLDAuNywyLjIsMS4xLDMuNCwxLjFzMi4zLTAuMywzLjMtMWMwLjktMC42LDEuNi0xLjUsMi0yLjYNCgljMC4zLTAuOSwwLjQtMS44LDAuMi0yLjhoLTIuNGMtMC40LDAtMC43LTAuMy0wLjctMC43YzAtMC4yLDAuMS0wLjMsMC4yLTAuNGw0LjQtNC40YzAuMy0wLjMsMC43LTAuMywwLjksMEwyMiw5LjgNCgljMC4zLDAuMywwLjQsMC42LDAuMywwLjlTMjIsMTEsMjEuOCwxMXoiLz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flip_rtl": true
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "control_if",
+      "category": "control",
+      "definition": {
+        "type": "control_if",
+        "message0": "如果 %1 那么",
+        "message1": "%1",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "CONDITION",
+            "check": "Boolean"
+          }
+        ],
+        "args1": [
+          {
+            "type": "input_statement",
+            "name": "SUBSTACK"
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "control_if_else",
+      "category": "control",
+      "definition": {
+        "type": "control_if_else",
+        "message0": "如果 %1 那么",
+        "message1": "%1",
+        "message2": "否则",
+        "message3": "%1",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "CONDITION",
+            "check": "Boolean"
+          }
+        ],
+        "args1": [
+          {
+            "type": "input_statement",
+            "name": "SUBSTACK"
+          }
+        ],
+        "args3": [
+          {
+            "type": "input_statement",
+            "name": "SUBSTACK2"
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "control_repeat_until",
+      "category": "control",
+      "definition": {
+        "message0": "重复执行直到 %1",
+        "message1": "%1",
+        "message2": "%1",
+        "lastDummyAlign2": "RIGHT",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "CONDITION",
+            "check": "Boolean"
+          }
+        ],
+        "args1": [
+          {
+            "type": "input_statement",
+            "name": "SUBSTACK"
+          }
+        ],
+        "args2": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyMS4wLjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0icmVwZWF0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4PSIwcHgiIHk9IjBweCINCgkgdmlld0JveD0iMCAwIDI0IDI0IiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAyNCAyNDsiIHhtbDpzcGFjZT0icHJlc2VydmUiPg0KPHN0eWxlIHR5cGU9InRleHQvY3NzIj4NCgkuc3Qwe2ZpbGw6I0NGOEIxNzt9DQoJLnN0MXtmaWxsOiNGRkZGRkY7fQ0KPC9zdHlsZT4NCjx0aXRsZT5yZXBlYXQ8L3RpdGxlPg0KPHBhdGggY2xhc3M9InN0MCIgZD0iTTIzLjMsMTFjLTAuMywwLjYtMC45LDEtMS41LDFoLTEuNmMtMC4xLDEuMy0wLjUsMi41LTEuMSwzLjZjLTAuOSwxLjctMi4zLDMuMi00LjEsNC4xDQoJYy0xLjcsMC45LTMuNiwxLjItNS41LDAuOWMtMS44LTAuMy0zLjUtMS4xLTQuOS0yLjNjLTAuNy0wLjctMC43LTEuOSwwLTIuNmMwLjYtMC42LDEuNi0wLjcsMi4zLTAuMkg3YzAuOSwwLjYsMS45LDAuOSwyLjksMC45DQoJczEuOS0wLjMsMi43LTAuOWMxLjEtMC44LDEuOC0yLjEsMS44LTMuNWgtMS41Yy0wLjksMC0xLjctMC43LTEuNy0xLjdjMC0wLjQsMC4yLTAuOSwwLjUtMS4ybDQuNC00LjRjMC43LTAuNiwxLjctMC42LDIuNCwwTDIzLDkuMg0KCUMyMy41LDkuNywyMy42LDEwLjQsMjMuMywxMXoiLz4NCjxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0yMS44LDExaC0yLjZjMCwxLjUtMC4zLDIuOS0xLDQuMmMtMC44LDEuNi0yLjEsMi44LTMuNywzLjZjLTEuNSwwLjgtMy4zLDEuMS00LjksMC44Yy0xLjYtMC4yLTMuMi0xLTQuNC0yLjENCgljLTAuNC0wLjMtMC40LTAuOS0wLjEtMS4yYzAuMy0wLjQsMC45LTAuNCwxLjItMC4xbDAsMGMxLDAuNywyLjIsMS4xLDMuNCwxLjFzMi4zLTAuMywzLjMtMWMwLjktMC42LDEuNi0xLjUsMi0yLjYNCgljMC4zLTAuOSwwLjQtMS44LDAuMi0yLjhoLTIuNGMtMC40LDAtMC43LTAuMy0wLjctMC43YzAtMC4yLDAuMS0wLjMsMC4yLTAuNGw0LjQtNC40YzAuMy0wLjMsMC43LTAuMywwLjksMEwyMiw5LjgNCgljMC4zLDAuMywwLjQsMC42LDAuMywwLjlTMjIsMTEsMjEuOCwxMXoiLz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flip_rtl": true
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "control_stop",
+      "category": "control",
+      "definition": {
+        "id": "control_stop",
+        "message0": "停止并且退出程序",
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "sensing_key_judgment",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_key_judgment",
+        "message0": "%1 %2 触碰传感器 %3 被按下？",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPHBhdGggY2xhc3M9InN0MCIgZD0iTTEyLDEwLjY4VjkuMzloLTEuMzJ2MS4yOUg5LjRWMTJoMS4yOHYxLjI4SDEyVjEyaDEuMjl2LTEuMzJIMTJ6IE0xMiwxMC42OFY5LjM5aC0xLjMydjEuMjlIOS40VjEyaDEuMjh2MS4yOA0KCUgxMlYxMmgxLjI5di0xLjMySDEyeiBNMTIsMTAuNjhWOS4zOWgtMS4zMnYxLjI5SDkuNFYxMmgxLjI4djEuMjhIMTJWMTJoMS4yOXYtMS4zMkgxMnogTTEyLDEwLjY4VjkuMzloLTEuMzJ2MS4yOUg5LjRWMTJoMS4yOA0KCXYxLjI4SDEyVjEyaDEuMjl2LTEuMzJIMTJ6IE0xNi42NywyLjgzSDYuMDFDNC4yNiwyLjgzLDIuODQsNC4yNSwyLjg0LDZ2MTAuNjdjMCwxLjc1LDEuNDIsMy4xNywzLjE3LDMuMTdoMTAuNjYNCgljMS43NiwwLDMuMTctMS40MiwzLjE3LTMuMTdWNkMxOS44NCw0LjI1LDE4LjQzLDIuODMsMTYuNjcsMi44M3ogTTE0LjYyLDExLjM0YzAsMS4xNC0wLjU5LDIuMTUtMS40OCwyLjczDQoJYy0wLjUyLDAuMzQtMS4xNCwwLjU0LTEuOCwwLjU0Yy0wLjY2LDAtMS4yOC0wLjItMS44LTAuNTRjLTAuODktMC41OC0xLjQ4LTEuNTktMS40OC0yLjczYzAtMS4xNCwwLjU5LTIuMTUsMS40OC0yLjc0DQoJYzAuNTItMC4zNCwxLjE0LTAuNTQsMS44LTAuNTRjMC42NiwwLDEuMjgsMC4yLDEuOCwwLjU0QzE0LjAzLDkuMTksMTQuNjIsMTAuMiwxNC42MiwxMS4zNHogTTUuMjksMTQuMDcNCgljLTAuNDMsMC0wLjc4LTAuMzUtMC43OC0wLjc4VjkuMzhjMC0wLjQzLDAuMzUtMC43OCwwLjc4LTAuNzhoMi43N2MtMC42MywwLjc0LTEsMS43LTEsMi43NGMwLDEuMDMsMC4zNywxLjk5LDEsMi43M0g1LjI5eg0KCSBNMTguMTcsMTMuMjljMCwwLjQzLTAuMzUsMC43OC0wLjc4LDAuNzhoLTIuNzdjMC42My0wLjc0LDEtMS43LDEtMi43M2MwLTEuMDQtMC4zNy0yLTEtMi43NGgyLjc3YzAuNDMsMCwwLjc4LDAuMzUsMC43OCwwLjc4DQoJVjEzLjI5eiBNMTAuNjgsOS4zOXYxLjI5SDkuNFYxMmgxLjI4djEuMjhIMTJWMTJoMS4yOXYtMS4zMkgxMlY5LjM5SDEwLjY4eiBNMTIsMTAuNjhWOS4zOWgtMS4zMnYxLjI5SDkuNFYxMmgxLjI4djEuMjhIMTJWMTJoMS4yOQ0KCXYtMS4zMkgxMnogTTEyLDEwLjY4VjkuMzloLTEuMzJ2MS4yOUg5LjRWMTJoMS4yOHYxLjI4SDEyVjEyaDEuMjl2LTEuMzJIMTJ6Ii8+DQo8L3N2Zz4NCg==",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_boolean"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "touching_menu",
+          "fields": {
+            "TOUCHING_MENU": "A"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sensing_reflected_light_judgment",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_reflected_light_judgment",
+        "message0": "%1 %2 灰度传感器 %3 的反射光 %4 %5",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjY3LDIuODNINi4wMUM0LjI1LDIuODMsMi44Myw0LjI1LDIuODMsNnYxMC42N2MwLDEuNzUsMS40MiwzLjE3LDMuMTgsMy4xN2gxMC42Ng0KCQljMS43NSwwLDMuMTctMS40MiwzLjE3LTMuMTdWNkMxOS44NCw0LjI1LDE4LjQyLDIuODMsMTYuNjcsMi44M3ogTTE1Ljg5LDEzLjYyaC0wLjk0Yy0wLjc1LDEuMi0yLjA5LDEuOTktMy42MSwxLjk5DQoJCXMtMi44Ni0wLjc5LTMuNjEtMS45OUg2Ljc5Yy0xLjI2LDAtMi4yOC0xLjAyLTIuMjgtMi4yOGMwLTAuNjMsMC4yNS0xLjIsMC42Ny0xLjYxYzAuNDEtMC40MSwwLjk4LTAuNjcsMS42MS0wLjY3aDAuOTQNCgkJYzAuNzUtMS4yLDIuMDktMS45OSwzLjYxLTEuOTlzMi44NiwwLjc5LDMuNjEsMS45OWgwLjk0YzEuMjYsMCwyLjI4LDEuMDIsMi4yOCwyLjI4UzE3LjE1LDEzLjYyLDE1Ljg5LDEzLjYyeiIvPg0KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xMy45NSwxMS4zNGMwLDAuOTgtMC41NCwxLjg0LTEuMzUsMi4yOGMtMC4zNywwLjIxLTAuOCwwLjMzLTEuMjYsMC4zM3MtMC44OS0wLjEyLTEuMjYtMC4zMw0KCQljLTAuODEtMC40NC0xLjM1LTEuMy0xLjM1LTIuMjhzMC41NC0xLjg0LDEuMzUtMi4yOGMwLjM3LTAuMjEsMC44LTAuMzMsMS4yNi0wLjMzczAuODksMC4xMiwxLjI2LDAuMzMNCgkJQzEzLjQxLDkuNSwxMy45NSwxMC4zNiwxMy45NSwxMS4zNHoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "judgment",
+            "options": [
+              [
+                ">",
+                ">"
+              ],
+              [
+                "<",
+                "<"
+              ],
+              [
+                "=",
+                "="
+              ]
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "value"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_boolean"
+        ]
+      },
+      "fields": {
+        "judgment": ">"
+      },
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "sensing_menu",
+          "fields": {
+            "SENSING_MENU": "A"
+          }
+        },
+        {
+          "name": "value",
+          "type": "math_number",
+          "fields": {
+            "NUM": "50"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sensing_reflected_light_detection",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_reflected_light_detection",
+        "message0": "%1 %2 灰度传感器 %3 的数值",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjY3LDIuODNINi4wMUM0LjI1LDIuODMsMi44Myw0LjI1LDIuODMsNnYxMC42N2MwLDEuNzUsMS40MiwzLjE3LDMuMTgsMy4xN2gxMC42Ng0KCQljMS43NSwwLDMuMTctMS40MiwzLjE3LTMuMTdWNkMxOS44NCw0LjI1LDE4LjQyLDIuODMsMTYuNjcsMi44M3ogTTE1Ljg5LDEzLjYyaC0wLjk0Yy0wLjc1LDEuMi0yLjA5LDEuOTktMy42MSwxLjk5DQoJCXMtMi44Ni0wLjc5LTMuNjEtMS45OUg2Ljc5Yy0xLjI2LDAtMi4yOC0xLjAyLTIuMjgtMi4yOGMwLTAuNjMsMC4yNS0xLjIsMC42Ny0xLjYxYzAuNDEtMC40MSwwLjk4LTAuNjcsMS42MS0wLjY3aDAuOTQNCgkJYzAuNzUtMS4yLDIuMDktMS45OSwzLjYxLTEuOTlzMi44NiwwLjc5LDMuNjEsMS45OWgwLjk0YzEuMjYsMCwyLjI4LDEuMDIsMi4yOCwyLjI4UzE3LjE1LDEzLjYyLDE1Ljg5LDEzLjYyeiIvPg0KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xMy45NSwxMS4zNGMwLDAuOTgtMC41NCwxLjg0LTEuMzUsMi4yOGMtMC4zNywwLjIxLTAuOCwwLjMzLTEuMjYsMC4zM3MtMC44OS0wLjEyLTEuMjYtMC4zMw0KCQljLTAuODEtMC40NC0xLjM1LTEuMy0xLjM1LTIuMjhzMC41NC0xLjg0LDEuMzUtMi4yOGMwLjM3LTAuMjEsMC44LTAuMzMsMS4yNi0wLjMzczAuODksMC4xMiwxLjI2LDAuMzMNCgkJQzEzLjQxLDkuNSwxMy45NSwxMC4zNiwxMy45NSwxMS4zNHoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "sensing_menu",
+          "fields": {
+            "SENSING_MENU": "A"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sensing_set_color_threshold_value",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_set_color_threshold_value",
+        "message0": "%1 %2 灰度传感器 %3 阈值设为 %4",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjY3LDIuODNINi4wMUM0LjI1LDIuODMsMi44Myw0LjI1LDIuODMsNnYxMC42N2MwLDEuNzUsMS40MiwzLjE3LDMuMTgsMy4xN2gxMC42Ng0KCQljMS43NSwwLDMuMTctMS40MiwzLjE3LTMuMTdWNkMxOS44NCw0LjI1LDE4LjQyLDIuODMsMTYuNjcsMi44M3ogTTE1Ljg5LDEzLjYyaC0wLjk0Yy0wLjc1LDEuMi0yLjA5LDEuOTktMy42MSwxLjk5DQoJCXMtMi44Ni0wLjc5LTMuNjEtMS45OUg2Ljc5Yy0xLjI2LDAtMi4yOC0xLjAyLTIuMjgtMi4yOGMwLTAuNjMsMC4yNS0xLjIsMC42Ny0xLjYxYzAuNDEtMC40MSwwLjk4LTAuNjcsMS42MS0wLjY3aDAuOTQNCgkJYzAuNzUtMS4yLDIuMDktMS45OSwzLjYxLTEuOTlzMi44NiwwLjc5LDMuNjEsMS45OWgwLjk0YzEuMjYsMCwyLjI4LDEuMDIsMi4yOCwyLjI4UzE3LjE1LDEzLjYyLDE1Ljg5LDEzLjYyeiIvPg0KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xMy45NSwxMS4zNGMwLDAuOTgtMC41NCwxLjg0LTEuMzUsMi4yOGMtMC4zNywwLjIxLTAuOCwwLjMzLTEuMjYsMC4zM3MtMC44OS0wLjEyLTEuMjYtMC4zMw0KCQljLTAuODEtMC40NC0xLjM1LTEuMy0xLjM1LTIuMjhzMC41NC0xLjg0LDEuMzUtMi4yOGMwLjM3LTAuMjEsMC44LTAuMzMsMS4yNi0wLjMzczAuODksMC4xMiwxLjI2LDAuMzMNCgkJQzEzLjQxLDkuNSwxMy45NSwxMC4zNiwxMy45NSwxMS4zNHoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "input_value",
+            "name": "THRESHOLD"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "sensing_menu",
+          "fields": {
+            "SENSING_MENU": "A"
+          }
+        },
+        {
+          "name": "THRESHOLD",
+          "type": "math_number",
+          "fields": {
+            "NUM": "1000"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sensing_grayscale_state",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_grayscale_state",
+        "message0": "%1 %2 灰度传感器 %3 是否触发",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjY3LDIuODNINi4wMUM0LjI1LDIuODMsMi44Myw0LjI1LDIuODMsNnYxMC42N2MwLDEuNzUsMS40MiwzLjE3LDMuMTgsMy4xN2gxMC42Ng0KCQljMS43NSwwLDMuMTctMS40MiwzLjE3LTMuMTdWNkMxOS44NCw0LjI1LDE4LjQyLDIuODMsMTYuNjcsMi44M3ogTTE1Ljg5LDEzLjYyaC0wLjk0Yy0wLjc1LDEuMi0yLjA5LDEuOTktMy42MSwxLjk5DQoJCXMtMi44Ni0wLjc5LTMuNjEtMS45OUg2Ljc5Yy0xLjI2LDAtMi4yOC0xLjAyLTIuMjgtMi4yOGMwLTAuNjMsMC4yNS0xLjIsMC42Ny0xLjYxYzAuNDEtMC40MSwwLjk4LTAuNjcsMS42MS0wLjY3aDAuOTQNCgkJYzAuNzUtMS4yLDIuMDktMS45OSwzLjYxLTEuOTlzMi44NiwwLjc5LDMuNjEsMS45OWgwLjk0YzEuMjYsMCwyLjI4LDEuMDIsMi4yOCwyLjI4UzE3LjE1LDEzLjYyLDE1Ljg5LDEzLjYyeiIvPg0KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xMy45NSwxMS4zNGMwLDAuOTgtMC41NCwxLjg0LTEuMzUsMi4yOGMtMC4zNywwLjIxLTAuOCwwLjMzLTEuMjYsMC4zM3MtMC44OS0wLjEyLTEuMjYtMC4zMw0KCQljLTAuODEtMC40NC0xLjM1LTEuMy0xLjM1LTIuMjhzMC41NC0xLjg0LDEuMzUtMi4yOGMwLjM3LTAuMjEsMC44LTAuMzMsMS4yNi0wLjMzczAuODksMC4xMiwxLjI2LDAuMzMNCgkJQzEzLjQxLDkuNSwxMy45NSwxMC4zNiwxMy45NSwxMS4zNHoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_boolean"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "sensing_menu",
+          "fields": {
+            "SENSING_MENU": "A"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sensing_one_calibrate",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_one_calibrate",
+        "message0": "%1 %2 校准 %3 的灰度传感器 %4 秒",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjY3LDIuODNINi4wMUM0LjI1LDIuODMsMi44Myw0LjI1LDIuODMsNnYxMC42N2MwLDEuNzUsMS40MiwzLjE3LDMuMTgsMy4xN2gxMC42Ng0KCQljMS43NSwwLDMuMTctMS40MiwzLjE3LTMuMTdWNkMxOS44NCw0LjI1LDE4LjQyLDIuODMsMTYuNjcsMi44M3ogTTE1Ljg5LDEzLjYyaC0wLjk0Yy0wLjc1LDEuMi0yLjA5LDEuOTktMy42MSwxLjk5DQoJCXMtMi44Ni0wLjc5LTMuNjEtMS45OUg2Ljc5Yy0xLjI2LDAtMi4yOC0xLjAyLTIuMjgtMi4yOGMwLTAuNjMsMC4yNS0xLjIsMC42Ny0xLjYxYzAuNDEtMC40MSwwLjk4LTAuNjcsMS42MS0wLjY3aDAuOTQNCgkJYzAuNzUtMS4yLDIuMDktMS45OSwzLjYxLTEuOTlzMi44NiwwLjc5LDMuNjEsMS45OWgwLjk0YzEuMjYsMCwyLjI4LDEuMDIsMi4yOCwyLjI4UzE3LjE1LDEzLjYyLDE1Ljg5LDEzLjYyeiIvPg0KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xMy45NSwxMS4zNGMwLDAuOTgtMC41NCwxLjg0LTEuMzUsMi4yOGMtMC4zNywwLjIxLTAuOCwwLjMzLTEuMjYsMC4zM3MtMC44OS0wLjEyLTEuMjYtMC4zMw0KCQljLTAuODEtMC40NC0xLjM1LTEuMy0xLjM1LTIuMjhzMC41NC0xLjg0LDEuMzUtMi4yOGMwLjM3LTAuMjEsMC44LTAuMzMsMS4yNi0wLjMzczAuODksMC4xMiwxLjI2LDAuMzMNCgkJQzEzLjQxLDkuNSwxMy45NSwxMC4zNiwxMy45NSwxMS4zNHoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "input_value",
+            "name": "SECONDS"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "sensing_menu",
+          "fields": {
+            "SENSING_MENU": "A"
+          }
+        },
+        {
+          "name": "SECONDS",
+          "type": "math_number",
+          "fields": {
+            "NUM": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sensing_two_calibrate",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_two_calibrate",
+        "message0": "%1 %2 %3 和 %4 的灰度传感器 %5 秒",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjY3LDIuODNINi4wMUM0LjI1LDIuODMsMi44Myw0LjI1LDIuODMsNnYxMC42N2MwLDEuNzUsMS40MiwzLjE3LDMuMTgsMy4xN2gxMC42Ng0KCQljMS43NSwwLDMuMTctMS40MiwzLjE3LTMuMTdWNkMxOS44NCw0LjI1LDE4LjQyLDIuODMsMTYuNjcsMi44M3ogTTE1Ljg5LDEzLjYyaC0wLjk0Yy0wLjc1LDEuMi0yLjA5LDEuOTktMy42MSwxLjk5DQoJCXMtMi44Ni0wLjc5LTMuNjEtMS45OUg2Ljc5Yy0xLjI2LDAtMi4yOC0xLjAyLTIuMjgtMi4yOGMwLTAuNjMsMC4yNS0xLjIsMC42Ny0xLjYxYzAuNDEtMC40MSwwLjk4LTAuNjcsMS42MS0wLjY3aDAuOTQNCgkJYzAuNzUtMS4yLDIuMDktMS45OSwzLjYxLTEuOTlzMi44NiwwLjc5LDMuNjEsMS45OWgwLjk0YzEuMjYsMCwyLjI4LDEuMDIsMi4yOCwyLjI4UzE3LjE1LDEzLjYyLDE1Ljg5LDEzLjYyeiIvPg0KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xMy45NSwxMS4zNGMwLDAuOTgtMC41NCwxLjg0LTEuMzUsMi4yOGMtMC4zNywwLjIxLTAuOCwwLjMzLTEuMjYsMC4zM3MtMC44OS0wLjEyLTEuMjYtMC4zMw0KCQljLTAuODEtMC40NC0xLjM1LTEuMy0xLjM1LTIuMjhzMC41NC0xLjg0LDEuMzUtMi4yOGMwLjM3LTAuMjEsMC44LTAuMzMsMS4yNi0wLjMzczAuODksMC4xMiwxLjI2LDAuMzMNCgkJQzEzLjQxLDkuNSwxMy45NSwxMC4zNiwxMy45NSwxMS4zNHoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT1"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT2"
+          },
+          {
+            "type": "input_value",
+            "name": "SECONDS"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "PORT1",
+          "type": "sensing_menu",
+          "fields": {
+            "SENSING_MENU": "A"
+          }
+        },
+        {
+          "name": "PORT2",
+          "type": "sensing_menu",
+          "fields": {
+            "SENSING_MENU": "A"
+          }
+        },
+        {
+          "name": "SECONDS",
+          "type": "math_number",
+          "fields": {
+            "NUM": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sensing_ultrasonic_judgment",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_ultrasonic_judgment",
+        "message0": "%1 %2 超声波传感器 %3 距离是否 %4 %5 CM",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xOC4wMiw2Ljc2SDQuNjZjLTEuMjYsMC0yLjI5LDEuMDMtMi4yOSwyLjI5djQuODRjMCwxLjI3LDEuMDMsMi4zLDIuMjksMi4zaDEzLjM2DQoJCQljMS4yNiwwLDIuMjktMS4wMywyLjI5LTIuM1Y5LjA1QzIwLjMxLDcuNzksMTkuMjgsNi43NiwxOC4wMiw2Ljc2eiBNMTUuOTYsMTQuODdjLTEuNDMsMC0yLjY1LTAuODktMy4xMy0yLjE1aC0zLjENCgkJCWMtMC40NywxLjI2LTEuNywyLjE1LTMuMTMsMi4xNWMtMS44NSwwLTMuMzQtMS40OS0zLjM0LTMuMzRjMC0xLjg1LDEuNDktMy4zNSwzLjM0LTMuMzVoOS4zNWMxLjg1LDAsMy4zNSwxLjUsMy4zNSwzLjM1DQoJCQlDMTkuMzEsMTMuMzgsMTcuODEsMTQuODcsMTUuOTYsMTQuODd6Ii8+DQoJPC9nPg0KCTxnPg0KCQk8Zz4NCgkJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xNi4wMSw4Ljc2SDYuNTZjLTEuNTMsMC0yLjc3LDEuMjQtMi43NywyLjc3YzAsMS41MywxLjI0LDIuNzcsMi43NywyLjc3YzEuNDQsMCwyLjYzLTEuMSwyLjc1LTIuNTFoMy45NA0KCQkJCWMwLjEyLDEuNDEsMS4zMSwyLjUxLDIuNzUsMi41MWMxLjU0LDAsMi43Ny0xLjI0LDIuNzctMi43N0MxOC43OCw5Ljk5LDE3LjU1LDguNzYsMTYuMDEsOC43NnogTTYuNTYsMTMuNzENCgkJCQljLTEuMiwwLTIuMTgtMC45OC0yLjE4LTIuMThjMC0xLjIsMC45OC0yLjE4LDIuMTgtMi4xOGMxLjIsMCwyLjE4LDAuOTgsMi4xOCwyLjE4YzAsMC4wOC0wLjAxLDAuMTctMC4wMiwwLjI2DQoJCQkJQzguNiwxMi44Nyw3LjY4LDEzLjcxLDYuNTYsMTMuNzF6IE0xNi4wMSwxMy43MWMtMS4xMiwwLTIuMDQtMC44NS0yLjE3LTEuOTNjLTAuMDEtMC4wOC0wLjAyLTAuMTctMC4wMi0wLjI2DQoJCQkJYzAtMS4yLDAuOTgtMi4xOCwyLjE4LTIuMThjMS4yLDAsMi4xOCwwLjk4LDIuMTgsMi4xOEMxOC4xOSwxMi43MywxNy4yMSwxMy43MSwxNi4wMSwxMy43MXoiLz4NCgkJPC9nPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "judgment",
+            "options": [
+              [
+                ">",
+                ">"
+              ],
+              [
+                "<",
+                "<"
+              ],
+              [
+                "=",
+                "="
+              ]
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "value"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_boolean"
+        ]
+      },
+      "fields": {
+        "judgment": ">"
+      },
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "sensing_menu",
+          "fields": {
+            "SENSING_MENU": "A"
+          }
+        },
+        {
+          "name": "value",
+          "type": "math_number",
+          "fields": {
+            "NUM": "10"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sensing_ultrasonic_detection",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_ultrasonic_detection",
+        "message0": "%1 %2 超声波传感器 %3 的数值",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xOC4wMiw2Ljc2SDQuNjZjLTEuMjYsMC0yLjI5LDEuMDMtMi4yOSwyLjI5djQuODRjMCwxLjI3LDEuMDMsMi4zLDIuMjksMi4zaDEzLjM2DQoJCQljMS4yNiwwLDIuMjktMS4wMywyLjI5LTIuM1Y5LjA1QzIwLjMxLDcuNzksMTkuMjgsNi43NiwxOC4wMiw2Ljc2eiBNMTUuOTYsMTQuODdjLTEuNDMsMC0yLjY1LTAuODktMy4xMy0yLjE1aC0zLjENCgkJCWMtMC40NywxLjI2LTEuNywyLjE1LTMuMTMsMi4xNWMtMS44NSwwLTMuMzQtMS40OS0zLjM0LTMuMzRjMC0xLjg1LDEuNDktMy4zNSwzLjM0LTMuMzVoOS4zNWMxLjg1LDAsMy4zNSwxLjUsMy4zNSwzLjM1DQoJCQlDMTkuMzEsMTMuMzgsMTcuODEsMTQuODcsMTUuOTYsMTQuODd6Ii8+DQoJPC9nPg0KCTxnPg0KCQk8Zz4NCgkJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xNi4wMSw4Ljc2SDYuNTZjLTEuNTMsMC0yLjc3LDEuMjQtMi43NywyLjc3YzAsMS41MywxLjI0LDIuNzcsMi43NywyLjc3YzEuNDQsMCwyLjYzLTEuMSwyLjc1LTIuNTFoMy45NA0KCQkJCWMwLjEyLDEuNDEsMS4zMSwyLjUxLDIuNzUsMi41MWMxLjU0LDAsMi43Ny0xLjI0LDIuNzctMi43N0MxOC43OCw5Ljk5LDE3LjU1LDguNzYsMTYuMDEsOC43NnogTTYuNTYsMTMuNzENCgkJCQljLTEuMiwwLTIuMTgtMC45OC0yLjE4LTIuMThjMC0xLjIsMC45OC0yLjE4LDIuMTgtMi4xOGMxLjIsMCwyLjE4LDAuOTgsMi4xOCwyLjE4YzAsMC4wOC0wLjAxLDAuMTctMC4wMiwwLjI2DQoJCQkJQzguNiwxMi44Nyw3LjY4LDEzLjcxLDYuNTYsMTMuNzF6IE0xNi4wMSwxMy43MWMtMS4xMiwwLTIuMDQtMC44NS0yLjE3LTEuOTNjLTAuMDEtMC4wOC0wLjAyLTAuMTctMC4wMi0wLjI2DQoJCQkJYzAtMS4yLDAuOTgtMi4xOCwyLjE4LTIuMThjMS4yLDAsMi4xOCwwLjk4LDIuMTgsMi4xOEMxOC4xOSwxMi43MywxNy4yMSwxMy43MSwxNi4wMSwxMy43MXoiLz4NCgkJPC9nPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "sensing_menu",
+          "fields": {
+            "SENSING_MENU": "A"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sensing_isHandling",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_isHandling",
+        "message0": "%1 %2 手柄 %3 是否 %4",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjI0LDYuOTVjLTAuMDYsMC0wLjExLDAtMC4xNywwLjAxVjYuOTVINi40NGMtMi40MywwLTQuMzksMS45Ny00LjM5LDQuMzljMCwyLjQyLDEuOTcsNC4zOSw0LjM5LDQuMzkNCgkJYzEuMjksMCwyLjQ2LTAuNTYsMy4yNS0xLjQ2aDMuMjljMC44LDAuODksMS45NywxLjQ2LDMuMjYsMS40NmMyLjQzLDAsNC4zOS0xLjk3LDQuMzktNC4zOUMyMC42Myw4LjkyLDE4LjY3LDYuOTUsMTYuMjQsNi45NXoNCgkJIE0xNS4yNCwxMS4zNGMwLDAuNDgtMC4zOSwwLjg3LTAuODcsMC44N2MtMC40OSwwLTAuODctMC4zOS0wLjg3LTAuODdjMC0wLjQ5LDAuMzgtMC44OCwwLjg3LTAuODgNCgkJQzE0Ljg1LDEwLjQ3LDE1LjI0LDEwLjg2LDE1LjI0LDExLjM0eiBNNS40OSwxMy43M3YtMS42NUgzLjgzdi0xLjQ2aDEuNjZWOC45NWgxLjQ2djEuNjZoMS42NnYxLjQ2SDYuOTZ2MS42NUg1LjQ5eiBNMTYuMzgsMTQuMjENCgkJYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNmMtMC4zMi0wLjEyLTAuNTYtMC40NC0wLjU2LTAuODFjMC0wLjM3LDAuMjQtMC42OSwwLjU2LTAuODFjMC4wOS0wLjA0LDAuMi0wLjA2LDAuMzEtMC4wNg0KCQljMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODdDMTcuMjQsMTMuODIsMTYuODYsMTQuMjEsMTYuMzgsMTQuMjF6IE0xNi4zOCwxMC4yYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNg0KCQljLTAuMzItMC4xMi0wLjU2LTAuNDQtMC41Ni0wLjgxYzAtMC4zNywwLjI0LTAuNjksMC41Ni0wLjgxYzAuMDktMC4wNCwwLjItMC4wNiwwLjMxLTAuMDZjMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODcNCgkJQzE3LjI0LDkuODEsMTYuODYsMTAuMiwxNi4zOCwxMC4yeiBNMTguMzksMTIuMjFjLTAuNDksMC0wLjg3LTAuMzktMC44Ny0wLjg3YzAtMC40OSwwLjM4LTAuODgsMC44Ny0wLjg4DQoJCWMwLjQ4LDAsMC44NywwLjM5LDAuODcsMC44OEMxOS4yNSwxMS44MiwxOC44NiwxMi4yMSwxOC4zOSwxMi4yMXoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "BUTTON",
+            "options": [
+              [
+                "被按下",
+                "press"
+              ],
+              [
+                "未按下",
+                "unpress"
+              ]
+            ]
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_boolean"
+        ]
+      },
+      "fields": {
+        "BUTTON": "press"
+      },
+      "inputs": [
+        {
+          "name": "PORT",
+          "type": "handShank_menu",
+          "fields": {
+            "HAND_SHANK": "up"
+          }
+        }
+      ]
+    },
+    {
+      "id": "combined_forward_offset",
+      "category": "sensing",
+      "definition": {
+        "type": "combined_forward_offset",
+        "message0": "%1 %2 设置手柄前进偏移量为左 %3 右 %4",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjI0LDYuOTVjLTAuMDYsMC0wLjExLDAtMC4xNywwLjAxVjYuOTVINi40NGMtMi40MywwLTQuMzksMS45Ny00LjM5LDQuMzljMCwyLjQyLDEuOTcsNC4zOSw0LjM5LDQuMzkNCgkJYzEuMjksMCwyLjQ2LTAuNTYsMy4yNS0xLjQ2aDMuMjljMC44LDAuODksMS45NywxLjQ2LDMuMjYsMS40NmMyLjQzLDAsNC4zOS0xLjk3LDQuMzktNC4zOUMyMC42Myw4LjkyLDE4LjY3LDYuOTUsMTYuMjQsNi45NXoNCgkJIE0xNS4yNCwxMS4zNGMwLDAuNDgtMC4zOSwwLjg3LTAuODcsMC44N2MtMC40OSwwLTAuODctMC4zOS0wLjg3LTAuODdjMC0wLjQ5LDAuMzgtMC44OCwwLjg3LTAuODgNCgkJQzE0Ljg1LDEwLjQ3LDE1LjI0LDEwLjg2LDE1LjI0LDExLjM0eiBNNS40OSwxMy43M3YtMS42NUgzLjgzdi0xLjQ2aDEuNjZWOC45NWgxLjQ2djEuNjZoMS42NnYxLjQ2SDYuOTZ2MS42NUg1LjQ5eiBNMTYuMzgsMTQuMjENCgkJYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNmMtMC4zMi0wLjEyLTAuNTYtMC40NC0wLjU2LTAuODFjMC0wLjM3LDAuMjQtMC42OSwwLjU2LTAuODFjMC4wOS0wLjA0LDAuMi0wLjA2LDAuMzEtMC4wNg0KCQljMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODdDMTcuMjQsMTMuODIsMTYuODYsMTQuMjEsMTYuMzgsMTQuMjF6IE0xNi4zOCwxMC4yYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNg0KCQljLTAuMzItMC4xMi0wLjU2LTAuNDQtMC41Ni0wLjgxYzAtMC4zNywwLjI0LTAuNjksMC41Ni0wLjgxYzAuMDktMC4wNCwwLjItMC4wNiwwLjMxLTAuMDZjMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODcNCgkJQzE3LjI0LDkuODEsMTYuODYsMTAuMiwxNi4zOCwxMC4yeiBNMTguMzksMTIuMjFjLTAuNDksMC0wLjg3LTAuMzktMC44Ny0wLjg3YzAtMC40OSwwLjM4LTAuODgsMC44Ny0wLjg4DQoJCWMwLjQ4LDAsMC44NywwLjM5LDAuODcsMC44OEMxOS4yNSwxMS44MiwxOC44NiwxMi4yMSwxOC4zOSwxMi4yMXoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "LEFT_OFFSET"
+          },
+          {
+            "type": "input_value",
+            "name": "RIGHT_OFFSET"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "LEFT_OFFSET",
+          "type": "math_number",
+          "fields": {
+            "NUM": "0"
+          }
+        },
+        {
+          "name": "RIGHT_OFFSET",
+          "type": "math_number",
+          "fields": {
+            "NUM": "0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "combined_backward_offset",
+      "category": "sensing",
+      "definition": {
+        "type": "combined_backward_offset",
+        "message0": "%1 %2 设置手柄后退偏移量为左 %3 右%4",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjI0LDYuOTVjLTAuMDYsMC0wLjExLDAtMC4xNywwLjAxVjYuOTVINi40NGMtMi40MywwLTQuMzksMS45Ny00LjM5LDQuMzljMCwyLjQyLDEuOTcsNC4zOSw0LjM5LDQuMzkNCgkJYzEuMjksMCwyLjQ2LTAuNTYsMy4yNS0xLjQ2aDMuMjljMC44LDAuODksMS45NywxLjQ2LDMuMjYsMS40NmMyLjQzLDAsNC4zOS0xLjk3LDQuMzktNC4zOUMyMC42Myw4LjkyLDE4LjY3LDYuOTUsMTYuMjQsNi45NXoNCgkJIE0xNS4yNCwxMS4zNGMwLDAuNDgtMC4zOSwwLjg3LTAuODcsMC44N2MtMC40OSwwLTAuODctMC4zOS0wLjg3LTAuODdjMC0wLjQ5LDAuMzgtMC44OCwwLjg3LTAuODgNCgkJQzE0Ljg1LDEwLjQ3LDE1LjI0LDEwLjg2LDE1LjI0LDExLjM0eiBNNS40OSwxMy43M3YtMS42NUgzLjgzdi0xLjQ2aDEuNjZWOC45NWgxLjQ2djEuNjZoMS42NnYxLjQ2SDYuOTZ2MS42NUg1LjQ5eiBNMTYuMzgsMTQuMjENCgkJYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNmMtMC4zMi0wLjEyLTAuNTYtMC40NC0wLjU2LTAuODFjMC0wLjM3LDAuMjQtMC42OSwwLjU2LTAuODFjMC4wOS0wLjA0LDAuMi0wLjA2LDAuMzEtMC4wNg0KCQljMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODdDMTcuMjQsMTMuODIsMTYuODYsMTQuMjEsMTYuMzgsMTQuMjF6IE0xNi4zOCwxMC4yYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNg0KCQljLTAuMzItMC4xMi0wLjU2LTAuNDQtMC41Ni0wLjgxYzAtMC4zNywwLjI0LTAuNjksMC41Ni0wLjgxYzAuMDktMC4wNCwwLjItMC4wNiwwLjMxLTAuMDZjMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODcNCgkJQzE3LjI0LDkuODEsMTYuODYsMTAuMiwxNi4zOCwxMC4yeiBNMTguMzksMTIuMjFjLTAuNDksMC0wLjg3LTAuMzktMC44Ny0wLjg3YzAtMC40OSwwLjM4LTAuODgsMC44Ny0wLjg4DQoJCWMwLjQ4LDAsMC44NywwLjM5LDAuODcsMC44OEMxOS4yNSwxMS44MiwxOC44NiwxMi4yMSwxOC4zOSwxMi4yMXoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "LEFT_OFFSET"
+          },
+          {
+            "type": "input_value",
+            "name": "RIGHT_OFFSET"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "LEFT_OFFSET",
+          "type": "math_number",
+          "fields": {
+            "NUM": "0"
+          }
+        },
+        {
+          "name": "RIGHT_OFFSET",
+          "type": "math_number",
+          "fields": {
+            "NUM": "0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "read_adcance_left_offset",
+      "category": "sensing",
+      "definition": {
+        "type": "read_adcance_left_offset",
+        "message0": "%1 %2 读取前进左偏移量",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjI0LDYuOTVjLTAuMDYsMC0wLjExLDAtMC4xNywwLjAxVjYuOTVINi40NGMtMi40MywwLTQuMzksMS45Ny00LjM5LDQuMzljMCwyLjQyLDEuOTcsNC4zOSw0LjM5LDQuMzkNCgkJYzEuMjksMCwyLjQ2LTAuNTYsMy4yNS0xLjQ2aDMuMjljMC44LDAuODksMS45NywxLjQ2LDMuMjYsMS40NmMyLjQzLDAsNC4zOS0xLjk3LDQuMzktNC4zOUMyMC42Myw4LjkyLDE4LjY3LDYuOTUsMTYuMjQsNi45NXoNCgkJIE0xNS4yNCwxMS4zNGMwLDAuNDgtMC4zOSwwLjg3LTAuODcsMC44N2MtMC40OSwwLTAuODctMC4zOS0wLjg3LTAuODdjMC0wLjQ5LDAuMzgtMC44OCwwLjg3LTAuODgNCgkJQzE0Ljg1LDEwLjQ3LDE1LjI0LDEwLjg2LDE1LjI0LDExLjM0eiBNNS40OSwxMy43M3YtMS42NUgzLjgzdi0xLjQ2aDEuNjZWOC45NWgxLjQ2djEuNjZoMS42NnYxLjQ2SDYuOTZ2MS42NUg1LjQ5eiBNMTYuMzgsMTQuMjENCgkJYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNmMtMC4zMi0wLjEyLTAuNTYtMC40NC0wLjU2LTAuODFjMC0wLjM3LDAuMjQtMC42OSwwLjU2LTAuODFjMC4wOS0wLjA0LDAuMi0wLjA2LDAuMzEtMC4wNg0KCQljMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODdDMTcuMjQsMTMuODIsMTYuODYsMTQuMjEsMTYuMzgsMTQuMjF6IE0xNi4zOCwxMC4yYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNg0KCQljLTAuMzItMC4xMi0wLjU2LTAuNDQtMC41Ni0wLjgxYzAtMC4zNywwLjI0LTAuNjksMC41Ni0wLjgxYzAuMDktMC4wNCwwLjItMC4wNiwwLjMxLTAuMDZjMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODcNCgkJQzE3LjI0LDkuODEsMTYuODYsMTAuMiwxNi4zOCwxMC4yeiBNMTguMzksMTIuMjFjLTAuNDksMC0wLjg3LTAuMzktMC44Ny0wLjg3YzAtMC40OSwwLjM4LTAuODgsMC44Ny0wLjg4DQoJCWMwLjQ4LDAsMC44NywwLjM5LDAuODcsMC44OEMxOS4yNSwxMS44MiwxOC44NiwxMi4yMSwxOC4zOSwxMi4yMXoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "read_advance_right_offset",
+      "category": "sensing",
+      "definition": {
+        "type": "read_advance_right_offset",
+        "message0": "%1 %2 读取前进右偏移量",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjI0LDYuOTVjLTAuMDYsMC0wLjExLDAtMC4xNywwLjAxVjYuOTVINi40NGMtMi40MywwLTQuMzksMS45Ny00LjM5LDQuMzljMCwyLjQyLDEuOTcsNC4zOSw0LjM5LDQuMzkNCgkJYzEuMjksMCwyLjQ2LTAuNTYsMy4yNS0xLjQ2aDMuMjljMC44LDAuODksMS45NywxLjQ2LDMuMjYsMS40NmMyLjQzLDAsNC4zOS0xLjk3LDQuMzktNC4zOUMyMC42Myw4LjkyLDE4LjY3LDYuOTUsMTYuMjQsNi45NXoNCgkJIE0xNS4yNCwxMS4zNGMwLDAuNDgtMC4zOSwwLjg3LTAuODcsMC44N2MtMC40OSwwLTAuODctMC4zOS0wLjg3LTAuODdjMC0wLjQ5LDAuMzgtMC44OCwwLjg3LTAuODgNCgkJQzE0Ljg1LDEwLjQ3LDE1LjI0LDEwLjg2LDE1LjI0LDExLjM0eiBNNS40OSwxMy43M3YtMS42NUgzLjgzdi0xLjQ2aDEuNjZWOC45NWgxLjQ2djEuNjZoMS42NnYxLjQ2SDYuOTZ2MS42NUg1LjQ5eiBNMTYuMzgsMTQuMjENCgkJYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNmMtMC4zMi0wLjEyLTAuNTYtMC40NC0wLjU2LTAuODFjMC0wLjM3LDAuMjQtMC42OSwwLjU2LTAuODFjMC4wOS0wLjA0LDAuMi0wLjA2LDAuMzEtMC4wNg0KCQljMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODdDMTcuMjQsMTMuODIsMTYuODYsMTQuMjEsMTYuMzgsMTQuMjF6IE0xNi4zOCwxMC4yYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNg0KCQljLTAuMzItMC4xMi0wLjU2LTAuNDQtMC41Ni0wLjgxYzAtMC4zNywwLjI0LTAuNjksMC41Ni0wLjgxYzAuMDktMC4wNCwwLjItMC4wNiwwLjMxLTAuMDZjMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODcNCgkJQzE3LjI0LDkuODEsMTYuODYsMTAuMiwxNi4zOCwxMC4yeiBNMTguMzksMTIuMjFjLTAuNDksMC0wLjg3LTAuMzktMC44Ny0wLjg3YzAtMC40OSwwLjM4LTAuODgsMC44Ny0wLjg4DQoJCWMwLjQ4LDAsMC44NywwLjM5LDAuODcsMC44OEMxOS4yNSwxMS44MiwxOC44NiwxMi4yMSwxOC4zOSwxMi4yMXoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "read_retreat_left_offset",
+      "category": "sensing",
+      "definition": {
+        "type": "read_retreat_left_offset",
+        "message0": "%1 %2 读取后退左偏移量",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjI0LDYuOTVjLTAuMDYsMC0wLjExLDAtMC4xNywwLjAxVjYuOTVINi40NGMtMi40MywwLTQuMzksMS45Ny00LjM5LDQuMzljMCwyLjQyLDEuOTcsNC4zOSw0LjM5LDQuMzkNCgkJYzEuMjksMCwyLjQ2LTAuNTYsMy4yNS0xLjQ2aDMuMjljMC44LDAuODksMS45NywxLjQ2LDMuMjYsMS40NmMyLjQzLDAsNC4zOS0xLjk3LDQuMzktNC4zOUMyMC42Myw4LjkyLDE4LjY3LDYuOTUsMTYuMjQsNi45NXoNCgkJIE0xNS4yNCwxMS4zNGMwLDAuNDgtMC4zOSwwLjg3LTAuODcsMC44N2MtMC40OSwwLTAuODctMC4zOS0wLjg3LTAuODdjMC0wLjQ5LDAuMzgtMC44OCwwLjg3LTAuODgNCgkJQzE0Ljg1LDEwLjQ3LDE1LjI0LDEwLjg2LDE1LjI0LDExLjM0eiBNNS40OSwxMy43M3YtMS42NUgzLjgzdi0xLjQ2aDEuNjZWOC45NWgxLjQ2djEuNjZoMS42NnYxLjQ2SDYuOTZ2MS42NUg1LjQ5eiBNMTYuMzgsMTQuMjENCgkJYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNmMtMC4zMi0wLjEyLTAuNTYtMC40NC0wLjU2LTAuODFjMC0wLjM3LDAuMjQtMC42OSwwLjU2LTAuODFjMC4wOS0wLjA0LDAuMi0wLjA2LDAuMzEtMC4wNg0KCQljMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODdDMTcuMjQsMTMuODIsMTYuODYsMTQuMjEsMTYuMzgsMTQuMjF6IE0xNi4zOCwxMC4yYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNg0KCQljLTAuMzItMC4xMi0wLjU2LTAuNDQtMC41Ni0wLjgxYzAtMC4zNywwLjI0LTAuNjksMC41Ni0wLjgxYzAuMDktMC4wNCwwLjItMC4wNiwwLjMxLTAuMDZjMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODcNCgkJQzE3LjI0LDkuODEsMTYuODYsMTAuMiwxNi4zOCwxMC4yeiBNMTguMzksMTIuMjFjLTAuNDksMC0wLjg3LTAuMzktMC44Ny0wLjg3YzAtMC40OSwwLjM4LTAuODgsMC44Ny0wLjg4DQoJCWMwLjQ4LDAsMC44NywwLjM5LDAuODcsMC44OEMxOS4yNSwxMS44MiwxOC44NiwxMi4yMSwxOC4zOSwxMi4yMXoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "read_retreat_right_offset",
+      "category": "sensing",
+      "definition": {
+        "type": "read_retreat_right_offset",
+        "message0": "%1 %2 读取后退右偏移量",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi41LjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0i5Zu+5bGCXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNjggMjIuNjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIyLjY4IDIyLjY4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojRkZGRkZGO30NCgkuc3Qxe2ZpbGw6IzAwOTBGNTt9DQoJLnN0MntmaWxsOiNGRjRDQ0Q7fQ0KCS5zdDN7ZmlsbDojOUI2QUY2O30NCgkuc3Q0e2ZpbGw6I0JFNjBFRjt9DQoJLnN0NXtmaWxsOiMzNENCRjA7fQ0KCS5zdDZ7ZmlsbDojNUNCMUQ2O30NCgkuc3Q3e2ZpbGw6bm9uZTtzdHJva2U6IzJFOEVCODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQoJLnN0OHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjEuMjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE2LjI0LDYuOTVjLTAuMDYsMC0wLjExLDAtMC4xNywwLjAxVjYuOTVINi40NGMtMi40MywwLTQuMzksMS45Ny00LjM5LDQuMzljMCwyLjQyLDEuOTcsNC4zOSw0LjM5LDQuMzkNCgkJYzEuMjksMCwyLjQ2LTAuNTYsMy4yNS0xLjQ2aDMuMjljMC44LDAuODksMS45NywxLjQ2LDMuMjYsMS40NmMyLjQzLDAsNC4zOS0xLjk3LDQuMzktNC4zOUMyMC42Myw4LjkyLDE4LjY3LDYuOTUsMTYuMjQsNi45NXoNCgkJIE0xNS4yNCwxMS4zNGMwLDAuNDgtMC4zOSwwLjg3LTAuODcsMC44N2MtMC40OSwwLTAuODctMC4zOS0wLjg3LTAuODdjMC0wLjQ5LDAuMzgtMC44OCwwLjg3LTAuODgNCgkJQzE0Ljg1LDEwLjQ3LDE1LjI0LDEwLjg2LDE1LjI0LDExLjM0eiBNNS40OSwxMy43M3YtMS42NUgzLjgzdi0xLjQ2aDEuNjZWOC45NWgxLjQ2djEuNjZoMS42NnYxLjQ2SDYuOTZ2MS42NUg1LjQ5eiBNMTYuMzgsMTQuMjENCgkJYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNmMtMC4zMi0wLjEyLTAuNTYtMC40NC0wLjU2LTAuODFjMC0wLjM3LDAuMjQtMC42OSwwLjU2LTAuODFjMC4wOS0wLjA0LDAuMi0wLjA2LDAuMzEtMC4wNg0KCQljMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODdDMTcuMjQsMTMuODIsMTYuODYsMTQuMjEsMTYuMzgsMTQuMjF6IE0xNi4zOCwxMC4yYy0wLjExLDAtMC4yMS0wLjAyLTAuMzEtMC4wNg0KCQljLTAuMzItMC4xMi0wLjU2LTAuNDQtMC41Ni0wLjgxYzAtMC4zNywwLjI0LTAuNjksMC41Ni0wLjgxYzAuMDktMC4wNCwwLjItMC4wNiwwLjMxLTAuMDZjMC40OSwwLDAuODcsMC4zOSwwLjg3LDAuODcNCgkJQzE3LjI0LDkuODEsMTYuODYsMTAuMiwxNi4zOCwxMC4yeiBNMTguMzksMTIuMjFjLTAuNDksMC0wLjg3LTAuMzktMC44Ny0wLjg3YzAtMC40OSwwLjM4LTAuODgsMC44Ny0wLjg4DQoJCWMwLjQ4LDAsMC44NywwLjM5LDAuODcsMC44OEMxOS4yNSwxMS44MiwxOC44NiwxMi4yMSwxOC4zOSwxMi4yMXoiLz4NCjwvZz4NCjwvc3ZnPg0K",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "sensing_mainIsPress",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_Handling",
+        "message0": "主机 %1 按钮是否 %2",
+        "args0": [
+          {
+            "type": "field_dropdown",
+            "name": "KEYS",
+            "options": [
+              [
+                "左",
+                "left"
+              ],
+              [
+                "右",
+                "right"
+              ]
+            ]
+          },
+          {
+            "type": "field_dropdown",
+            "name": "BUTTON",
+            "options": [
+              [
+                "被按下",
+                "1"
+              ],
+              [
+                "未按下",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_boolean"
+        ]
+      },
+      "fields": {
+        "KEYS": "left",
+        "BUTTON": "1"
+      },
+      "inputs": []
+    },
+    {
+      "id": "sensing_timer",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_timer",
+        "message0": "计时器",
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "sensing_reset_timer",
+      "category": "sensing",
+      "definition": {
+        "type": "sensing_reset_timer",
+        "message0": "重置计时器",
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "shape_statement"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "operator_add",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 + %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "NUM1"
+          },
+          {
+            "type": "input_value",
+            "name": "NUM2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "NUM1",
+          "type": "math_number",
+          "fields": {
+            "NUM": ""
+          }
+        },
+        {
+          "name": "NUM2",
+          "type": "math_number",
+          "fields": {
+            "NUM": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_subtract",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 - %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "NUM1"
+          },
+          {
+            "type": "input_value",
+            "name": "NUM2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "NUM1",
+          "type": "math_number",
+          "fields": {
+            "NUM": ""
+          }
+        },
+        {
+          "name": "NUM2",
+          "type": "math_number",
+          "fields": {
+            "NUM": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_multiply",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 * %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "NUM1"
+          },
+          {
+            "type": "input_value",
+            "name": "NUM2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "NUM1",
+          "type": "math_number",
+          "fields": {
+            "NUM": ""
+          }
+        },
+        {
+          "name": "NUM2",
+          "type": "math_number",
+          "fields": {
+            "NUM": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_divide",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 / %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "NUM1"
+          },
+          {
+            "type": "input_value",
+            "name": "NUM2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "NUM1",
+          "type": "math_number",
+          "fields": {
+            "NUM": ""
+          }
+        },
+        {
+          "name": "NUM2",
+          "type": "math_number",
+          "fields": {
+            "NUM": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_gt",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 > %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "OPERAND1"
+          },
+          {
+            "type": "input_value",
+            "name": "OPERAND2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "OPERAND1",
+          "type": "text",
+          "fields": {
+            "TEXT": ""
+          }
+        },
+        {
+          "name": "OPERAND2",
+          "type": "text",
+          "fields": {
+            "TEXT": "50"
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_lt",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 < %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "OPERAND1"
+          },
+          {
+            "type": "input_value",
+            "name": "OPERAND2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "OPERAND1",
+          "type": "text",
+          "fields": {
+            "TEXT": ""
+          }
+        },
+        {
+          "name": "OPERAND2",
+          "type": "text",
+          "fields": {
+            "TEXT": "50"
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_equals",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 = %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "OPERAND1"
+          },
+          {
+            "type": "input_value",
+            "name": "OPERAND2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "OPERAND1",
+          "type": "text",
+          "fields": {
+            "TEXT": ""
+          }
+        },
+        {
+          "name": "OPERAND2",
+          "type": "text",
+          "fields": {
+            "TEXT": "50"
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_and",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 与 %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "OPERAND1",
+            "check": "Boolean"
+          },
+          {
+            "type": "input_value",
+            "name": "OPERAND2",
+            "check": "Boolean"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "operator_or",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 或 %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "OPERAND1",
+            "check": "Boolean"
+          },
+          {
+            "type": "input_value",
+            "name": "OPERAND2",
+            "check": "Boolean"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "operator_not",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 不成立",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "OPERAND",
+            "check": "Boolean"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "fields": {},
+      "inputs": []
+    },
+    {
+      "id": "operator_contains",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 包含 %2 ?",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "STRING1"
+          },
+          {
+            "type": "input_value",
+            "name": "STRING2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "STRING1",
+          "type": "text",
+          "fields": {
+            "TEXT": "apple"
+          }
+        },
+        {
+          "name": "STRING2",
+          "type": "text",
+          "fields": {
+            "TEXT": "a"
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_join",
+      "category": "operators",
+      "definition": {
+        "message0": "连接 %1 和 %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "STRING1"
+          },
+          {
+            "type": "input_value",
+            "name": "STRING2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_string"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "STRING1",
+          "type": "text",
+          "fields": {
+            "TEXT": "apple"
+          }
+        },
+        {
+          "name": "STRING2",
+          "type": "text",
+          "fields": {
+            "TEXT": "banana"
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_letter_of",
+      "category": "operators",
+      "definition": {
+        "message0": "%2 的第 %1 个字符",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "LETTER"
+          },
+          {
+            "type": "input_value",
+            "name": "STRING"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_string"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "LETTER",
+          "type": "math_whole_number",
+          "fields": {
+            "NUM": "1"
+          }
+        },
+        {
+          "name": "STRING",
+          "type": "text",
+          "fields": {
+            "TEXT": "apple"
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_length",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 的字符数",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "STRING"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_string"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "STRING",
+          "type": "text",
+          "fields": {
+            "TEXT": "apple"
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_mod",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 除以 %2 的余数",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "NUM1"
+          },
+          {
+            "type": "input_value",
+            "name": "NUM2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "NUM1",
+          "type": "math_number",
+          "fields": {
+            "NUM": ""
+          }
+        },
+        {
+          "name": "NUM2",
+          "type": "math_number",
+          "fields": {
+            "NUM": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_round",
+      "category": "operators",
+      "definition": {
+        "message0": "四舍五入 %1",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "NUM"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "NUM",
+          "type": "math_number",
+          "fields": {
+            "NUM": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_mathop",
+      "category": "operators",
+      "definition": {
+        "message0": "%1 %2",
+        "args0": [
+          {
+            "type": "field_dropdown",
+            "name": "OPERATOR",
+            "options": [
+              [
+                "绝对值",
+                "_abs_"
+              ],
+              [
+                "向下取整",
+                "down_abs"
+              ],
+              [
+                "向上取整",
+                "up_abs"
+              ],
+              [
+                "平方根",
+                "sqrt_abs"
+              ],
+              [
+                "sin",
+                "sin_abs"
+              ],
+              [
+                "cos",
+                "cos_abs"
+              ],
+              [
+                "tan",
+                "tan_abs"
+              ],
+              [
+                "asin",
+                "asin_abs"
+              ],
+              [
+                "acos",
+                "acos_abs"
+              ],
+              [
+                "atan",
+                "atan_abs"
+              ],
+              [
+                "log",
+                "ln_abs"
+              ],
+              [
+                "e ^",
+                "e_abs"
+              ],
+              [
+                "10 ^",
+                "10_abs"
+              ]
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "NUM"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "fields": {
+        "OPERATOR": "_abs_"
+      },
+      "inputs": [
+        {
+          "name": "NUM",
+          "type": "math_number",
+          "fields": {
+            "NUM": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator_random",
+      "category": "operators",
+      "definition": {
+        "message0": "在 %1 和 %2 之间取随机数",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "FROM"
+          },
+          {
+            "type": "input_value",
+            "name": "TO"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "fields": {},
+      "inputs": [
+        {
+          "name": "FROM",
+          "type": "math_number",
+          "fields": {
+            "NUM": "1"
+          }
+        },
+        {
+          "name": "TO",
+          "type": "math_number",
+          "fields": {
+            "NUM": "10"
+          }
+        }
+      ]
+    }
+  ],
+  "shadows": [
+    {
+      "id": "motor_box",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_motor",
+            "name": "MOTOR",
+            "motorList": [
+              "null",
+              "null",
+              "null",
+              "null",
+              "E",
+              "F",
+              "G",
+              "H"
+            ]
+          }
+        ],
+        "category": "motor",
+        "colour": "#64c7f0",
+        "colourSecondary": "#00b0f9",
+        "colourTertiary": "#00b0f9",
+        "extensions": [
+          "output_string"
+        ]
+      }
+    },
+    {
+      "id": "math_-100to100_number",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_slider",
+            "name": "NUM",
+            "value": "0",
+            "min": "-100",
+            "max": "100"
+          }
+        ],
+        "output": "Number",
+        "outputShape": 2,
+        "colour": "#FFFFFF",
+        "colourSecondary": "#FFFFFF",
+        "colourTertiary": "#FFFFFF"
+      }
+    },
+    {
+      "id": "math_number",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_number",
+            "name": "NUM",
+            "value": "0"
+          }
+        ],
+        "output": "Number",
+        "outputShape": 2,
+        "colour": "#FFFFFF",
+        "colourSecondary": "#FFFFFF",
+        "colourTertiary": "#FFFFFF"
+      }
+    },
+    {
+      "id": "combined_motor_box",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_combined_motor",
+            "name": "MOTOR",
+            "motorList": [
+              "null",
+              "null",
+              "null",
+              "null",
+              "E",
+              "F",
+              "G",
+              "H"
+            ]
+          }
+        ],
+        "category": "combined_motor",
+        "colour": "#FF4CCD",
+        "colourSecondary": "#FF33A3",
+        "colourTertiary": "#B2248A",
+        "extensions": [
+          "output_string"
+        ]
+      }
+    },
+    {
+      "id": "text",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_input",
+            "name": "TEXT"
+          }
+        ],
+        "output": "String",
+        "outputShape": 2,
+        "colour": "#FFFFFF",
+        "colourSecondary": "#FFFFFF",
+        "colourTertiary": "#FFFFFF"
+      }
+    },
+    {
+      "id": "matrix_x",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_dropdown",
+            "name": "X",
+            "options": [
+              [
+                "0",
+                "0"
+              ],
+              [
+                "1",
+                "1"
+              ],
+              [
+                "2",
+                "2"
+              ],
+              [
+                "3",
+                "3"
+              ],
+              [
+                "4",
+                "4"
+              ],
+              [
+                "5",
+                "5"
+              ],
+              [
+                "6",
+                "6"
+              ],
+              [
+                "7",
+                "7"
+              ],
+              [
+                "8",
+                "8"
+              ],
+              [
+                "9",
+                "9"
+              ]
+            ]
+          }
+        ],
+        "category": "matrix",
+        "colour": "#7986b8",
+        "colourSecondary": "#855CD6",
+        "colourTertiary": "#6877b3",
+        "extensions": [
+          "output_string"
+        ]
+      }
+    },
+    {
+      "id": "matrix_y",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_dropdown",
+            "name": "Y",
+            "options": [
+              [
+                "0",
+                "0"
+              ],
+              [
+                "1",
+                "1"
+              ],
+              [
+                "2",
+                "2"
+              ],
+              [
+                "3",
+                "3"
+              ],
+              [
+                "4",
+                "4"
+              ],
+              [
+                "5",
+                "5"
+              ],
+              [
+                "6",
+                "6"
+              ],
+              [
+                "7",
+                "7"
+              ]
+            ]
+          }
+        ],
+        "category": "matrix",
+        "colour": "#7986b8",
+        "colourSecondary": "#855CD6",
+        "colourTertiary": "#6877b3",
+        "extensions": [
+          "output_string"
+        ]
+      }
+    },
+    {
+      "id": "piano",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_piano",
+            "name": "NOTE"
+          }
+        ],
+        "outputShape": 2,
+        "output": "String",
+        "colour": "#FFFFFF",
+        "colourSecondary": "#FFFFFF",
+        "colourTertiary": "#FFFFFF"
+      }
+    },
+    {
+      "id": "math_positive_number",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_number",
+            "name": "NUM",
+            "min": 0
+          }
+        ],
+        "output": "Number",
+        "outputShape": 2,
+        "colour": "#FFFFFF",
+        "colourSecondary": "#FFFFFF",
+        "colourTertiary": "#FFFFFF"
+      }
+    },
+    {
+      "id": "math_whole_number",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_number",
+            "name": "NUM",
+            "min": 0,
+            "precision": 1
+          }
+        ],
+        "output": "Number",
+        "outputShape": 2,
+        "colour": "#FFFFFF",
+        "colourSecondary": "#FFFFFF",
+        "colourTertiary": "#FFFFFF"
+      }
+    },
+    {
+      "id": "touching_menu",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_motor",
+            "name": "TOUCHING_MENU",
+            "motorList": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "null",
+              "null",
+              "null",
+              "null"
+            ]
+          }
+        ],
+        "category": "sensing",
+        "colour": "#34CCF1",
+        "colourSecondary": "#2EBDDA",
+        "colourTertiary": "#27A7C9",
+        "extensions": [
+          "output_string"
+        ]
+      }
+    },
+    {
+      "id": "sensing_menu",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_motor",
+            "name": "SENSING_MENU",
+            "motorList": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "null",
+              "null",
+              "null",
+              "null"
+            ]
+          }
+        ],
+        "category": "sensing",
+        "colour": "#34CCF1",
+        "colourSecondary": "#2EBDDA",
+        "colourTertiary": "#27A7C9",
+        "extensions": [
+          "output_string"
+        ]
+      }
+    },
+    {
+      "id": "handShank_menu",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_handShank",
+            "name": "HAND_SHANK",
+            "handShankValue": [
+              "up",
+              "down",
+              "left",
+              "right",
+              "Y",
+              "A",
+              "B",
+              "X",
+              "L1",
+              "R1"
+            ]
+          }
+        ],
+        "category": "sensing",
+        "colour": "#34CCF1",
+        "colourSecondary": "#2EBDDA",
+        "colourTertiary": "#27A7C9",
+        "extensions": [
+          "output_string"
+        ]
+      }
+    },
+    {
+      "id": "math_integer",
+      "definition": {
+        "message0": "%1",
+        "args0": [
+          {
+            "type": "field_number",
+            "name": "NUM",
+            "precision": 1
+          }
+        ],
+        "output": "Number",
+        "outputShape": 2,
+        "colour": "#FFFFFF",
+        "colourSecondary": "#FFFFFF",
+        "colourTertiary": "#FFFFFF"
+      }
+    }
+  ]
+}

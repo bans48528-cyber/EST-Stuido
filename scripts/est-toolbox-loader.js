@@ -18,7 +18,7 @@ module.exports = function (source) {
         .replace(genericDeviceEventsImport, '')
         .replace(
             returnStatement,
-            '    return [xmlOpen, getEstToolboxCategories(), gap, variablesXML, gap, ' +
+            '    return [xmlOpen, getEstToolboxCategories(undefined, categoriesXML.some(category => category.id === "vision")), gap, variablesXML, gap, ' +
                 "myBlocksXML, xmlClose].join('\\n');"
         );
     return `import getEstToolboxCategories from 'est-toolbox';\n${transformedSource}`;

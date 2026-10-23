@@ -9,13 +9,15 @@ import {connect} from 'react-redux';
 import {EST_CONNECTION_STATUS_EVENT} from './est-connection-status';
 import {getEstText} from './est-i18n';
 import styles from './EstHardwareStatusButton.css';
+import {getHardwareProfile} from '../common/hardware-profiles';
 
-const REFRESH_INTERVAL_MS = 3000;
+const REFRESH_INTERVAL_MS = 250;
+const RETRY_INTERVAL_MS = 3000;
 const PANEL_MARGIN = 12;
 const PANEL_DEFAULT_WIDTH = 600;
 const PANEL_DEFAULT_HEIGHT = 420;
-const MOTOR_PORTS = ['A', 'B', 'C', 'D'];
-const SENSOR_PORTS = ['1', '2', '3', '4'];
+const MOTOR_PORTS = getHardwareProfile('est').motorPorts;
+const SENSOR_PORTS = getHardwareProfile('est').sensorPorts;
 const MOTOR_OUTPUT_NAMES = {
     0: 'coast',
     1: 'drive',
@@ -124,6 +126,16 @@ const sensorModeName = (sensorType, mode, locale) => {
     return names[mode] || getEstText('hardware.unknown', locale, {value: hexByte(mode)});
 };
 
+// Uptime and program timing change on every report but are not displayed here.
+const visibleSnapshotKey = ({connection, errorMessage, status}) => JSON.stringify([
+    connection && connection.state, errorMessage,
+    status && [status.firmwareVersion, status.protocolMajor, status.protocolMinor,
+        status.batteryPercent, status.batteryAdcRaw, status.batterySampleMv,
+        status.compatibility && status.compatibility.programCompatible,
+        status.motors, status.sensors, isProgramRunning(status),
+        status.statusPollingDeferred, status.statusPollingError]
+]);
+
 class EstHardwareStatusButton extends React.Component {
     constructor (props) {
         super(props);
@@ -143,6 +155,12 @@ class EstHardwareStatusButton extends React.Component {
         this.dragOffset = null;
         this.refreshInFlight = false;
         this.programStatusTimer = null;
+        this.unmounted = false;
+        this.refreshGeneration = 0;
+        this.handleVisibilityChange = () => {
+            this.stopProgramStatusTimer();
+            if (!document.hidden && this.state.isOpen) this.refreshStatus({silent: true});
+        };
         this.handleConnectionStatus = this.handleConnectionStatus.bind(this);
         this.handlePanelDragEnd = this.handlePanelDragEnd.bind(this);
         this.handlePanelDragMove = this.handlePanelDragMove.bind(this);
@@ -159,6 +177,7 @@ class EstHardwareStatusButton extends React.Component {
     componentDidMount () {
         window.addEventListener(EST_CONNECTION_STATUS_EVENT, this.handleConnectionStatus);
         window.addEventListener('resize', this.handleWindowResize);
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
         ipcRenderer.on('est-firmware-update-progress', this.handleFirmwareUpdateProgress);
     }
 
@@ -167,6 +186,9 @@ class EstHardwareStatusButton extends React.Component {
     }
 
     componentWillUnmount () {
+        this.unmounted = true;
+        this.refreshGeneration++;
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
         window.removeEventListener(EST_CONNECTION_STATUS_EVENT, this.handleConnectionStatus);
         window.removeEventListener('resize', this.handleWindowResize);
         ipcRenderer.removeListener('est-firmware-update-progress', this.handleFirmwareUpdateProgress);
@@ -176,9 +198,14 @@ class EstHardwareStatusButton extends React.Component {
 
     handleConnectionStatus (event) {
         const detail = event && event.detail;
-        if (!detail || detail.isConnected) {
+        if (!detail) return;
+        if (detail.isConnected) {
+            if (this.state.isOpen && (!this.state.connection || this.state.connection.state !== 'connected')) {
+                this.refreshStatus({silent: true});
+            }
             return;
         }
+        this.refreshGeneration++;
         this.setState({
             connection: {state: 'not-found'},
             errorMessage: null,
@@ -187,6 +214,7 @@ class EstHardwareStatusButton extends React.Component {
     }
 
     handleToggle () {
+        this.refreshGeneration++;
         this.setState(state => {
             const isOpen = !state.isOpen;
             return {
@@ -208,6 +236,7 @@ class EstHardwareStatusButton extends React.Component {
     }
 
     handleClose () {
+        this.refreshGeneration++;
         this.setState({
             firmwareUpdateMenuOpen: false,
             isOpen: false
@@ -403,15 +432,14 @@ class EstHardwareStatusButton extends React.Component {
     }
 
     updateProgramStatusTimer () {
-        const shouldPoll = this.state.isOpen && isProgramRunning(this.state.status);
-        if (shouldPoll && !this.programStatusTimer) {
-            this.programStatusTimer = window.setInterval(() => {
-                if (this.state.isOpen && isProgramRunning(this.state.status)) {
-                    this.refreshStatus({silent: true});
-                }
-            }, REFRESH_INTERVAL_MS);
-        } else if (!shouldPoll && this.programStatusTimer) {
+        const shouldPoll = !this.unmounted && this.state.isOpen && !document.hidden && !this.state.firmwareUpdateBusy;
+        if (!shouldPoll) {
             this.stopProgramStatusTimer();
+        } else if (!this.refreshInFlight && !this.programStatusTimer) {
+            this.programStatusTimer = window.setTimeout(() => {
+                this.programStatusTimer = null;
+                this.refreshStatus({silent: true});
+            }, this.state.errorMessage ? RETRY_INTERVAL_MS : REFRESH_INTERVAL_MS);
         }
     }
 
@@ -419,31 +447,40 @@ class EstHardwareStatusButton extends React.Component {
         if (!this.programStatusTimer) {
             return;
         }
-        window.clearInterval(this.programStatusTimer);
+        window.clearTimeout(this.programStatusTimer);
         this.programStatusTimer = null;
     }
 
     async refreshStatus ({silent = false} = {}) {
-        if (this.refreshInFlight) {
+        if (this.unmounted || !this.state.isOpen || this.state.firmwareUpdateBusy) return;
+        if (silent && (document.hidden || this.dragOffset)) {
+            this.updateProgramStatusTimer();
             return;
         }
+        if (this.refreshInFlight) return;
+        this.stopProgramStatusTimer();
+        const generation = this.refreshGeneration;
         this.refreshInFlight = true;
         if (!silent) {
             this.setState({isLoading: true, errorMessage: null});
         }
         try {
-            const connection = await ipcRenderer.invoke('est-auto-connect', {
-                includeProgramStatus: true
-            });
+            const connection = await ipcRenderer.invoke('est-hardware-status');
+            if (this.unmounted || generation !== this.refreshGeneration || !this.state.isOpen) return;
+            if (connection && connection.state === 'busy') return;
             const isConnected = connection && connection.state === 'connected';
-            this.setState({
+            const next = {
                 connection,
                 errorMessage: isConnected || !(connection && connection.message) ?
                     null :
                     formatStatusError(connection.message, this.props.locale),
                 status: isConnected ? connection.status : null
-            });
+            };
+            this.setState(state => (
+                visibleSnapshotKey(state) === visibleSnapshotKey(next) ? null : next
+            ));
         } catch (error) {
+            if (this.unmounted || generation !== this.refreshGeneration || !this.state.isOpen) return;
             this.setState({
                 connection: {state: 'error'},
                 errorMessage: formatStatusError(error, this.props.locale),
@@ -451,9 +488,10 @@ class EstHardwareStatusButton extends React.Component {
             });
         } finally {
             this.refreshInFlight = false;
-            if (!silent) {
+            if (!this.unmounted && !silent) {
                 this.setState({isLoading: false});
             }
+            this.updateProgramStatusTimer();
         }
     }
 
@@ -653,7 +691,7 @@ class EstHardwareStatusButton extends React.Component {
                             </div>
                             <button
                                 className={styles.refreshButton}
-                                disabled={isLoading}
+                                disabled={isLoading || Boolean(firmwareUpdateBusy)}
                                 type="button"
                                 onClick={this.handleManualRefresh}
                             >
@@ -669,7 +707,7 @@ class EstHardwareStatusButton extends React.Component {
                             </button>
                         </div>
                     </div>
-                    {programRunning && (
+                    {programRunning && status.statusPollingDeferred && (
                         <div className={styles.notice}>
                             {getEstText('hardware.runningNotice', locale)}
                         </div>

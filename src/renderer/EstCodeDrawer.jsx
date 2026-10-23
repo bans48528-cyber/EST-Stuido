@@ -14,6 +14,7 @@ import {
 } from './est-code-drawer-events';
 import {getEstText} from './est-i18n';
 import styles from './EstCodeDrawer.css';
+import {withHardwareCompiler} from './hardware/HardwareGate.jsx';
 
 import lockIcon from 'openblock-gui/src/components/hardware/icon--lock.svg';
 import unlockIcon from 'openblock-gui/src/components/hardware/icon--unlock.svg';
@@ -270,4 +271,4 @@ export {
     EstCodeDrawer
 };
 
-export default connect(mapStateToProps)(EstCodeDrawer);
+export default withHardwareCompiler(connect(mapStateToProps)(EstCodeDrawer));

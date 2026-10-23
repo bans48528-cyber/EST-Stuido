@@ -9,12 +9,13 @@ const estBlocksRoot = path.resolve(__dirname, '..', 'src', 'renderer', 'est-bloc
 const estRendererRoot = path.resolve(__dirname, '..', 'src', 'renderer');
 const originalLoader = Module._extensions['.js'];
 const originalSvgLoader = Module._extensions['.svg'];
+Module._extensions['.png'] = (module, filename) => { module.exports = filename; };
 
 Module._extensions['.svg'] = (module, filename) => {
     module.exports = filename;
 };
 Module._extensions['.js'] = (module, filename) => {
-    if (!filename.startsWith(estRendererRoot)) return originalLoader(module, filename);
+    if (!filename.startsWith(path.join(__dirname, '..', 'src'))) return originalLoader(module, filename);
     const source = fs.readFileSync(filename, 'utf8');
     const transformed = babel.transformSync(source, {
         babelrc: false,
@@ -457,6 +458,88 @@ const addSyntaxCase = (name, source) => {
     syntaxCases.push({name, source: `${source.trim()}\n`});
 };
 
+const visionPredicateCases = [];
+['state', 'gesture', 'face', 'pose'].forEach(kind => {
+    assert.strictEqual(generator[`event_vision_${kind}`], undefined, 'vision hats must have no generator');
+});
+const visualPredicateMatrix = [];
+const {FACE_ACTIONS, POSE_ACTIONS} = require(path.join(estRendererRoot, 'est-vision/visual-classes.js'));
+['face', 'pose'].forEach(kind => {
+    const actions = kind === 'face' ? FACE_ACTIONS : POSE_ACTIONS;
+    const validIds = kind === 'face' ? Array.from({length: 8}, (_, i) => 2100 + i) : POSE_ACTIONS.map(a => a.classId);
+    const otherIds = [1101, 1203, 2099, 2108, 3100, 3108, 65535, -1,
+        ...(kind === 'face' ? [3101, 3107] : [2100, 2107])];
+    const [detectedCode] = generator[`vision_${kind}_detected`]();
+    for (const classId of [...validIds, ...otherIds]) {
+        visualPredicateMatrix.push({code: detectedCode, classId, valid: true, expected: validIds.includes(classId)});
+        visualPredicateMatrix.push({code: detectedCode, classId, valid: false, expected: false});
+    }
+    actions.forEach(action => {
+        resetGenerator();
+        const block = {getFieldValue: () => action.id};
+        const [code] = generator[`vision_${kind}_action`](block);
+        assert.strictEqual(generator[`vision_wait_${kind}`](block), `rt.wait_until(lambda: ${code})\n`);
+        for (const classId of [...validIds, ...otherIds]) {
+            const expected = validIds.includes(classId) && (kind === 'pose' ? classId === action.classId :
+                action.mask === 0 ? classId === 2100 : Boolean((classId - 2100) & action.mask));
+            visualPredicateMatrix.push({code, classId, valid: true, expected});
+            visualPredicateMatrix.push({code, classId, valid: false, expected: false});
+        }
+        addSyntaxCase(`vision-${kind}-${action.id}`,
+            `${programPreamble()}\n${generator[`vision_wait_${kind}`](block)}`);
+    });
+    assert.throws(() => generator[`vision_${kind}_action`]({getFieldValue: () => 'unknown'}), /Invalid vision action/);
+});
+for (const side of ['left', 'right']) {
+    for (let gesture = 1; gesture <= 6; gesture++) {
+        resetGenerator();
+        const [code] = generator.vision_gesture({getFieldValue: name => (
+            name === 'SIDE' ? side : String(gesture)
+        )});
+        const classId = (side === 'left' ? 1100 : 1200) + gesture;
+        assert.strictEqual(code,
+            `(lambda s: bool(s[0]) and s[1] == ${classId})(rt.vision_snapshot('${side}'))`);
+        assert.match(programPreamble(), /import est_runtime as rt/);
+        addSyntaxCase(`vision-${side}-${gesture}`, `${programPreamble()}\nresult = ${code}`);
+        visionPredicateCases.push({code, classId});
+        const fields = {SIDE: side, GESTURE: String(gesture)};
+        const gestureBlock = {getFieldValue: name => fields[name]};
+        const waitCode = generator.vision_wait_gesture(gestureBlock);
+        assert.strictEqual(waitCode, `rt.wait_until(lambda: ${code})\n`);
+        resetGenerator();
+        generator.event_program_start({
+            type: 'event_program_start', id: 'vision-wait-start',
+            nextCode: `${generator.INDENT}${waitCode}`,
+            nextConnection: {targetBlock: () => ({type: 'vision_wait_gesture'})}
+        });
+        const eventCode = dictionaryCode(generator.libraries_);
+        assert.ok(eventCode.includes('@rt.on_start'));
+        assert.match(eventCode, /async def stack_1/);
+        assert.ok(eventCode.includes(`await ${waitCode.trim()}`));
+        addSyntaxCase(`vision-wait-${side}-${gesture}`, `${programPreamble()}\n${eventCode}`);
+    }
+}
+for (const state of ['valid', 'invalid']) {
+    resetGenerator();
+    const stateBlock = {getFieldValue: name => name === 'TARGET' ? 'pose' : state,
+        type: 'vision_wait_state', id: 'vision-state-wait'};
+    const predicate = state === 'valid' ? "rt.vision_valid('pose')" : "not rt.vision_valid('pose')";
+    assert.strictEqual(generator.vision_wait_state(stateBlock), `rt.wait_until(lambda: ${predicate})\n`);
+    addSyntaxCase(`vision-state-${state}`, `${programPreamble()}\n${generator.vision_wait_state(stateBlock)}`);
+}
+assert.throws(() => generator.vision_wait_state({getFieldValue: () => 'unknown'}), /Invalid vision state/);
+assert.throws(() => generator.vision_wait_gesture({getFieldValue: () => 'unknown'}), /Invalid vision gesture/);
+for (const index of [3, 4, 5, 6]) {
+    const [code] = generator.vision_position({getFieldValue: name =>
+        name === 'TARGET' ? 'face' : String(index)});
+    assert.strictEqual(code,
+        `(lambda s: s[${index}] if s[0] else 0)(rt.vision_snapshot('face'))`);
+    addSyntaxCase(`vision-position-${index}`, `${programPreamble()}\nresult = ${code}`);
+}
+assert.strictEqual(generator.vision_valid()[0], "rt.vision_valid('right')");
+assert.strictEqual(generator.vision_class()[0],
+    "(lambda s: s[1] if s[0] else -1)(rt.vision_snapshot('right'))");
+
 allEstGeneratorIds.forEach(blockId => {
     const definition = definitionById.get(blockId);
     const block = makeBlockFromDefinition(definition);
@@ -513,6 +596,26 @@ assert.deepStrictEqual(generator.operator_random({
 }), ['rt.random_int(lower_value, upper_value)', generator.ORDER_FUNCTION_CALL]);
 assert.strictEqual(generator.imports_.estRuntime, 'import est_runtime as rt');
 assert.doesNotMatch(generator.operator_random.toString(), /random\.randint/);
+
+const inverseCosine = generator.operator_mathop({
+    values: {NUM: '0.5'}, getFieldValue: () => 'acos'
+});
+assert.match(inverseCosine[0], /math\.acos\(0\.5\)/);
+assert.doesNotMatch(inverseCosine[0], /acosh/);
+addSyntaxCase('operator_acos_regression', `${programPreamble()}\nresult = ${inverseCosine[0]}`);
+
+resetGenerator();
+const absoluteValue = generator.operator_mathop({
+    values: {NUM: '-10'}, getFieldValue: () => 'abs'
+});
+assert.deepStrictEqual(absoluteValue, ['abs(-10)', generator.ORDER_FUNCTION_CALL]);
+assert.strictEqual(Object.prototype.hasOwnProperty.call(generator.imports_, 'math'), false);
+addSyntaxCase('operator_abs_micropython', `${programPreamble()}\nresult = ${absoluteValue[0]}`);
+const waitWithAbsoluteValue = generator.control_wait_seconds({
+    values: {SECONDS: absoluteValue[0]}, getFieldValue: () => null
+});
+assert.strictEqual(waitWithAbsoluteValue, 'rt.sleep(abs(-10))\n');
+assert.strictEqual(Object.prototype.hasOwnProperty.call(generator.imports_, 'math'), false);
 
 nativeDataIds.forEach(blockId => {
     resetGenerator();
@@ -1118,6 +1221,37 @@ const python = pythonCandidates.find(candidate => {
     return !result.error && result.status === 0;
 });
 assert.ok(python, 'Python 3 is required to run generated-code syntax tests.');
+const predicateResult = childProcess.spawnSync(python.command, python.args.concat('-c', `
+import json, sys
+class Runtime:
+    def vision_snapshot(self, target=None):
+        self.reads += 1
+        return self.sample
+rt = Runtime()
+for case in json.load(sys.stdin):
+    for valid, class_id, expected in [(True, case['classId'], True),
+                                      (False, case['classId'], False),
+                                      (True, -1, False)]:
+        rt.sample = (valid, class_id)
+        rt.reads = 0
+        assert eval(case['code']) is expected
+        assert rt.reads == 1
+`), {input: JSON.stringify(visionPredicateCases), encoding: 'utf8', windowsHide: true});
+assert.strictEqual(predicateResult.status, 0, predicateResult.stderr);
+const visualPredicateResult = childProcess.spawnSync(python.command, python.args.concat('-c', `
+import json, sys
+class Runtime:
+    def vision_snapshot(self, target=None):
+        self.reads += 1
+        return self.sample
+rt = Runtime()
+for case in json.load(sys.stdin):
+    rt.sample = (case['valid'], case['classId'])
+    rt.reads = 0
+    assert eval(case['code']) is case['expected'], case
+    assert rt.reads == 1
+`), {input: JSON.stringify(visualPredicateMatrix), encoding: 'utf8', windowsHide: true});
+assert.strictEqual(visualPredicateResult.status, 0, visualPredicateResult.stderr);
 
 const syntaxResult = childProcess.spawnSync(
     python.command,

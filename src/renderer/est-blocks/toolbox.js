@@ -1,5 +1,7 @@
 /* eslint-disable max-len -- Compact block declarations keep defaults beside their block IDs. */
 import {CATEGORY_COLOURS} from './definitions';
+import {getHardwareContext} from '../hardware/context';
+import {getSparkToolboxCategories} from '../spark-ai/blocks';
 import {
     getCurrentEstLocale,
     getEstText
@@ -194,6 +196,23 @@ const sensorCategory = locale => category(getEstText('category.sensing', locale)
     block('sensor_timer_reset')
 ]);
 
+const visionCategory = locale => category(getEstText('category.vision', locale), 'vision', 'vision', [
+    block('vision_valid', field('TARGET', 'right')),
+    block('vision_gesture', `${field('SIDE', 'right')}${field('GESTURE', '1')}`),
+    block('vision_class', field('TARGET', 'right')),
+    block('vision_position', `${field('TARGET', 'right')}${field('PROPERTY', '3')}`),
+    block('vision_wait_state', `${field('TARGET', 'right')}${field('STATE', 'valid')}`),
+    block('vision_wait_gesture', `${field('SIDE', 'right')}${field('GESTURE', '1')}`),
+    separator,
+    block('vision_face_detected'),
+    block('vision_face_action', field('ACTION', 'natural')),
+    block('vision_wait_face', field('ACTION', 'smile')),
+    separator,
+    block('vision_pose_detected'),
+    block('vision_pose_action', field('ACTION', 'standing')),
+    block('vision_wait_pose', field('ACTION', 'bothUp'))
+]);
+
 // Keep this category aligned with OpenBlock's native operator toolbox. These
 // block types and input names are consumed by OpenBlock's built-in definitions
 // and Python generators; EST must not redefine them.
@@ -226,15 +245,20 @@ const operatorCategory = () => `
         ${separator}
     </category>`;
 
-export const getEstToolboxCategories = (locale = getCurrentEstLocale()) => [
-    motorCategory(locale),
-    movementCategory(locale),
-    displayCategory(locale),
-    soundCategory(locale),
-    eventCategory(locale),
-    controlCategory(locale),
-    sensorCategory(locale),
-    operatorCategory()
-].join('\n');
+export const getEstToolboxCategories = (locale = getCurrentEstLocale(), includeVision = false) => {
+    if (getHardwareContext().profile.compiler === 'spark-python') return getSparkToolboxCategories(locale);
+    if (getHardwareContext().profile.compiler !== 'est-python') return operatorCategory();
+    return [
+        motorCategory(locale),
+        movementCategory(locale),
+        displayCategory(locale),
+        soundCategory(locale),
+        eventCategory(locale),
+        controlCategory(locale),
+        sensorCategory(locale),
+        operatorCategory(),
+        includeVision ? visionCategory(locale) : ''
+    ].join('\n');
+};
 
 export default getEstToolboxCategories;

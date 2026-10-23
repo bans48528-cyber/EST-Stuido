@@ -85,7 +85,7 @@ const createPreviewWorkspace = () => {
 
 const createToolboxBlockMap = locale => {
     const toolboxDocument = new DOMParser().parseFromString(
-        `<xml>${getEstToolboxCategories(locale)}</xml>`,
+        `<xml>${getEstToolboxCategories(locale, true)}</xml>`,
         'text/xml'
     );
     return Array.from(toolboxDocument.getElementsByTagName('block')).reduce((blockMap, blockNode) => {

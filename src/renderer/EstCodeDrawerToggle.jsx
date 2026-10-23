@@ -11,6 +11,7 @@ import {
 import {getEstText} from './est-i18n';
 import codeIcon from './file-code-fill.svg';
 import styles from './EstCodeDrawerToggle.css';
+import {withHardwareCompiler} from './hardware/HardwareGate.jsx';
 
 class EstCodeDrawerToggle extends React.Component {
     constructor (props) {
@@ -80,4 +81,4 @@ const mapStateToProps = state => ({
 
 export {EstCodeDrawerToggle};
 
-export default connect(mapStateToProps)(EstCodeDrawerToggle);
+export default withHardwareCompiler(connect(mapStateToProps)(EstCodeDrawerToggle));

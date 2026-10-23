@@ -1,6 +1,5 @@
 /**
- * Keep only the EST connection status in the hardware area. EST Studio uses a
- * upload mode, so hardware selection and mode switching are hidden.
+ * Use the local hardware selector and its device-specific status controls.
  * Keeping this as a build-time transform avoids editing the installed dependency.
  * @param {string} source - OpenBlock menu-bar component source.
  * @returns {string} transformed component source.
@@ -156,7 +155,7 @@ module.exports = function (source) {
         .replace(deviceSelectionPattern, '')
         .replace(
             connectionButtonPattern,
-            '                    <EstStatusPanel />\n                    <EstHardwareStatusButton />'
+            '                    <HardwareMenu />'
         )
         .replace(editMenuPattern, '')
         .replace(openBlockUtilityItemsPattern, '')
@@ -604,6 +603,7 @@ module.exports = function (source) {
     if (settingMenuPattern.test(transformedSource)) {
         transformedSource = transformedSource.replace(
             settingMenuPattern,
+            '                    <EstCameraButton />\n' +
             '                    <EstCodeDrawerToggle />\n'
         );
     }
@@ -628,12 +628,12 @@ module.exports = function (source) {
     }
 
     return [
+        "import EstCameraButton from 'est-camera-button';",
         "import EstCodeDrawerToggle from 'est-code-drawer-toggle';",
-        "import EstHardwareStatusButton from 'est-hardware-status-button';",
+        "import HardwareMenu from 'est-hardware-menu';",
         "import EstLanguageMenu from 'est-language-menu';",
         "import EstMenuBarLayout from 'est-menu-bar-layout';",
         "import estMenuLogo from 'est-menu-logo';",
-        "import EstStatusPanel from 'est-status-panel';",
         transformedSource
     ].join('\n');
 };

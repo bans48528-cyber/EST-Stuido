@@ -1,3 +1,6 @@
+import {getHardwareProfile, serializeHardwareProject} from '../../common/hardware-profiles';
+import {getHardwareContext} from '../hardware/context';
+
 const EMPTY_COSTUME_ASSET_ID = 'b6229967372e473079438136d6e7f144';
 const EMPTY_COSTUME_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>';
 const DEFAULT_PROGRAM_START_BLOCK_ID = 'est_default_program_start';
@@ -26,9 +29,9 @@ const createBaseTarget = ({isStage, name}) => ({
     volume: 100
 });
 
-const createDefaultProgramBlocks = () => ({
+const createDefaultProgramBlocks = (compiler = 'est-python') => ({
     [DEFAULT_PROGRAM_START_BLOCK_ID]: {
-        opcode: 'event_program_start',
+        opcode: compiler === 'spark-python' ? 'spark_event_whenflagclicked' : 'event_program_start',
         next: null,
         parent: null,
         inputs: {},
@@ -40,12 +43,13 @@ const createDefaultProgramBlocks = () => ({
     }
 });
 
-const createEstDefaultProjectData = () => ({
+const createEstDefaultProjectData = (hardwareId = getHardwareContext().profile.id) => serializeHardwareProject({
     targets: [
         createBaseTarget({isStage: true, name: 'Stage'}),
         {
             ...createBaseTarget({isStage: false, name: 'Program'}),
-            blocks: createDefaultProgramBlocks(),
+            blocks: getHardwareProfile(hardwareId).compiler ?
+                createDefaultProgramBlocks(getHardwareProfile(hardwareId).compiler) : {},
             visible: false,
             x: 0,
             y: 0,
@@ -60,7 +64,7 @@ const createEstDefaultProjectData = () => ({
         vm: '0.1.0',
         agent: 'EST Studio'
     }
-});
+}, {estStudioHardwareId: hardwareId});
 
 const createEstDefaultProjectAssets = () => [
     {

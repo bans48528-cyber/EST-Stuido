@@ -28,6 +28,24 @@ import createEstBlockPreviews from './est-home-block-previews';
 import aiConversationGuide from './est-home-assets/home-guide-ai-conversation.png';
 import aiSettingsGuide from './est-home-assets/home-guide-ai-settings.png';
 import aiWelcomeGuide from './est-home-assets/home-guide-ai-welcome.png';
+import hostHomeGuide from './est-home-assets/home-guide-est-host-home.png';
+import hostHomeGuideEN from './est-home-assets/home-guide-est-host-home-en.png';
+import hostHomeGuidePT from './est-home-assets/home-guide-est-host-home-pt-br.png';
+import hostPortsGuide from './est-home-assets/home-guide-est-host-ports.png';
+import hostPortsGuideEN from './est-home-assets/home-guide-est-host-ports-en.png';
+import hostPortsGuidePT from './est-home-assets/home-guide-est-host-ports-pt-br.png';
+import hostProgramsGuide from './est-home-assets/home-guide-est-host-programs.png';
+import hostProgramsGuideEN from './est-home-assets/home-guide-est-host-programs-en.png';
+import hostProgramsGuidePT from './est-home-assets/home-guide-est-host-programs-pt-br.png';
+import hostSettingsGuide from './est-home-assets/home-guide-est-host-settings.png';
+import hostSettingsGuideEN from './est-home-assets/home-guide-est-host-settings-en.png';
+import hostSettingsGuidePT from './est-home-assets/home-guide-est-host-settings-pt-br.png';
+import visionCameraGuide from './est-home-assets/home-guide-vision-camera.png';
+import visionCameraGuideEN from './est-home-assets/home-guide-vision-camera-en.png';
+import visionCameraGuidePT from './est-home-assets/home-guide-vision-camera-pt-br.png';
+import visionCameraGuideRU from './est-home-assets/home-guide-vision-camera-ru.png';
+import visionCameraGuideTW from './est-home-assets/home-guide-vision-camera-zh-tw.png';
+import estProductGuide from '../../resources/est-build-library/thumbnails/basic-01.jpg';
 import buildIcon from './est-home-assets/home-icon-build.png';
 import fileIcon from './est-home-assets/home-icon-file.png';
 import moreIcon from './est-home-assets/home-icon-more.png';
@@ -67,6 +85,8 @@ const STACK_BLOCK_PATH = [
 ].join(' ');
 
 const INFO_ITEMS = [
+    {id: 'est', title: 'home.more.est', subtitle: 'home.more.estSummary'},
+    {id: 'vision', title: 'home.more.vision', subtitle: 'home.more.visionSummary'},
     {id: 'interaction', title: 'home.more.interaction', subtitle: 'home.more.interactionSummary'},
     {id: 'hardware', title: 'home.more.hardware', subtitle: 'home.more.hardwareSummary'},
     {id: 'blocks', title: 'home.more.blocks', subtitle: 'home.more.blocksSummary'},
@@ -76,6 +96,136 @@ const INFO_ITEMS = [
 ];
 
 const INFO_DIALOGS = {
+    est: {
+        lead: 'home.dialog.est.lead',
+        sections: [
+            {
+                title: 'home.dialog.est.overviewTitle',
+                image: estProductGuide,
+                imageAlt: 'home.dialog.est.overviewImageAlt',
+                caption: 'home.dialog.est.overviewImageCaption',
+                items: [
+                    'home.dialog.est.overview1',
+                    'home.dialog.est.overview2',
+                    'home.dialog.est.overview3'
+                ]
+            },
+            {
+                title: 'home.dialog.est.controllerTitle',
+                items: [
+                    'home.dialog.est.controller1',
+                    'home.dialog.est.controller2',
+                    'home.dialog.est.controller3',
+                    'home.dialog.est.controller4'
+                ]
+            },
+            {
+                title: 'home.dialog.est.hardwareTitle',
+                items: [
+                    'home.dialog.est.hardware1',
+                    'home.dialog.est.hardware2',
+                    'home.dialog.est.hardware3',
+                    'home.dialog.est.hardware4'
+                ]
+            },
+            {
+                title: 'home.dialog.est.programmingTitle',
+                items: [
+                    'home.dialog.est.programming1',
+                    'home.dialog.est.programming2',
+                    'home.dialog.est.programming3',
+                    'home.dialog.est.programming4'
+                ]
+            },
+            {
+                title: 'home.dialog.est.smartTitle',
+                items: [
+                    'home.dialog.est.smart1',
+                    'home.dialog.est.smart2',
+                    'home.dialog.est.smart3'
+                ]
+            },
+            {
+                title: 'home.dialog.est.useTitle',
+                items: [
+                    'home.dialog.est.use1',
+                    'home.dialog.est.use2',
+                    'home.dialog.est.use3'
+                ],
+                note: 'home.dialog.est.useNote'
+            }
+        ]
+    },
+    vision: {
+        lead: 'home.dialog.vision.lead',
+        action: 'vision',
+        actionLabel: 'home.dialog.vision.openAction',
+        sections: [
+            {
+                title: 'home.dialog.vision.startTitle',
+                image: visionCameraGuide,
+                localizedImages: {
+                    en: visionCameraGuideEN, ru: visionCameraGuideRU,
+                    'pt-br': visionCameraGuidePT, 'zh-tw': visionCameraGuideTW
+                },
+                imageAlt: 'home.dialog.vision.startImageAlt',
+                caption: 'home.dialog.vision.startImageCaption',
+                ordered: true,
+                items: [
+                    'home.dialog.vision.start1',
+                    'home.dialog.vision.start2',
+                    'home.dialog.vision.start3',
+                    'home.dialog.vision.start4'
+                ]
+            },
+            {
+                title: 'home.dialog.vision.modeTitle',
+                items: [
+                    'home.dialog.vision.mode1',
+                    'home.dialog.vision.mode2',
+                    'home.dialog.vision.mode3',
+                    'home.dialog.vision.mode4'
+                ]
+            },
+            {
+                title: 'home.dialog.vision.programTitle',
+                ordered: true,
+                items: [
+                    'home.dialog.vision.program1',
+                    'home.dialog.vision.program2',
+                    'home.dialog.vision.program3',
+                    'home.dialog.vision.program4'
+                ],
+                note: 'home.dialog.vision.programNote'
+            },
+            {
+                title: 'home.dialog.vision.firmwareTitle',
+                items: [
+                    'home.dialog.vision.firmware1',
+                    'home.dialog.vision.firmware2',
+                    'home.dialog.vision.firmware3',
+                    'home.dialog.vision.firmware4'
+                ]
+            },
+            {
+                title: 'home.dialog.vision.privacyTitle',
+                items: [
+                    'home.dialog.vision.privacy1',
+                    'home.dialog.vision.privacy2',
+                    'home.dialog.vision.privacy3'
+                ]
+            },
+            {
+                title: 'home.dialog.vision.troubleshootTitle',
+                items: [
+                    'home.dialog.vision.troubleshoot1',
+                    'home.dialog.vision.troubleshoot2',
+                    'home.dialog.vision.troubleshoot3',
+                    'home.dialog.vision.troubleshoot4'
+                ]
+            }
+        ]
+    },
     interaction: {
         lead: 'home.dialog.interaction.lead',
         sections: [
@@ -99,6 +249,13 @@ const INFO_DIALOGS = {
                 ]
             },
             {
+                title: 'home.dialog.interaction.hostTitle',
+                items: [
+                    'home.dialog.interaction.host1',
+                    'home.dialog.interaction.host2'
+                ]
+            },
+            {
                 title: 'home.dialog.interaction.feedbackTitle',
                 items: [
                     'home.dialog.interaction.feedback1',
@@ -106,6 +263,14 @@ const INFO_DIALOGS = {
                     'home.dialog.interaction.feedback3'
                 ],
                 note: 'home.dialog.interaction.feedbackNote'
+            },
+            {
+                title: 'home.dialog.interaction.visionTitle',
+                items: [
+                    'home.dialog.interaction.vision1',
+                    'home.dialog.interaction.vision2',
+                    'home.dialog.interaction.vision3'
+                ]
             },
             {
                 title: 'home.dialog.interaction.troubleshootTitle',
@@ -129,6 +294,86 @@ const INFO_DIALOGS = {
                 ]
             },
             {
+                title: 'home.dialog.hardware.hostHomeTitle',
+                image: hostHomeGuide,
+                localizedImages: {
+                    'en': hostHomeGuideEN,
+                    'pt-br': hostHomeGuidePT
+                },
+                imageAlt: 'home.dialog.hardware.hostHomeImageAlt',
+                caption: 'home.dialog.hardware.hostImageCaption',
+                items: [
+                    'home.dialog.hardware.hostHome1',
+                    'home.dialog.hardware.hostHome2',
+                    'home.dialog.hardware.hostHome3',
+                    'home.dialog.hardware.hostHome4'
+                ]
+            },
+            {
+                title: 'home.dialog.hardware.hostProgramsTitle',
+                image: hostProgramsGuide,
+                localizedImages: {
+                    'en': hostProgramsGuideEN,
+                    'pt-br': hostProgramsGuidePT
+                },
+                imageAlt: 'home.dialog.hardware.hostProgramsImageAlt',
+                caption: 'home.dialog.hardware.hostImageCaption',
+                items: [
+                    'home.dialog.hardware.hostPrograms1',
+                    'home.dialog.hardware.hostPrograms2',
+                    'home.dialog.hardware.hostPrograms3',
+                    'home.dialog.hardware.hostPrograms4'
+                ]
+            },
+            {
+                title: 'home.dialog.hardware.hostPortsTitle',
+                image: hostPortsGuide,
+                localizedImages: {
+                    'en': hostPortsGuideEN,
+                    'pt-br': hostPortsGuidePT
+                },
+                imageAlt: 'home.dialog.hardware.hostPortsImageAlt',
+                caption: 'home.dialog.hardware.hostImageCaption',
+                items: [
+                    'home.dialog.hardware.hostPorts1',
+                    'home.dialog.hardware.hostPorts2',
+                    'home.dialog.hardware.hostPorts3'
+                ]
+            },
+            {
+                title: 'home.dialog.hardware.hostRemoteTitle',
+                items: [
+                    'home.dialog.hardware.hostRemote1',
+                    'home.dialog.hardware.hostRemote2',
+                    'home.dialog.hardware.hostRemote3'
+                ]
+            },
+            {
+                title: 'home.dialog.hardware.hostMotorTitle',
+                items: [
+                    'home.dialog.hardware.hostMotor1',
+                    'home.dialog.hardware.hostMotor2',
+                    'home.dialog.hardware.hostMotor3',
+                    'home.dialog.hardware.hostMotor4'
+                ],
+                note: 'home.dialog.hardware.hostMotorNote'
+            },
+            {
+                title: 'home.dialog.hardware.hostSettingsTitle',
+                image: hostSettingsGuide,
+                localizedImages: {
+                    'en': hostSettingsGuideEN,
+                    'pt-br': hostSettingsGuidePT
+                },
+                imageAlt: 'home.dialog.hardware.hostSettingsImageAlt',
+                caption: 'home.dialog.hardware.hostImageCaption',
+                items: [
+                    'home.dialog.hardware.hostSettings1',
+                    'home.dialog.hardware.hostSettings2',
+                    'home.dialog.hardware.hostSettings3'
+                ]
+            },
+            {
                 title: 'home.dialog.hardware.outputTitle',
                 items: [
                     'home.dialog.hardware.output1',
@@ -142,7 +387,8 @@ const INFO_DIALOGS = {
                     'home.dialog.hardware.sensor1',
                     'home.dialog.hardware.sensor2',
                     'home.dialog.hardware.sensor3',
-                    'home.dialog.hardware.sensor4'
+                    'home.dialog.hardware.sensor4',
+                    'home.dialog.hardware.sensor5'
                 ]
             },
             {
@@ -232,7 +478,8 @@ const INFO_DIALOGS = {
                     'home.dialog.ai.scope1',
                     'home.dialog.ai.scope2',
                     'home.dialog.ai.scope3',
-                    'home.dialog.ai.scope4'
+                    'home.dialog.ai.scope4',
+                    'home.dialog.ai.scope5'
                 ]
             },
             {
@@ -271,7 +518,8 @@ const INFO_DIALOGS = {
                 items: [
                     'home.dialog.software.workspace1',
                     'home.dialog.software.workspace2',
-                    'home.dialog.software.workspace3'
+                    'home.dialog.software.workspace3',
+                    'home.dialog.software.workspace4'
                 ]
             },
             {
@@ -1527,6 +1775,18 @@ class EstHome extends React.Component {
                         ) : guide ? (
                             <div className={styles.guideContent}>
                                 <p className={styles.guideLead}>{this.text(guide.lead, {version})}</p>
+                                {guide.action === 'vision' ? (
+                                    <button
+                                        className={styles.guideAction}
+                                        type="button"
+                                        onClick={() => this.setState(
+                                            {dialogId: null},
+                                            () => this.props.onOpenVision()
+                                        )}
+                                    >
+                                        {this.text(guide.actionLabel)}
+                                    </button>
+                                ) : null}
                                 {dialogId === 'blocks' ? (
                                     <div className={styles.blockGuide}>
                                         {EST_HOME_BLOCK_GUIDE_CATEGORIES.map(category => (
@@ -1605,7 +1865,9 @@ class EstHome extends React.Component {
                                                         <figure className={styles.guideFigure}>
                                                             <img
                                                                 alt={this.text(section.imageAlt)}
-                                                                src={section.image}
+                                                                src={(section.localizedImages &&
+                                                                    section.localizedImages[this.state.locale]) ||
+                                                                    section.image}
                                                             />
                                                             {section.caption ? (
                                                                 <figcaption>{this.text(section.caption)}</figcaption>
@@ -1694,6 +1956,7 @@ class EstHome extends React.Component {
 }
 
 EstHome.propTypes = {
+    onOpenVision: PropTypes.func.isRequired,
     canReturnToEditor: PropTypes.bool,
     onReturnToEditor: PropTypes.func,
     visible: PropTypes.bool

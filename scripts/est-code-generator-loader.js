@@ -14,7 +14,10 @@ module.exports = function (source) {
     }
 
     if (resourcePath.endsWith('/lib/code-generator.js')) {
-        return source.replace(nullReturn, "    return 'Python';");
+        const targetReturn =
+            "    if (getHardwareContext().profile.compiler === 'spark-python') return 'SparkPython';\n" +
+            "    return 'Python';";
+        return `import {getHardwareContext} from 'est-hardware-context';\n${source.replace(nullReturn, targetReturn)}`;
     }
     if (resourcePath.endsWith('/lib/device.js')) {
         return source.replace(nullReturn, "    return 'python';");

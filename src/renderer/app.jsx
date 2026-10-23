@@ -7,12 +7,15 @@ import AppStateHOC from 'openblock-gui/src/lib/app-state-hoc.jsx';
 
 import EstAiPanel from './EstAiPanel.jsx';
 import EstHome from './EstHome.jsx';
+import {EST_VISION_OPEN_EVENT} from './est-vision/menu-events';
+import {EST_LOCALE_CHANGED_EVENT, getCurrentEstLocale, getEstText} from './est-i18n';
 import ScratchDesktopGUIHOC from './ScratchDesktopGUIHOC.jsx';
 import {
     EST_HOME_PROJECT_OPENED_EVENT,
     EST_SHOW_HOME_EVENT
 } from './est-home-events';
 import styles from './app.css';
+import HardwareGate from './hardware/HardwareGate.jsx';
 
 const appTarget = document.getElementById('app');
 appTarget.className = styles.app || 'app';
@@ -41,9 +44,15 @@ class EstDesktopApp extends React.Component {
         this.handleEnterEditor = this.handleEnterEditor.bind(this);
         this.handleReturnToEditor = this.handleReturnToEditor.bind(this);
         this.handleShowHome = this.handleShowHome.bind(this);
+        this.handleOpenVision = () => ipcRenderer.invoke('est-vision-window-open', getCurrentEstLocale())
+            .catch(() => window.alert(getEstText('camera.error.window')));
+        this.handleVisionLocale = () => ipcRenderer.invoke('est-vision-window-locale', getCurrentEstLocale())
+            .catch(() => {});
     }
 
     componentDidMount () {
+        window.addEventListener(EST_VISION_OPEN_EVENT, this.handleOpenVision);
+        window.addEventListener(EST_LOCALE_CHANGED_EVENT, this.handleVisionLocale);
         window.addEventListener(EST_SHOW_HOME_EVENT, this.handleShowHome);
         window.addEventListener(EST_HOME_PROJECT_OPENED_EVENT, this.handleEnterEditor);
         ipcRenderer.invoke('est-home-get-startup-state')
@@ -62,6 +71,8 @@ class EstDesktopApp extends React.Component {
     }
 
     componentWillUnmount () {
+        window.removeEventListener(EST_VISION_OPEN_EVENT, this.handleOpenVision);
+        window.removeEventListener(EST_LOCALE_CHANGED_EVENT, this.handleVisionLocale);
         window.clearTimeout(this.homeTransitionTimer);
         window.cancelAnimationFrame(this.homeEnterFrame);
         window.removeEventListener(EST_SHOW_HOME_EVENT, this.handleShowHome);
@@ -127,12 +138,13 @@ class EstDesktopApp extends React.Component {
                     aria-hidden={this.state.homeVisible}
                 >
                     <WrappedGui />
-                    <EstAiPanel visible={!this.state.homeMounted} />
+                    <HardwareGate><EstAiPanel visible={!this.state.homeMounted} /></HardwareGate>
                 </div>
                 {this.state.homeMounted ? (
                     <EstHome
                         canReturnToEditor={this.state.canReturnToEditor}
                         visible={this.state.homeVisible}
+                        onOpenVision={this.handleOpenVision}
                         onReturnToEditor={this.handleReturnToEditor}
                     />
                 ) : null}

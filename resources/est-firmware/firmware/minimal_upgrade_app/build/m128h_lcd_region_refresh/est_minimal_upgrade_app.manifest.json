@@ -1,0 +1,12 @@
+{
+  "version": "M1.28H",
+  "input": "est_minimal_upgrade_app.bin",
+  "raw_app_size": 324452,
+  "unpadded_package_size": 324456,
+  "upgrade_package_size": 327680,
+  "bootloader_stored_length": 327679,
+  "initial_msp": "0x2002D3B0",
+  "reset_handler": "0x0801E765",
+  "header_ascii": "APP=",
+  "sha256": "5d5a32f4422b75f35f612231778215f49e0e0df0e071a6d959588cc3e63f6d1b"
+}

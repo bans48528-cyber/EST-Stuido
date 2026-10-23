@@ -1616,6 +1616,29 @@
     min-width: 0;
 }
 
+.guideAction {
+    min-width: 180px;
+    margin-top: 24px;
+    padding: 12px 22px;
+    border: 0;
+    border-radius: 7px;
+    background: #137bd1;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.guideAction:hover {
+    background: #0869b8;
+}
+
+.guideAction:focus-visible {
+    outline: 3px solid rgba(19, 123, 209, 0.26);
+    outline-offset: 3px;
+}
+
 .guideSections {
     display: block;
     margin-top: 48px;
