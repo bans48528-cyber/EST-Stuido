@@ -1,10 +1,12 @@
 import {
-    EST_AI_BLOCK_SPEC,
+    getEstAiBlockCatalog,
     EST_AI_RULE_CATEGORY_IDS,
     getEstAiBlockSpecsForCategories
 } from './est-block-spec';
 import {compileEstBlockIrToXml} from './est-block-compiler';
 import {getEstText} from '../est-i18n';
+import {getHardwareProfile} from '../../common/hardware-profiles';
+import {SPARK_AI_SAMPLE_IR, getSparkAiBlockDescription} from '../spark-ai/ai-spec';
 
 export const SAMPLE_IR = {
     version: 1,
@@ -20,15 +22,18 @@ export const SAMPLE_IR = {
     }]
 };
 
+export const getAiSampleIr = (hardwareId = 'est') => (hardwareId === 'spark-ai' ? SPARK_AI_SAMPLE_IR : SAMPLE_IR);
+
 const RULE_CATEGORY_PATTERNS = {
     movement: /(前进|后退|倒车|小车|行驶|移动|转向|转弯|巡线|循迹|驱动|左转|右转|move|drive|steer|turn|line.?follow|wheel)/i,
-    motor: /(单(?:个|独).*电机|马达|电机.*(?:速度|功率|角度|旋转|制动|刹车|堵转)|[ABCD]\s*(?:端口)?\s*(?:的)?电机|motor|stall)/i,
-    display: /(显示|屏幕|图像|图片|绘图|画|像素|文字|文本|清屏|状态灯|灯光|display|screen|image|draw|bitmap|pixel|text|status.?light)/i,
+    motor: /(单(?:个|独).*电机|马达|电机.*(?:速度|功率|角度|旋转|制动|刹车|堵转)|[A-H]\s*(?:端口)?\s*(?:的)?电机|motor|stall)/i,
+    display: new RegExp('显示|屏幕|图像|图片|绘图|画|像素|文字|文本|清屏|状态灯|灯光|矩阵|点阵|' +
+        'display|screen|image|draw|bitmap|pixel|text|matrix|matriz|status.?light', 'i'),
     sound: /(声音|播放|蜂鸣|音量|音符|音乐|sound|beep|volume|note|music)/i,
     control: /(等待|延时|秒|重复|循环|一直|永久|如果|否则|直到|停止|wait|repeat|loop|forever|if|else|until|stop)/i,
     sensing: new RegExp(
         '传感器|按键|按钮|颜色|反射光|环境光|触碰|触摸|超声波|距离|红外|陀螺仪|计时器|' +
-        'sensor|button|color|touch|ultrasonic|distance|infrared|gyro|timer', 'i'
+        '手柄|sensor|button|controller|gamepad|color|touch|ultrasonic|distance|infrared|gyro|timer', 'i'
     ),
     operators: new RegExp(
         '大于|小于|等于|比较|并且|或者|逻辑|加法|减法|乘法|除法|取余|随机|拼接|字符|长度|包含|四舍五入|取整|绝对值|平方根|三角|对数|' +
@@ -100,12 +105,15 @@ const normalizeRuleCategories = categories => {
     return unique;
 };
 
-export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareContext = null) => {
+export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareContext = null, hardwareId = 'est') => {
     const selected = normalizeRuleCategories(categories);
-    const catalog = getEstAiBlockSpecsForCategories(selected).map(spec => ({
+    const profile = getHardwareProfile(hardwareId);
+    const catalog = getEstAiBlockSpecsForCategories(selected, hardwareId).map(spec => ({
         ...spec,
-        description: getEstText(`home.blockGuide.${spec.type}`, locale)
+        description: (hardwareId === 'spark-ai' && getSparkAiBlockDescription(spec.type, locale)) ||
+            getEstText(`home.blockGuide.${spec.type}`, locale)
     }));
+    const start = hardwareId === 'spark-ai' ? 'spark_event_whenflagclicked' : 'event_program_start';
     const lines = [
         'You are the EST Studio programming assistant. Reply in the user\'s language. Return only JSON.',
         'Response: {"message":"concise explanation or clarification question","ir":null or EST Block IR}.',
@@ -113,7 +121,10 @@ export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareC
         'For program generation return the complete candidate program, including unchanged stacks for follow-up edits.',
         'Valid response structure example (replace the empty body with task blocks): ' +
             '{"message":"Program proposal","ir":{"version":1,"mode":"insert",' +
-            '"stacks":[{"event":{"type":"event_program_start"},"body":[]}]}}',
+            `"hardwareId":"${hardwareId}","stacks":[{"event":{"type":"${start}"},"body":[]}]}}`,
+        `Target hardware: ${profile.name} (${hardwareId}). IR.hardwareId must be "${hardwareId}". ` +
+            `Motor ports: ${profile.motorPorts.join(',')}; sensor ports: ${profile.sensorPorts.join(',')}. ` +
+            'Never use blocks, APIs or ports from another hardware model.',
         'Node keys: type, fields, inputs, body, elseBody. Inputs may contain literals or nested block objects.',
         'Use strict JSON: double-quoted keys and strings, balanced object/array brackets, no comments, ' +
             'trailing commas, ellipses or JavaScript expressions. Arithmetic must use operator blocks.',
@@ -151,7 +162,20 @@ export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareC
             'Arguments are scoped to their definition. Keep declarations and definition stacks on follow-up edits.'
         );
     }
-    if (selected.includes('display')) {
+    if (hardwareId === 'spark-ai') {
+        lines.push(
+            'Spark AI uses only spark_* toolbox blocks plus the supplied native data/procedure blocks, not EST blocks.',
+            'Motor pair input PORT is an ordered string such as E+F: first=left motor, second=right; distinct E/F/G/H.',
+            'Do not invent left/right installation roles. Ask if drive motor ports or roles have not been confirmed.',
+            'Matrix is 5 columns by 7 rows, NOT an EST screen. lamp is exactly 35 binary digits, row-major.',
+            'For a single matrix pixel, x is the row (0..6), y is the column (0..4).',
+            'Hand controller face buttons: top 1=Y, right 2=X, bottom 3=A, left 4=B. ' +
+                'Use the internal Y/X/A/B values in IR, and 1/2/3/4 in user-facing explanations.',
+            'Timer is milliseconds; wait/motor duration/note BEATS use seconds. ' +
+                'Line-patrol PORT_ONE/PORT_TWO use numeric sensor indices A=0,B=1,C=2,D=3.',
+            'spark_control_break is valid only inside a repeat/forever/repeat-until loop.'
+        );
+    } else if (selected.includes('display')) {
         lines.push(
             'display_draw.fields.BITMAP accepts {rows:["010","111"],x:0,y:0,scale:1} or canonical v1: bitmap encoding.',
             'Rows: equal-width 0/1 strings (white/black). Integer x/y origin, scale=1..16; must fit in 180x128.'
@@ -159,31 +183,32 @@ export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareC
     }
     if (hardwareContext) {
         lines.push(
-            'The following live USB port snapshot is reference context, not a validation rule. ' +
+            'The following live port snapshot is reference context, not a validation rule. ' +
                 'Prefer its detected ports when the user did not specify ports.',
             'USB cannot determine semantic installation roles such as left wheel or right wheel. ' +
                 'Use roles stated by the user in the conversation and do not invent them.',
-            `Current EST USB port snapshot: ${JSON.stringify(hardwareContext)}`
+            `Current ${profile.name} port snapshot: ${JSON.stringify(hardwareContext)}`
         );
     }
     return lines.join('\n');
 };
 
-export const parseEstAiReply = content => {
+export const parseEstAiReply = (content, hardwareId = 'est') => {
     const reply = parseJsonContent(content);
     if (!reply || Array.isArray(reply) || typeof reply.message !== 'string' ||
         !reply.message.trim() || reply.message.length > 8000 || !Object.prototype.hasOwnProperty.call(reply, 'ir')) {
         throw new Error('AI 回复应包含 message 与 ir。');
     }
-    const compiled = reply.ir === null ? null : compileEstBlockIrToXml(reply.ir);
+    const compiled = reply.ir === null ? null : compileEstBlockIrToXml(reply.ir, {hardwareId});
     return {message: reply.message.trim(), compiled, ir: compiled ? compiled.normalized : null};
 };
 
-const categoriesFromIr = ir => {
+const categoriesFromIr = (ir, hardwareId) => {
+    const catalog = getEstAiBlockCatalog(hardwareId);
     const categories = [];
     const visit = node => {
         if (!node || typeof node !== 'object' || Array.isArray(node)) return;
-        const spec = typeof node.type === 'string' ? EST_AI_BLOCK_SPEC[node.type] : null;
+        const spec = typeof node.type === 'string' ? catalog[node.type] : null;
         if (spec && !categories.includes(spec.category)) categories.push(spec.category);
         Object.values(node.inputs || {}).forEach(input => visit(input));
         (node.body || []).forEach(visit);
@@ -201,22 +226,37 @@ const categoriesFromIr = ir => {
     return categories;
 };
 
-const latestProgramCategories = messages => {
+const latestProgramCategories = (messages, hardwareId) => {
     for (let index = messages.length - 1; index >= 0; index--) {
-        if (messages[index].role === 'assistant' && messages[index].ir) return categoriesFromIr(messages[index].ir);
+        if (messages[index].role === 'assistant' && messages[index].ir) {
+            return categoriesFromIr(messages[index].ir, hardwareId);
+        }
     }
     return [];
 };
 
-export const selectEstAiRuleCategories = messages => {
+export const selectEstAiRuleCategories = (messages, hardwareId = 'est') => {
     const history = requestHistory(messages);
     const text = history.filter(message => message.role === 'user' && typeof message.text === 'string')
         .map(message => message.text)
         .join('\n');
-    const previous = latestProgramCategories(history);
+    const previous = latestProgramCategories(history, hardwareId);
     const matched = Object.keys(RULE_CATEGORY_PATTERNS).filter(
         category => RULE_CATEGORY_PATTERNS[category].test(text)
     );
+    if (hardwareId === 'spark-ai') {
+        const localized = {
+            movement: /avanç|avanc|mover|andar|virar|движ|впер|назад|повор/i,
+            motor: /motor|мотор|двигател/i,
+            display: /mostrar|limpar|matriz|экран|матриц|показ/i,
+            sound: /tocar|música|musica|nota|звук|музык/i,
+            control: /esperar|segundo|repetir|sempre|parar|ждать|секунд|повтор|цикл|останов/i,
+            sensing: /botão|botao|controle|датчик|кноп|геймпад/i
+        };
+        Object.keys(localized).forEach(category => {
+            if (localized[category].test(text) && !matched.includes(category)) matched.push(category);
+        });
+    }
     if (!previous.length && !matched.length && !PROGRAM_INTENT_PATTERN.test(text)) return [];
     const requested = new Set(['event', ...previous, ...matched]);
     if (requested.has('motor') && MOTOR_FEEDBACK_PATTERN.test(text)) {
@@ -248,6 +288,7 @@ export const generateEstAiReply = async ({
     locale,
     invoke,
     hardwareContext = null,
+    hardwareId = 'est',
     onPhase = () => {},
     isCurrent = () => true
 }) => {
@@ -257,10 +298,10 @@ export const generateEstAiReply = async ({
             content: message.role === 'assistant' ?
                 JSON.stringify({message: message.text, ir: message.ir || null}) : message.text
         }));
-    const categories = selectEstAiRuleCategories(messages);
+    const categories = selectEstAiRuleCategories(messages, hardwareId);
     const initialMessages = [{
         role: 'system',
-        content: buildEstAiSystemPrompt(locale, categories, hardwareContext)
+        content: buildEstAiSystemPrompt(locale, categories, hardwareContext, hardwareId)
     }].concat(history);
     let requestMessages = initialMessages;
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -269,7 +310,7 @@ export const generateEstAiReply = async ({
         const content = await invokeCompletion({id, requestMessages, invoke, isCurrent});
         onPhase('replying');
         try {
-            return {...parseEstAiReply(content), ruleCategories: categories};
+            return {...parseEstAiReply(content, hardwareId), ruleCategories: categories};
         } catch (error) {
             if (attempt === 2) {
                 if (error.code === 'AI_JSON_SYNTAX') {

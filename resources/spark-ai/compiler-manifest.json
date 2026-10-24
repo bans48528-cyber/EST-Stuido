@@ -1,0 +1,11 @@
+{
+  "compiler": "PikaPython",
+  "version": "1.13.4",
+  "source": "Spark AI 1.1.9",
+  "platform": "win32",
+  "arch": "x64",
+  "sha256": "902f43061019656d118f27e2856ec6a04116bdf161a62d5d84d587b2cc85e2f5",
+  "bytes": 471040,
+  "firmwareVersion": 110,
+  "firmwareCommit": "561b7a112f9df923fbf98e468f475e61137d1c0a"
+}

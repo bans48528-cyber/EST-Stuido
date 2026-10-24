@@ -9,7 +9,7 @@ import {
 } from './est-block-spec';
 import {normalizeEstAiBitmap} from './est-ai-bitmap';
 
-const ROOT_KEYS = new Set(['version', 'mode', 'stacks', 'variables', 'procedures']);
+const ROOT_KEYS = new Set(['version', 'hardwareId', 'mode', 'stacks', 'variables', 'procedures']);
 const STACK_KEYS = new Set(['event', 'body', 'x', 'y']);
 const NODE_KEYS = new Set(['type', 'fields', 'inputs', 'body', 'elseBody']);
 const CONTINUOUS_MOTION_BLOCKS = new Set([
@@ -18,9 +18,13 @@ const CONTINUOUS_MOTION_BLOCKS = new Set([
     'motor_start_power',
     'drive_start_steer',
     'drive_start_steer_speed',
-    'drive_start_dual_speed'
+    'drive_start_dual_speed',
+    'spark_motor_startWithPower',
+    'spark_combined_mov_dir_power',
+    'spark_combined_motor_startWithPower'
 ]);
-const MOTION_STOP_BLOCKS = new Set(['motor_stop', 'drive_stop']);
+const MOTION_STOP_BLOCKS = new Set(['motor_stop', 'drive_stop', 'spark_motor_stop', 'spark_combined_motor_stop',
+    'spark_control_stop']);
 
 const isPlainObject = value => (
     value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -149,7 +153,7 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
     state.seen.add(node);
     addUnknownKeys(state, node, NODE_KEYS, path);
 
-    const spec = typeof node.type === 'string' ? getEstAiNodeSpec(node, state.procedures) : null;
+    const spec = typeof node.type === 'string' ? getEstAiNodeSpec(node, state.procedures, state.hardwareId) : null;
     if (!spec) {
         addError(state, 'UNKNOWN_BLOCK', `${path}.type`, `不支持积木 ${String(node.type)}`);
         state.visiting.delete(node);
@@ -189,6 +193,13 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
             } catch (error) {
                 addError(state, 'INVALID_BITMAP', `${path}.fields.${name}`, error.message);
             }
+            return;
+        }
+        if (descriptor.kind === 'matrix') {
+            if (typeof fields[name] !== 'string' || !/^[01]{35}$/.test(fields[name])) {
+                addError(state, 'INVALID_MATRIX', `${path}.fields.${name}`, '矩阵图案必须是 35 位 0/1 字符串');
+            }
+            normalizedFields[name] = fields[name];
             return;
         }
         if (!['string', 'number'].includes(typeof fields[name])) {
@@ -276,6 +287,9 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
     });
 
     const normalized = {type: node.type};
+    if (node.type === 'spark_control_break' && !state.loopDepth) {
+        addError(state, 'BREAK_OUTSIDE_LOOP', path, '退出循环积木必须位于循环内部');
+    }
     if (Object.keys(spec.fields).length) normalized.fields = normalizedFields;
     if (Object.keys(spec.inputs).length) normalized.inputs = normalizedInputs;
     Object.keys(spec.branches).forEach(branchName => {
@@ -286,10 +300,13 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
             normalized[property] = [];
             return;
         }
+        const loop = ['spark_control_repeat', 'spark_control_forever', 'spark_control_repeat_until']
+            .includes(node.type);
+        if (loop) state.loopDepth++;
         normalized[property] = node[property].map((child, index) => {
             const childPath = `${branchPath}[${index}]`;
             const normalizedChild = normalizeNode(child, 'statement', childPath, depth + 1, state);
-            const childSpec = normalizedChild && getEstAiBlockSpec(normalizedChild.type);
+            const childSpec = normalizedChild && getEstAiBlockSpec(normalizedChild.type, state.hardwareId);
             if (childSpec && index < node[property].length - 1 && !childSpec.acceptsNext) {
                 addError(
                     state,
@@ -300,6 +317,7 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
             }
             return normalizedChild;
         }).filter(Boolean);
+        if (loop) state.loopDepth--;
     });
     if (!spec.branches.SUBSTACK && typeof node.body !== 'undefined') {
         addError(state, 'UNEXPECTED_BRANCH', `${path}.body`, `${node.type} 不接受 body`);
@@ -320,7 +338,7 @@ const normalizeStatementSequence = (nodes, path, depth, state) => (
     nodes.map((node, index) => {
         const nodePath = `${path}[${index}]`;
         const normalized = normalizeNode(node, 'statement', nodePath, depth, state);
-        const spec = normalized && getEstAiBlockSpec(normalized.type);
+        const spec = normalized && getEstAiBlockSpec(normalized.type, state.hardwareId);
         if (spec && index < nodes.length - 1 && !spec.acceptsNext) {
             addError(
                 state,
@@ -342,7 +360,7 @@ const containsBlock = (nodes, predicate) => nodes.some(node => (
 const collectSafetyWarnings = (nodes, path, warnings) => {
     nodes.forEach((node, index) => {
         const nodePath = `${path}[${index}]`;
-        if (node.type === 'control_forever' &&
+        if (['control_forever', 'spark_control_forever'].includes(node.type) &&
             containsBlock(node.body || [], child => CONTINUOUS_MOTION_BLOCKS.has(child.type)) &&
             !containsBlock(node.body || [], child => MOTION_STOP_BLOCKS.has(child.type))) {
             warnings.push({
@@ -356,8 +374,10 @@ const collectSafetyWarnings = (nodes, path, warnings) => {
     });
 };
 
-export const validateEstBlockIr = ir => {
+export const validateEstBlockIr = (ir, {hardwareId = 'est'} = {}) => {
     const state = {
+        hardwareId,
+        loopDepth: 0,
         blockCount: 0,
         errors: [],
         seen: new WeakSet(),
@@ -372,6 +392,9 @@ export const validateEstBlockIr = ir => {
         };
     }
     addUnknownKeys(state, ir, ROOT_KEYS, '$');
+    if (typeof ir.hardwareId !== 'undefined' && ir.hardwareId !== hardwareId) {
+        addError(state, 'HARDWARE_MISMATCH', '$.hardwareId', '程序硬件与当前硬件不一致');
+    }
     state.variables = normalizeDeclarations(state, ir.variables, 'variables');
     state.procedures = normalizeDeclarations(state, ir.procedures, 'procedures');
     if (ir.version !== EST_AI_IR_VERSION) {
@@ -413,6 +436,7 @@ export const validateEstBlockIr = ir => {
 
     const normalized = {
         version: EST_AI_IR_VERSION,
+        ...(hardwareId === 'est' && typeof ir.hardwareId === 'undefined' ? {} : {hardwareId}),
         mode: ir.mode,
         stacks: normalizedStacks,
         ...(typeof ir.variables === 'undefined' ? {} : {variables: state.variables}),
@@ -450,8 +474,8 @@ export class EstBlockIrValidationError extends Error {
     }
 }
 
-export const assertValidEstBlockIr = ir => {
-    const result = validateEstBlockIr(ir);
+export const assertValidEstBlockIr = (ir, options) => {
+    const result = validateEstBlockIr(ir, options);
     if (!result.valid) throw new EstBlockIrValidationError(result);
     return result;
 };

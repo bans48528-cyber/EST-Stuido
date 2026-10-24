@@ -15,6 +15,7 @@ import {EST_AI_IMPORT_REQUEST_EVENT, importEstBlockIrToWorkspace} from '../../sr
 import styles from '../../src/renderer/EstAiPanel.css';
 import mascotStyles from '../../src/renderer/EstAiMascot.css';
 import {runCoverageUiTests} from './coverage-ui';
+import {runSparkAiUiTests} from './spark-ui';
 
 const delay = () => new Promise(resolve => setTimeout(resolve, 40));
 const settlePaint = () => new Promise(resolve => setTimeout(resolve, 220));
@@ -306,6 +307,7 @@ window.runEstAiUiTests = async () => {
         await until(() => mascot().dataset.state === 'idle');
     }
     await runCoverageUiTests({workspace, panel, until});
+    await runSparkAiUiTests({workspace, panel, until});
     ReactDOM.unmountComponentAtNode(document.getElementById('root'));
     workspace.dispose();
     return 'EST AI UI passed: real SVG previews, insert/replace undo, menu layering, focus, IME, drag and resize';

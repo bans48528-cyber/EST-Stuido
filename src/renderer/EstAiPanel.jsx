@@ -12,8 +12,9 @@ import {
 import {compileEstBlockIrToXml} from './est-ai/est-block-compiler';
 import {requestEstAiBlockImport} from './est-ai/est-ai-workspace';
 import {createEstProgramStackPreviews} from './est-ai/est-program-preview';
-import {generateEstAiReply, SAMPLE_IR} from './est-ai/est-ai-chat';
-import {createEstAiHardwareContext} from './est-ai/est-ai-hardware-context';
+import {generateEstAiReply, getAiSampleIr, SAMPLE_IR} from './est-ai/est-ai-chat';
+import {createEstAiHardwareContext, createSparkAiHardwareContext} from './est-ai/est-ai-hardware-context';
+import {HARDWARE_CHANGED_EVENT, getHardwareContext, isAiHardwareActive} from './hardware/context';
 import {
     EST_AI_OPEN_REQUEST_EVENT,
     dispatchEstAiMenuState
@@ -165,6 +166,7 @@ Icon.propTypes = {name: PropTypes.string.isRequired};
 class EstAiPanel extends React.Component {
     constructor (props) {
         super(props);
+        this.hardwareId = getHardwareContext().profile.id;
         this.state = {
             isOpen: false,
             locale: getCurrentEstLocale(),
@@ -181,7 +183,7 @@ class EstAiPanel extends React.Component {
             apiKey: '',
             keyError: '',
             savingKey: false,
-            debugSource: JSON.stringify(SAMPLE_IR, null, 2),
+            debugSource: JSON.stringify(getAiSampleIr(this.hardwareId), null, 2),
             debugError: '',
             position: null
         };
@@ -198,7 +200,7 @@ class EstAiPanel extends React.Component {
             'handleLocaleChanged', 'handleOpen', 'handleClose', 'handleSettings', 'handleSettingsClose',
             'handleSaveKey', 'handleSend', 'handleCancel', 'handleNewChat', 'handleKeyDown',
             'handleInputKeyDown', 'handleDragStart', 'handleDragMove', 'handleDragEnd',
-            'handleResize', 'handleLocalPreview', 'handleProviderChange'
+            'handleResize', 'handleLocalPreview', 'handleProviderChange', 'handleHardwareChanged'
         ].forEach(name => {
             this[name] = this[name].bind(this);
         });
@@ -208,6 +210,7 @@ class EstAiPanel extends React.Component {
         this.mounted = true;
         window.addEventListener(EST_LOCALE_CHANGED_EVENT, this.handleLocaleChanged);
         window.addEventListener(EST_AI_OPEN_REQUEST_EVENT, this.handleOpen);
+        window.addEventListener(HARDWARE_CHANGED_EVENT, this.handleHardwareChanged);
         window.addEventListener('resize', this.handleResize);
         dispatchEstAiMenuState({visible: this.props.visible, open: this.state.isOpen});
         ipcRenderer.invoke('est-ai-status').then(result => {
@@ -251,12 +254,38 @@ class EstAiPanel extends React.Component {
         this.handleDragEnd();
         window.removeEventListener(EST_LOCALE_CHANGED_EVENT, this.handleLocaleChanged);
         window.removeEventListener(EST_AI_OPEN_REQUEST_EVENT, this.handleOpen);
+        window.removeEventListener(HARDWARE_CHANGED_EVENT, this.handleHardwareChanged);
         window.removeEventListener('resize', this.handleResize);
         dispatchEstAiMenuState({visible: false, open: false});
     }
 
     getCopy () {
-        return COPY[this.state.locale] || COPY.en;
+        const copy = COPY[this.state.locale] || COPY.en;
+        if (this.hardwareId !== 'spark-ai') return copy;
+        const suggestions = {
+            'zh-cn': ['显示 HELLO，一秒后清空点阵', '用 Spark AI 点阵显示 HELLO，等待一秒后清空点阵。'],
+            'zh-tw': ['顯示 HELLO，一秒後清空點陣', '用 Spark AI 點陣顯示 HELLO，等待一秒後清空點陣。'],
+            'pt-br': ['Mostrar HELLO e limpar após um segundo',
+                'No Spark AI, mostrar HELLO na matriz, esperar um segundo e limpar.'],
+            'ru': ['Показать HELLO и очистить через секунду',
+                'На Spark AI показать HELLO на матрице, подождать секунду и очистить.'],
+            'en': ['Show HELLO, then clear after one second',
+                'On Spark AI, show HELLO on the matrix, wait one second, then clear it.']
+        };
+        const [suggestion, suggestionPrompt] = suggestions[this.state.locale] || suggestions.en;
+        return {...copy, suggestion, suggestionPrompt};
+    }
+
+    handleHardwareChanged () {
+        const context = getHardwareContext();
+        if (!context.busy && context.profile.id === this.hardwareId) return;
+        this.hardwareId = context.profile.id;
+        this.handleNewChat();
+        this.setState({debugSource: JSON.stringify(getAiSampleIr(this.hardwareId), null, 2),
+            debugError: '',
+            settingsOpen: false,
+            apiKey: '',
+            isOpen: false});
     }
 
     setMascotState (mascotState) {
@@ -282,7 +311,7 @@ class EstAiPanel extends React.Component {
     }
 
     handleOpen () {
-        if (!this.props.visible) return;
+        if (!this.props.visible || !isAiHardwareActive()) return;
         this.setState({isOpen: true}, () => this.focusComposer());
     }
 
@@ -435,7 +464,8 @@ class EstAiPanel extends React.Component {
 
     async handleSend () {
         const text = this.state.input.trim();
-        if (!text || this.state.busy || this.requestId) return;
+        if (!text || this.state.busy || this.requestId || !isAiHardwareActive()) return;
+        const hardwareId = this.hardwareId;
         if (!this.state.configured) {
             this.handleSettings();
             return;
@@ -448,16 +478,21 @@ class EstAiPanel extends React.Component {
         try {
             let hardwareContext = null;
             try {
-                const connection = await ipcRenderer.invoke('est-auto-connect', {includePortInfo: true});
-                hardwareContext = createEstAiHardwareContext(connection);
+                if (hardwareId === 'spark-ai') {
+                    hardwareContext = createSparkAiHardwareContext(await ipcRenderer.invoke('spark-state'));
+                } else {
+                    const connection = await ipcRenderer.invoke('est-auto-connect', {includePortInfo: true});
+                    hardwareContext = createEstAiHardwareContext(connection);
+                }
             } catch (error) {
-                // AI chat remains available when no EST USB device can be inspected.
+                // Generating proposals does not require a connected device.
             }
             const reply = await generateEstAiReply({
                 id,
                 messages,
                 locale: this.state.locale,
                 hardwareContext,
+                hardwareId,
                 invoke: (channel, payload) => ipcRenderer.invoke(channel, payload),
                 onPhase: phase => {
                     if (!this.mounted || this.requestId !== id) return;
@@ -493,7 +528,9 @@ class EstAiPanel extends React.Component {
                     text: error.message || this.getCopy().requestError,
                     error: true,
                     retryText: text,
-                    settingsAction: /^(HTTP_(400|401|403|404|503)|REQUEST_TIMEOUT)$/.test(error.code || '')
+                    settingsAction: /^(HTTP_(400|401|403|404|503)|REQUEST_TIMEOUT)$/.test(error.code || '') ||
+                        ['AI_RESPONSE_FORMAT', 'AI_HTML_RESPONSE', 'AI_EMPTY_RESPONSE', 'AI_UNEXPECTED_TOOLS']
+                            .includes(error.code)
                 }),
                 busy: false
             }));
@@ -508,7 +545,7 @@ class EstAiPanel extends React.Component {
         this.setMascotState('replying');
         this.setState({busy: true, phase: 'previewing', debugError: ''});
         try {
-            const compiled = compileEstBlockIrToXml(JSON.parse(this.state.debugSource));
+            const compiled = compileEstBlockIrToXml(JSON.parse(this.state.debugSource), {hardwareId: this.hardwareId});
             const previews = await createEstProgramStackPreviews(compiled.xml);
             if (!previews || !previews.length) throw new Error(this.getCopy().previewFailed);
             if (!this.mounted || this.requestId !== id) return;
@@ -539,6 +576,7 @@ class EstAiPanel extends React.Component {
 
     async handleApply (message, mode) {
         if (this.state.busy || !message.previews || !message.previews.length) return;
+        if (!isAiHardwareActive() || (message.ir.hardwareId || 'est') !== this.hardwareId) return;
         const copy = this.getCopy();
         const confirm = detail => dialog.showMessageBoxSync({
             type: 'question',
@@ -785,7 +823,9 @@ class EstAiPanel extends React.Component {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => this.setState({debugSource: JSON.stringify(SAMPLE_IR, null, 2)})}
+                                onClick={() => this.setState({
+                                    debugSource: JSON.stringify(getAiSampleIr(this.hardwareId), null, 2)
+                                })}
                             >
                                 {copy.debugSample}
                             </button>

@@ -3,6 +3,7 @@
 import installSourceGenerators from './source-generators';
 import {installEstPythonNameSanitizer} from '../est-blocks/python-names';
 import catalog from './catalog.json';
+import {parseSparkMotorPair, SPARK_MOTOR_PAIR_INCOMPLETE} from './combined-motor-field';
 
 const HAT = 'spark_event_whenflagclicked';
 const ROOTS = new Set([HAT, 'procedures_definition']);
@@ -66,6 +67,13 @@ export const registerSparkPythonGenerator = ScratchBlocks => {
             return [String(code), order];
         };
     });
+    const pairMotors = g.spark_combined_motor_starting;
+    g.spark_combined_motor_starting = block => {
+        const code = g.valueToCode(block, 'PORT', g.ORDER_NONE).replace(/['"]/g, '');
+        const ports = parseSparkMotorPair(code);
+        if (ports.length !== 2 || ports.join('+') !== code) return `# ${SPARK_MOTOR_PAIR_INCOMPLETE}\n`;
+        return pairMotors(block);
+    };
     const variableType = ScratchBlocks.Variables.NAME_TYPE;
     const variableName = (block, field) => g.variableDB_.getName(block.getFieldValue(field), variableType);
     const procName = code => g.variableDB_.getName(code.replace(/ /g, '_').replace(/%([nsb])/g,

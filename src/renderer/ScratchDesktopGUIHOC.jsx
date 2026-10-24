@@ -361,7 +361,9 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
             dispatch(onFetchedProjectData(projectData, loadingState)),
         onLoadedProject: (loadingState, loadSuccess) => {
             const canSaveToServer = false;
-            return dispatch(onLoadedProject(loadingState, canSaveToServer, loadSuccess));
+            // The VM manager may already have completed a startup project load.
+            const action = onLoadedProject(loadingState, canSaveToServer, loadSuccess);
+            return action && dispatch(action);
         },
         onRequestNewProject: () => dispatch(requestNewProject(false)),
         onFinishHomeProject: success => {

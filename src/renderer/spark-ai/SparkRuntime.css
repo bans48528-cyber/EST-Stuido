@@ -1,0 +1,77 @@
+.connection { display: inline-flex; align-items: center; gap: 10px; border: 0; padding: 8px 10px; background: transparent; color: #273241; font: inherit; font-size: 12px; cursor: pointer; }
+.connection:hover, .connection:focus-visible { background: #e2e7ee; outline: 2px solid #498af2; outline-offset: -2px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: #ed5262; flex: 0 0 auto; }
+.connected { background: #24bf71; }
+.warning { background: #e6a323; }
+.backdrop { position: fixed; inset: 0; z-index: 10020; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(20, 30, 45, .28); }
+.panel { box-sizing: border-box; width: 720px; max-width: 100%; max-height: calc(100vh - 40px); overflow-y: auto; padding: 20px; background: #f7f9fc; color: #273241; border: 1px solid #d1dae6; border-radius: 8px; box-shadow: 0 12px 36px rgba(25, 35, 50, .2); font-size: 13px; }
+.header, .serial-row, .monitor-row, .log-header { display: flex; align-items: center; gap: 10px; }
+.header { justify-content: space-between; position: sticky; top: -20px; z-index: 1; margin: -20px -20px 16px; padding: 16px 20px; background: #f7f9fc; border-bottom: 1px solid #dce3ec; }
+.header h2 { margin: 0; font-size: 19px; }
+.serial-row { flex-wrap: wrap; }
+.auto-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; margin-top: 12px; }
+.auto-row label { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.auto-row > span { color: #66788c; overflow-wrap: anywhere; min-width: 0; }
+.serial-row select { box-sizing: border-box; min-width: 120px; flex: 1; max-width: 100%; height: 34px; border: 1px solid #c6d0df; border-radius: 4px; background: white; color: #273241; padding: 4px 8px; }
+.icon-button, .command { box-sizing: border-box; border: 1px solid #ccd5e0; background: white; color: #345381; cursor: pointer; border-radius: 4px; }
+.icon-button { display: inline-flex; flex: 0 0 30px; align-items: center; justify-content: center; width: 30px; height: 30px; font-size: 20px; line-height: 1; }
+.command { min-height: 34px; padding: 6px 12px; font-size: 13px; }
+.icon-button:hover, .command:hover { background: #e8f1ff; border-color: #498af2; }
+.icon-button:disabled, .command:disabled { opacity: .45; cursor: default; }
+.error { margin-top: 12px; padding: 10px; border: 1px solid #e8a4a4; border-radius: 4px; background: #fff2f2; color: #9c2839; line-height: 1.5; overflow-wrap: anywhere; }
+.notice { margin-top: 12px; padding: 10px; border: 1px solid #e6d3a8; border-radius: 4px; background: #fff9eb; color: #72551c; line-height: 1.5; overflow-wrap: anywhere; }
+.summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 18px 0; }
+.summary > div { display: flex; gap: 10px; flex-wrap: wrap; }
+.summary dt { color: #66788c; }
+.summary dd { margin: 0; overflow-wrap: anywhere; }
+.monitor-row { justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.monitor-row label { display: inline-flex; align-items: center; gap: 6px; }
+.monitor-row > span { color: #926718; }
+.ports { border-top: 1px solid #dce3ec; }
+.port { display: grid; grid-template-columns: 20px 100px minmax(0, 1fr); gap: 12px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid #dce3ec; }
+.port > span { overflow-wrap: anywhere; }
+.port-values { display: flex; flex-wrap: wrap; gap: 5px 14px; min-width: 0; overflow-wrap: anywhere; }
+.log-header { margin: 16px 0 8px; }
+.log-header h3 { margin: 0 auto 0 0; font-size: 14px; }
+.logs { box-sizing: border-box; display: block; width: 100%; height: 130px; min-height: 80px; resize: vertical; border: 1px solid #cbd5e0; border-radius: 4px; padding: 10px; color: #273241; background: white; font-family: Consolas, monospace; font-size: 12px; line-height: 1.5; }
+.program-controls { isolation: isolate; }
+.operation-message { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; box-sizing: border-box; width: max-content; max-width: min(400px, calc(100vw - 32px)); white-space: normal; overflow-wrap: anywhere; }
+.operation-message progress { width: 100%; height: 5px; accent-color: #398cec; }
+@media (max-width: 1050px) { .connection-label { display: none; } }
+@media (max-width: 540px) { .backdrop { padding: 10px; } .panel { padding: 14px; max-height: calc(100vh - 20px); } .header { top: -14px; margin: -14px -14px 16px; padding: 12px 14px; } .summary { grid-template-columns: minmax(0, 1fr); } .port { grid-template-columns: 16px 80px minmax(0, 1fr); gap: 8px; } }
+.transport-modes {
+    display: flex;
+    gap: 0;
+    margin: 8px 0 14px;
+}
+.transport-modes button { border-radius: 0; min-width: 80px; }
+.transport-modes button:first-child { border-radius: 6px 0 0 6px; }
+.transport-modes button:last-child { border-radius: 0 6px 6px 0; }
+.transport-modes button[aria-pressed="true"] { background: #e7f2ff; border-color: #4c97ff; color: #165da5; }
+.ble-section { margin-bottom: 12px; }
+.remembered-device { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.remembered-device > span { min-width: 0; overflow-wrap: anywhere; }
+.remembered-device small { display: block; color: #66758a; margin-top: 4px; }
+.remembered-device button { flex-shrink: 0; }
+.ble-devices { list-style: none; padding: 0; max-height: 180px; overflow-y: auto; }
+.ble-devices li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #e4e9ee; }
+.ble-devices li > span { min-width: 0; overflow-wrap: anywhere; }
+.ble-devices small { display: block; color: #66758a; }
+.firmware-section { margin: 16px 0; padding: 14px 0; border-top: 1px solid #dce3ec; border-bottom: 1px solid #dce3ec; }
+.firmware-section > button { scroll-margin-top: 74px; }
+.firmware-section h3 { margin: 16px 0 8px; font-size: 14px; }
+.firmware-section p { line-height: 1.5; overflow-wrap: anywhere; }
+.firmware-files { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+.firmware-files th, .firmware-files td { padding: 8px 6px; text-align: start; border-bottom: 1px solid #dce3ec; overflow-wrap: anywhere; vertical-align: top; }
+.firmware-files th:first-child { width: 42%; }
+.firmware-files th:nth-child(2) { width: 22%; }
+.firmware-blockers { padding-inline-start: 20px; color: #865714; line-height: 1.6; overflow-wrap: anywhere; }
+.firmware-blockers li + li { margin-top: 4px; }
+.firmware-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.firmware-notice { color: #865714; }
+.firmware-confirm, .firmware-recovery label { display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
+.firmware-confirm { margin: 12px 0; }
+.firmware-confirm input, .firmware-recovery input { flex: 0 0 auto; margin-top: 3px; }
+.firmware-recovery select { max-width: 100%; min-height: 34px; border: 1px solid #ccd5e0; border-radius: 4px; background: white; }
+.firmware-progress { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; line-height: 1.5; overflow-wrap: anywhere; }
+.firmware-progress progress { width: 100%; height: 8px; accent-color: #398cec; }

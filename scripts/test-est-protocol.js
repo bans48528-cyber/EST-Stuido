@@ -1449,11 +1449,11 @@ assert.strictEqual(isSteeringDialMarkVisible(165), false);
 assert.strictEqual(isSteeringDialMarkVisible(180), true);
 assert.strictEqual(isSteeringDialMarkVisible(270), true);
 assert.strictEqual(isSteeringDialMarkVisible(345), true);
-assert.strictEqual(formatSteeringDisplayText(-40), 'esq.:-40');
-assert.strictEqual(formatSteeringDisplayText(0), 'frente:0');
-assert.strictEqual(formatSteeringDisplayText(40), 'dir.:40');
-assert.strictEqual(formatSteeringDisplayText(-120), 'esq.:-100');
-assert.strictEqual(formatSteeringDisplayText(120), 'dir.:100');
+assert.strictEqual(formatSteeringDisplayText(-40), '左:-40');
+assert.strictEqual(formatSteeringDisplayText(0), '前:0');
+assert.strictEqual(formatSteeringDisplayText(40), '右:40');
+assert.strictEqual(formatSteeringDisplayText(-120), '左:-100');
+assert.strictEqual(formatSteeringDisplayText(120), '右:100');
 assert.strictEqual(typeof registeredFields[EST_STEERING_FIELD_TYPE], 'function');
 const steeringField = new registeredFields[EST_STEERING_FIELD_TYPE](0);
 assert.strictEqual(steeringField.classValidator('-120'), '-100');
@@ -1461,7 +1461,7 @@ assert.strictEqual(steeringField.classValidator('43.6'), '44');
 assert.strictEqual(steeringField.classValidator('150'), '100');
 assert.strictEqual(steeringField.classValidator('not-a-number'), null);
 steeringField.getText = () => '-40';
-assert.strictEqual(steeringField.getDisplayText_(), 'esq.:-40');
+assert.strictEqual(steeringField.getDisplayText_(), '左:-40');
 const blockDefinitionFor = blockId => registeredBlockDefinitions.find(definition => definition.type === blockId);
 const soundOptions = definitionArguments(blockDefinitionFor('sound_play'))
     .find(argument => argument.name === 'SOUND').options;
@@ -1477,12 +1477,13 @@ assert.strictEqual(Object.prototype.hasOwnProperty.call(noteForDuration, 'check'
 assert.strictEqual(noteContinuous.type, 'input_value');
 assert.strictEqual(Object.prototype.hasOwnProperty.call(noteContinuous, 'check'), false);
 assert.strictEqual(EST_LOCALE_NAMES['pt-br'], 'Português (Brasil)');
-assert.strictEqual(EST_DEFAULT_LOCALE, 'pt-br');
+assert.strictEqual(EST_DEFAULT_LOCALE, 'zh-cn');
+assert.strictEqual(normalizeEstLocale('invalid-locale'), 'zh-cn');
 assert.strictEqual(normalizeEstLocale('pt_BR'), 'pt-br');
 assert.strictEqual(getEstText('menu.hardwareStatus', 'pt-br'), 'Status do hardware');
-assert.strictEqual(getEstText('firmware.updateButton'), 'Atualizar firmware');
-assert.strictEqual(getEstText('firmware.upgradeEstOs'), 'Atualizar EST OS');
-assert.strictEqual(getEstText('firmware.downgradeLegacyEst'), 'Voltar ao EST antigo');
+assert.strictEqual(getEstText('firmware.updateButton'), '固件更新');
+assert.strictEqual(getEstText('firmware.upgradeEstOs'), '升级EST OS');
+assert.strictEqual(getEstText('firmware.downgradeLegacyEst'), '降级旧EST系统');
 assert.strictEqual(getEstText('firmware.updateButton', 'pt-br'), 'Atualizar firmware');
 assert.deepStrictEqual(getEstLocaleOptions({
     en: {},
@@ -3222,6 +3223,8 @@ assert.ok(!transformedAppState.includes("require('scratch-paint')"));
 assert.ok(!transformedAppState.includes('scratchPaint: ScratchPaintReducer'));
 assert.ok(!transformedAppState.includes('componentDidUpdate (prevProps)'));
 assert.match(transformedAppState, /scratchGui: guiReducer/);
+assert.ok(transformedAppState.includes("supportedLocales.includes(savedLocale) ? savedLocale : 'zh-cn'"),
+    'startup defaults to Simplified Chinese while respecting a saved language');
 const estRendererAppSource = fs.readFileSync(path.resolve(
     __dirname,
     '..',

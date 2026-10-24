@@ -11,7 +11,12 @@ if (!process.versions.electron) {
     });
     process.exitCode = result.status === null ? 1 : result.status;
 } else {
-    const {app, BrowserWindow, ipcMain} = require('electron');
+    const {app, BrowserWindow, ipcMain, dialog} = require('electron');
+    const nativeMessages = [];
+    dialog.showMessageBox = (parent, options) => {
+        nativeMessages.push(options || parent);
+        return Promise.resolve({response: 0});
+    };
     const remote = require('@electron/remote/main');
     const output = fs.mkdtempSync(path.join(os.tmpdir(), 'est-locale-test-'));
     app.setPath('userData', path.join(output, 'profile'));
@@ -24,9 +29,47 @@ if (!process.versions.electron) {
     let hardwareMaxActive = 0;
     let hardwareMockEnabled = false;
     let selectedHardware = 'est';
+    let startupProjectData = null;
+    const sparkPorts = [{path: 'COM_TEST', friendlyName: 'Spark AI USB (mock)',
+        vendorId: '0483', productId: '5740', serialNumber: 'SPARK_TEST'}];
+    let sparkState = {state: 'disconnected', connected: false, busy: false, compatible: false,
+        compilerSupported: true, stale: false, monitoring: true, status: null, operation: null, logs: [],
+        discovery: {enabled: true, status: 'waiting', ports: sparkPorts, revision: 0}};
+    const sparkRequests = [];
+    let interruptSparkDownload = false;
+    let firmwareChecks = 0;
+    const firmwareRelease = require('../src/main/spark-ai/firmware-release.json');
+    const sparkStatus = {version: 110, battery: 85, heap: 12, running: false,
+        flash: {total: '1024 kb', free: '512 kb'}, ports: [
+            {port: 0, type: 'color', values: {lux: 100, state: 1, min: 10, max: 900, threadValue: 455}},
+            {port: 1, type: 'touch', values: {state: 1}}, {port: 2, type: 'ultrasion', values: {cm: 25}},
+            {port: 3, type: 'ir_remote', values: {state: 2}}
+        ]};
+    const sendSpark = event => event.sender.send('spark-state-change', sparkState);
+    const mockSparkProgram = async (event, request, action) => {
+        sparkRequests.push({action, ...request});
+        sparkState = {...sparkState, busy: true, result: null,
+            operation: {phase: action === 'stop' ? 'stopping' : 'downloading', bytes: 80, total: 110}};
+        sendSpark(event);
+        await new Promise(resolve => setTimeout(resolve, 160));
+        if (interruptSparkDownload && action === 'download') {
+            interruptSparkDownload = false;
+            sparkState = {...sparkState, busy: false, operation: null, result: null, error: null,
+                warning: 'SPARK_DOWNLOAD_INCOMPLETE'};
+            sendSpark(event);
+            throw new Error('SPARK_DOWNLOAD_INCOMPLETE');
+        }
+        const result = action === 'stop' ? {stopObserved: true} :
+            {downloaded: true, slot: request.slot, startRequested: action === 'run', runObserved: action === 'run'};
+        sparkState = {...sparkState, busy: false, operation: null, result,
+            warning: action === 'stop' ? sparkState.warning : null,
+            status: {...sparkStatus, running: action === 'run'}};
+        sendSpark(event);
+        return result;
+    };
     const hardwareDrafts = new Map();
     for (const [name, handler] of Object.entries({
-        'get-initial-project-data': () => null,
+        'get-initial-project-data': () => startupProjectData,
         'est-home-get-startup-state': () => ({hasInitialProject: true}),
         'est-home-list-recent-projects': () => [],
         'est-home-get-build-library-state': () => ({}),
@@ -38,6 +81,64 @@ if (!process.versions.electron) {
         },
         'hardware-draft-write': (event, draft) => { hardwareDrafts.set(draft.hardwareId, draft); },
         'hardware-draft-read': (event, hardwareId) => hardwareDrafts.get(hardwareId) || null,
+        'spark-state': () => sparkState,
+        'spark-firmware-inspect': () => {
+            firmwareChecks++;
+            return {...firmwareRelease, releaseId: firmwareRelease.id, valid: true, canUpdate: true,
+                files: firmwareRelease.files.map(file => ({...file, valid: true, error: null}))};
+        },
+        'spark-firmware-update': async (event, request) => {
+            if (!request.confirmedErase) throw new Error('SPARK_FW_ERASE_CONFIRM');
+            sparkRequests.push({action: 'firmware', ...request});
+            sparkState = {...sparkState, busy: true,
+                firmware: {active: true, phase: 'transferring', bytes: 100000, total: 202906, file: 'app/app.bin'}};
+            sendSpark(event);
+            await new Promise(resolve => setTimeout(resolve, 350));
+            const result = {transferComplete: true, reconnected: true, versionMatched: true, version: 110};
+            sparkState = {...sparkState, busy: false, connected: true, compatible: true, status: sparkStatus,
+                firmware: {active: false, phase: 'complete', bytes: 202906, total: 202906, result}};
+            sendSpark(event); return result;
+        },
+        'spark-list-devices': () => sparkPorts,
+        'spark-ble-cancel-scan': () => {},
+        'spark-ble-forget': event => {
+            sparkState = {...sparkState, bleDevice: null}; sendSpark(event); return sparkState;
+        },
+        'spark-connection-mode': (event, connectionMode) => {
+            sparkState = {...sparkState, connectionMode, connected: false, compatible: false, status: null};
+            sendSpark(event);
+        },
+        'spark-set-auto-connect': (event, enabled) => {
+            sparkState = {...sparkState, discovery: {...sparkState.discovery, enabled,
+                status: sparkState.connected ? 'connected' : (enabled ? 'waiting' : 'paused'),
+                revision: sparkState.discovery.revision + 1}};
+            sendSpark(event); return sparkState;
+        },
+        'spark-connect': (event, request) => {
+            sparkRequests.push({action: 'connect', ...request});
+            sparkState = {...sparkState, connected: true, compatible: true, status: sparkStatus,
+                port: request.path,
+                discovery: {...sparkState.discovery, status: 'connected', revision: sparkState.discovery.revision + 1},
+                state: 'ready', logs: [{id: 1, time: Date.now(), text: 'mock serial output'}]};
+            sendSpark(event); return sparkState;
+        },
+        'spark-disconnect': event => {
+            sparkState = {...sparkState, connected: false, status: null, state: 'disconnected',
+                discovery: {...sparkState.discovery, enabled: false, status: 'paused',
+                    revision: sparkState.discovery.revision + 1}};
+            sendSpark(event); return sparkState;
+        },
+        'spark-download-program': (event, request) => mockSparkProgram(event, request, 'download'),
+        'spark-run-program': (event, request) => mockSparkProgram(event, request, 'run'),
+        'spark-stop-program': event => mockSparkProgram(event, {}, 'stop'),
+        'spark-set-monitoring': (event, enabled) => {
+            sparkState = {...sparkState, monitoring: enabled}; sendSpark(event); return sparkState;
+        },
+        'spark-cancel': event => {
+            sparkRequests.push({action: 'cancel'});
+            sparkState = {...sparkState, busy: false, operation: null}; sendSpark(event);
+        },
+        'spark-clear-logs': event => { sparkState = {...sparkState, logs: []}; sendSpark(event); },
         'est-auto-connect': () => (hardwareMockEnabled ?
             {state: 'connected', compatible: true, status: {programStatus: {state: 0}}} : {state: 'not-found'}),
         'est-vision-window-open': (event, locale) => { cameraOpenRequests++; openedCameraLocale = locale; },
@@ -56,13 +157,20 @@ if (!process.versions.electron) {
         'est-ai-status': () => ({ok: true, data: {configured: false, hasKey: false, config: {}}})
     })) ipcMain.handle(name, handler);
     const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
-    const timeout = setTimeout(() => app.exit(1), 90000);
+    const timeout = setTimeout(() => app.exit(1), 180000);
     app.whenReady().then(async () => {
         const window = new BrowserWindow({show: false, width: 1280, height: 860,
             webPreferences: {nodeIntegration: true, contextIsolation: false, backgroundThrottling: false, offscreen: true}});
         remote.enable(window.webContents);
-        window.webContents.on('console-message', (event, level, message) => {
-            if (level >= 3) console.error('Renderer: ' + message);
+        const unhandledRejections = [];
+        window.webContents.on('console-message', (event, level, message, line, source) => {
+            if (level >= 3) console.error(`Renderer: ${message} (${source}:${line})`);
+            if (message.startsWith('Unhandled rejection stack:')) unhandledRejections.push(message);
+        });
+        window.webContents.on('dom-ready', () => {
+            window.webContents.executeJavaScript(`window.addEventListener('unhandledrejection', event => {
+                console.error('Unhandled rejection stack: ' + (event.reason && event.reason.stack || event.reason));
+            });`).catch(error => console.error(error));
         });
         const evaluate = async source => {
             const result = await window.webContents.executeJavaScript(`(async () => {
@@ -97,6 +205,11 @@ if (!process.versions.electron) {
             }
             assert.ok(ready, 'editor must mount');
             await pause(1000);
+            assert.equal(await evaluate('window.findLocaleTestBlocks().props.locale'), 'zh-cn',
+                'a fresh installation must start in Simplified Chinese');
+            assert.equal(await evaluate('document.documentElement.lang'), 'zh-cn');
+            assert.equal(await evaluate("localStorage.getItem('est-studio-locale')"), 'zh-cn');
+            console.log('Fresh-profile startup: Simplified Chinese selected and saved without manual language switching.');
             const loadedExtensions = () => evaluate('window.findLocaleTestBlocks().props.vm.runtime.getLoadedDeviceExtension()');
             assert.deepStrictEqual(await loadedExtensions(), [], 'new projects must not load vision');
             assert.strictEqual(await evaluate(`window.findLocaleTestBlocks().workspace.getFlyout().getWorkspace()
@@ -367,7 +480,31 @@ if (!process.versions.electron) {
             assert.equal(pendingCategories.length, 10, 'Spark has eight fixed and two native dynamic categories');
             assert.ok(!await evaluate('Boolean(document.querySelector("#est-vision-open"))'));
             assert.ok(!/est_runtime|rt\./.test(await evaluate('window.findLocaleTestBlocks().workspaceToCode()')));
-            assert.ok(await evaluate('document.querySelector(".est-menu-bar-ai-button").hidden'));
+            assert.ok(!await evaluate('document.querySelector(".est-menu-bar-ai-button").hidden'));
+            const assistant = await evaluate(`(async () => {
+                document.querySelector('.est-menu-bar-ai-button').click();
+                let panel;
+                for (const element of document.querySelectorAll('div')) {
+                    let fiber = element[Object.keys(element).find(key => key.startsWith('__reactInternalInstance'))];
+                    for (; fiber; fiber = fiber.return) {
+                        if (fiber.stateNode && typeof fiber.stateNode.handleLocalPreview === 'function') {
+                            panel = fiber.stateNode; break;
+                        }
+                    }
+                    if (panel) break;
+                }
+                if (!panel) throw new Error('Spark assistant did not mount');
+                const before = findLocaleTestBlocks().props.vm.toJSON();
+                await panel.handleLocalPreview();
+                const message = panel.state.messages[0];
+                const result = {hardwareId: panel.hardwareId, irHardware: message && message.ir.hardwareId,
+                    previews: message && message.previews.length, error: panel.state.debugError,
+                    unchanged: before === findLocaleTestBlocks().props.vm.toJSON()};
+                panel.handleClose();
+                return result;
+            })()`);
+            assert.deepStrictEqual(assistant, {hardwareId: 'spark-ai', irHardware: 'spark-ai',
+                previews: 1, error: '', unchanged: true});
             const sparkCatalog = require('../src/renderer/spark-ai/catalog.json');
             const sparkUi = await evaluate(`(() => {
                 const editor = window.findLocaleTestBlocks(), B = editor.ScratchBlocks;
@@ -440,6 +577,324 @@ if (!process.versions.electron) {
                 (await window.webContents.capturePage()).toPNG());
             await evaluate('window.findLocaleTestBlocks().ScratchBlocks.DropDownDiv.hideWithoutAnimation()');
             console.log('Spark UI: 66 real block instances and native 5-column, 7-row matrix editor passed.');
+            const portColours = await evaluate(`(() => {
+                const editor = window.findLocaleTestBlocks(), B = editor.ScratchBlocks;
+                const xml = document.createElement('xml');
+                const types = ['motor_specifiedunit', 'combined_motor_starting',
+                    'sensing_key_judgment', 'sensing_ultrasonic_judgment', 'sensing_isHandling'];
+                types.forEach((type, index) => {
+                    const source = Array.from(sparkUiFixtureXml.children).find(node =>
+                        node.getAttribute('type') === 'spark_' + type).cloneNode(true);
+                    source.setAttribute('x', '60'); source.setAttribute('y', String(60 + index * 90));
+                    xml.appendChild(source);
+                });
+                window.sparkPortColourSnapshot = B.Xml.workspaceToDom(editor.workspace);
+                editor.workspace.clear(); B.Xml.domToWorkspace(xml, editor.workspace);
+                const references = ['est_motor_port_picker', 'est_drive_port_picker',
+                    'est_sensor_port_picker', 'est_sensor_port_picker', 'est_sensor_port_picker'];
+                const test = new B.Workspace();
+                const palette = block => [block.getColour(), block.getColourSecondary(),
+                    block.getColourTertiary()].map(value => value.toLowerCase());
+                try {
+                    return types.map((type, index) => {
+                        const parent = editor.workspace.getAllBlocks().find(b => b.type === 'spark_' + type);
+                        const port = parent.getInputTargetBlock('PORT');
+                        const reference = test.newBlock(references[index]);
+                        return {type, actual: palette(port), expected: palette(reference),
+                            fill: port.svgPath_.getAttribute('fill').toLowerCase(),
+                            stroke: port.svgPath_.getAttribute('stroke').toLowerCase(),
+                            value: port.getFieldValue('MOTOR') || port.getFieldValue('TOUCHING_MENU') ||
+                                port.getFieldValue('SENSING_MENU') || port.getFieldValue('HAND_SHANK'),
+                            options: type === 'sensing_isHandling' ?
+                                port.getField('HAND_SHANK').getOptions().map(option => option[1]) : null};
+                    });
+                } finally { test.dispose(); }
+            })()`);
+            for (const port of portColours) {
+                assert.deepStrictEqual(port.actual, port.expected, port.type + ': EST port palette');
+                assert.equal(port.fill, port.expected[0], port.type + ': rendered fill');
+                assert.equal(port.stroke, port.expected[2], port.type + ': rendered outline');
+            }
+            const gamepadPicker = portColours.find(port => port.type === 'sensing_isHandling');
+            assert.equal(gamepadPicker.value, 'up');
+            assert.deepStrictEqual(gamepadPicker.options, ['up', 'down', 'left', 'right', 'Y', 'A', 'B', 'X', 'L1', 'R1']);
+            window.webContents.invalidate(); await pause(100);
+            fs.writeFileSync(path.join(output, 'spark-port-colours.png'),
+                (await window.webContents.capturePage()).toPNG());
+            console.log('Spark picker UI: motor, paired motor, touch, sensor and gamepad fills/outlines match EST; all gamepad options preserved.');
+            await evaluate(`(() => {
+                const editor = window.findLocaleTestBlocks();
+                window.gamepadUiField = editor.workspace.getAllBlocks()
+                    .find(block => block.type === 'spark_handShank_menu').getField('HAND_SHANK');
+                gamepadUiField.showEditor_();
+            })()`);
+            const gamepadImage = await evaluate(`(async () => {
+                const image = document.querySelector('.spark-gamepad-stage img');
+                await image.decode();
+                return {width: image.naturalWidth, height: image.naturalHeight};
+            })()`);
+            assert.deepStrictEqual(gamepadImage, {width: 3300, height: 2550});
+            window.webContents.invalidate(); await pause(300);
+            const gamepadScreen = await window.webContents.capturePage();
+            fs.writeFileSync(path.join(output, 'spark-gamepad-initial.png'), gamepadScreen.toPNG());
+            const gamepadPixel = await evaluate(`(() => {
+                const box = document.querySelector('.spark-gamepad-stage').getBoundingClientRect();
+                return {x: box.x + box.width / 2, y: box.y + box.height / 2, width: innerWidth};
+            })()`);
+            const screenSize = gamepadScreen.getSize();
+            const screenScale = screenSize.width / gamepadPixel.width;
+            const pixelOffset = ((Math.floor(gamepadPixel.y * screenScale) * screenSize.width) +
+                Math.floor(gamepadPixel.x * screenScale)) * 4;
+            const gamepadBitmap = gamepadScreen.getBitmap();
+            assert.ok([0, 1, 2].every(channel => gamepadBitmap[pixelOffset + channel] > 100),
+                'the rendered controller body must be visible, not only a decoded image');
+            for (const width of [800, 1000, 1280]) {
+                window.setSize(width, 860); await pause(120);
+                const geometry = await evaluate(`(() => {
+                    gamepadUiField.showEditor_();
+                    const panel = document.querySelector('.spark-gamepad-selector');
+                    const stage = panel.querySelector('.spark-gamepad-stage').getBoundingClientRect();
+                    const bounds = panel.getBoundingClientRect();
+                    const buttons = Array.from(panel.querySelectorAll('[data-gamepad-key]'));
+                    return {fits: bounds.left >= 0 && bounds.top >= 0 &&
+                        bounds.right <= innerWidth && bounds.bottom <= innerHeight,
+                        keys: buttons.map(button => button.dataset.gamepadKey),
+                        inside: buttons.every(button => {
+                            const box = button.getBoundingClientRect();
+                            return box.left >= stage.left && box.top >= stage.top &&
+                                box.right <= stage.right && box.bottom <= stage.bottom;
+                        }),
+                        hitTests: buttons.every(button => {
+                            const box = button.getBoundingClientRect();
+                            return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)
+                                .closest('[data-gamepad-key]') === button;
+                        })};
+                })()`);
+                assert.equal(geometry.fits, true, 'gamepad popup fits at ' + width);
+                assert.equal(geometry.inside, true, 'all hotspots fit inside the rendered controller');
+                assert.equal(geometry.hitTests, true, 'no overlapped hit targets');
+                assert.deepStrictEqual(geometry.keys, gamepadPicker.options);
+            }
+            for (const key of gamepadPicker.options) {
+                const faceLabels = {Y: '1', X: '2', A: '3', B: '4'};
+                const result = await evaluate(`(() => {
+                    gamepadUiField.showEditor_();
+                    const button = document.querySelector('[data-gamepad-key="${key}"]');
+                    button.dispatchEvent(new MouseEvent('mouseleave'));
+                    const initial = button.style.background;
+                    button.dispatchEvent(new MouseEvent('mouseenter'));
+                    const hover = initial !== button.style.background;
+                    const label = {text: button.textContent, title: button.title,
+                        accessible: button.getAttribute('aria-label')};
+                    button.click();
+                    const editor = window.findLocaleTestBlocks();
+                    return {value: gamepadUiField.getValue(), hover, closed: !gamepadUiField.controllerEditor_,
+                        label, display: gamepadUiField.getText(),
+                        code: editor.ScratchBlocks.SparkPython.spark_sensing_isHandling(
+                            gamepadUiField.sourceBlock_.getParent())[0]};
+                })()`);
+                assert.equal(result.value, key);
+                assert.equal(result.hover, true);
+                assert.equal(result.closed, true);
+                if (faceLabels[key]) {
+                    assert.deepStrictEqual(result.label, {text: faceLabels[key],
+                        title: faceLabels[key], accessible: faceLabels[key]});
+                    assert.equal(result.display, faceLabels[key], 'the block must also display its number');
+                    const caption = await evaluate(`(() => {
+                        gamepadUiField.showEditor_();
+                        return gamepadUiField.controllerCaption_.textContent;
+                    })()`);
+                    assert.ok(caption.endsWith(': ' + faceLabels[key]), 'popup caption must use its number');
+                    await evaluate('window.findLocaleTestBlocks().ScratchBlocks.DropDownDiv.hideWithoutAnimation()');
+                }
+                assert.equal(result.code, '_key.key_remote("' + key + '","press")');
+                await pause(40);
+            }
+            await evaluate(`(() => {
+                const editor = window.findLocaleTestBlocks();
+                editor.workspace.clearUndo(); gamepadUiField.setValue('up');
+            })()`);
+            await pause(100);
+            await evaluate("gamepadUiField.setValue('A')");
+            await pause(100);
+            await evaluate('window.findLocaleTestBlocks().workspace.undo(false)');
+            assert.equal(await evaluate('gamepadUiField.getValue()'), 'up');
+            await evaluate('window.findLocaleTestBlocks().workspace.undo(true)');
+            assert.equal(await evaluate('gamepadUiField.getValue()'), 'A');
+            assert.equal(await evaluate('gamepadUiField.getText()'), '3');
+            const gamepadSaved = await evaluate(`(() => {
+                const B = window.findLocaleTestBlocks().ScratchBlocks;
+                const values = gamepadUiField.getOptions().map(option => option[1]);
+                return values.map(value => {
+                    gamepadUiField.setValue(value);
+                    const xml = B.Xml.blockToDom(gamepadUiField.sourceBlock_.getParent());
+                    const workspace = new B.Workspace();
+                    try {
+                        B.Xml.domToBlock(xml, workspace);
+                        const field = workspace.getAllBlocks().find(block => block.type === 'spark_handShank_menu')
+                            .getField('HAND_SHANK');
+                        return {value: field.getValue(), text: field.getText()};
+                    } finally { workspace.dispose(); }
+                });
+            })()`);
+            assert.deepStrictEqual(gamepadSaved.map(field => field.value), gamepadPicker.options);
+            for (const [value, text] of Object.entries({Y: '1', X: '2', A: '3', B: '4'})) {
+                assert.equal(gamepadSaved.find(field => field.value === value).text, text,
+                    'legacy letter values must reopen with numeric labels');
+            }
+            for (const locale of ['zh-cn', 'zh-tw', 'en', 'ru', 'pt-br']) {
+                await evaluate(`window.dispatchEvent(new CustomEvent('est-home-set-locale',
+                    {detail:{locale:${JSON.stringify(locale)}}}))`);
+                await pause(500);
+                const localized = await evaluate(`(() => {
+                    const editor = window.findLocaleTestBlocks();
+                    window.gamepadUiField = editor.workspace.getAllBlocks()
+                        .find(block => block.type === 'spark_handShank_menu').getField('HAND_SHANK');
+                    gamepadUiField.showEditor_();
+                    return {value: gamepadUiField.getValue(),
+                        label: document.querySelector('.spark-gamepad-selector').getAttribute('aria-label'),
+                        selected: document.querySelector('[data-gamepad-key][aria-pressed=true]').dataset.gamepadKey};
+                })()`);
+                assert.equal(localized.value, 'R1');
+                assert.equal(localized.selected, 'R1');
+                assert.equal(localized.label, {'zh-cn': '手柄按键', 'zh-tw': '手柄按鍵',
+                    en: 'Controller button', ru: 'Кнопка геймпада', 'pt-br': 'Botão do controle'}[locale]);
+                window.webContents.invalidate(); await pause(180);
+                fs.writeFileSync(path.join(output, 'spark-gamepad-' + locale + '.png'),
+                    (await window.webContents.capturePage()).toPNG());
+            }
+            await evaluate(`(() => {
+                const editor = window.findLocaleTestBlocks(), field = gamepadUiField;
+                const panel = field.controllerEditor_;
+                panel.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowLeft', bubbles: true}));
+                const keyboardFocus = document.activeElement.dataset.gamepadKey;
+                if (!keyboardFocus) throw new Error('Keyboard focus left the gamepad');
+                panel.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
+                if (field.controllerEditor_) throw new Error('Escape did not close the gamepad');
+                field.showEditor_();
+                field.sourceBlock_.getParent().dispose(false);
+                if (field.controllerEditor_ || editor.ScratchBlocks.DropDownDiv.owner_ === field) {
+                    throw new Error('Disposed gamepad retained its editor');
+                }
+                delete window.gamepadUiField;
+            })()`);
+            console.log('Spark graphical gamepad: supplied render loaded; all 10 button hotspots, hover/selection, Python mapping, undo/redo, save/reopen, keyboard, disposal, 5 locales and 800/1000/1280 layouts passed.');
+            const pairInitial = await evaluate(`(() => {
+                const editor = window.findLocaleTestBlocks();
+                const pair = editor.workspace.getAllBlocks().find(b => b.type === 'spark_combined_motor_box');
+                const field = pair.getField('MOTOR');
+                pair.getParent().getField('STATUS').showEditor_();
+                const nativePopup = getComputedStyle(editor.ScratchBlocks.DropDownDiv.getContentDiv().parentNode);
+                const nativeColours = {background: nativePopup.backgroundColor, border: nativePopup.borderTopColor};
+                window.sparkPairTestField = field;
+                editor.workspace.clearUndo();
+                field.showEditor_();
+                const panel = document.querySelector('.spark-combined-motor-selector');
+                const bounds = panel.getBoundingClientRect();
+                const popup = getComputedStyle(panel.parentNode.parentNode);
+                return {value: field.getValue(), options: field.getOptions().map(option => option[1]),
+                    selected: Array.from(panel.querySelectorAll('[aria-pressed=true]')).map(b => b.textContent),
+                    nativeColours, colours: {background: popup.backgroundColor, border: popup.borderTopColor},
+                    textColour: getComputedStyle(panel).color,
+                    fits: bounds.left >= 0 && bounds.top >= 0 && bounds.right <= innerWidth &&
+                        bounds.bottom <= innerHeight};
+            })()`);
+            assert.equal(pairInitial.value, 'E+F');
+            assert.deepStrictEqual(pairInitial.options, ['E', 'F', 'G', 'H']);
+            assert.deepStrictEqual(pairInitial.selected, ['E', 'F']);
+            assert.deepStrictEqual(pairInitial.colours, pairInitial.nativeColours,
+                'custom pair popup must use the same category background and border as a native dropdown');
+            assert.equal(pairInitial.textColour, 'rgb(255, 255, 255)');
+            assert.equal(pairInitial.fits, true);
+            const pairClick = async port => {
+                await evaluate(`document.querySelector('.spark-combined-motor-selector [data-motor-port="${port}"]').click()`);
+                await pause(100);
+                return evaluate(`(() => {
+                    const panel = document.querySelector('.spark-combined-motor-selector');
+                    return {value: sparkPairTestField.getValue(), text: sparkPairTestField.getText(),
+                        selected: Array.from(panel.querySelectorAll('[aria-pressed=true]')).map(b => b.textContent),
+                        left: panel.querySelector('[data-motor-side=left]').textContent,
+                        right: panel.querySelector('[data-motor-side=right]').textContent};
+                })()`);
+            };
+            const pairPending = await pairClick('G');
+            assert.equal(pairPending.value, 'G');
+            assert.equal(pairPending.text, 'G+?');
+            assert.equal(await evaluate(`(() => {
+                const project = JSON.parse(window.findLocaleTestBlocks().props.vm.toJSON());
+                return project.targets.flatMap(target => Object.values(target.blocks))
+                    .find(block => block.opcode === 'spark_combined_motor_box').fields.MOTOR[0];
+            })()`), 'G', 'pending motor selection must reach the saved project');
+            assert.deepStrictEqual(pairPending.selected, ['G']);
+            assert.ok(pairPending.left.endsWith(': G'));
+            assert.ok(!pairPending.right.endsWith(': F'), 'old right selection must be cleared');
+            assert.equal((await pairClick('G')).value, 'G', 'no duplicate port selection');
+            assert.equal((await pairClick('H')).value, 'G+H');
+            await evaluate('window.findLocaleTestBlocks().workspace.undo(false)');
+            await pause(100);
+            assert.equal(await evaluate('sparkPairTestField.getValue()'), 'G');
+            await evaluate('window.findLocaleTestBlocks().workspace.undo(true)');
+            await pause(100);
+            assert.equal(await evaluate('sparkPairTestField.getValue()'), 'G+H');
+            await evaluate('window.findLocaleTestBlocks().ScratchBlocks.DropDownDiv.hideWithoutAnimation()');
+            const pairRoundTrip = await evaluate(`(() => {
+                const B = window.findLocaleTestBlocks().ScratchBlocks;
+                const results = [];
+                for (const value of ['H+E', 'F', 'E+E']) {
+                    sparkPairTestField.setValue(value);
+                    const xml = B.Xml.blockToDom(sparkPairTestField.sourceBlock_.getParent());
+                    const scratch = new B.Workspace();
+                    try {
+                        B.Xml.domToBlock(xml, scratch);
+                        const field = scratch.getAllBlocks().find(b => b.type === 'spark_combined_motor_box')
+                            .getField('MOTOR');
+                        results.push({value: field.getValue(), text: field.getText()});
+                    } finally { scratch.dispose(); }
+                }
+                sparkPairTestField.showEditor_();
+                return results;
+            })()`);
+            assert.deepStrictEqual(pairRoundTrip.map(result => result.value), ['H+E', 'F', 'E']);
+            assert.equal(pairRoundTrip[1].text, 'F+?');
+            assert.equal((await pairClick('H')).value, 'E+H');
+            assert.equal((await pairClick('F')).value, 'F', 'third selection resets even after reopening');
+            assert.equal((await pairClick('E')).value, 'F+E', 'selection order must not be sorted');
+            for (const width of [800, 1000, 1280]) {
+                window.setSize(width, 860);
+                await pause(100);
+                const layout = await evaluate(`(() => {
+                    sparkPairTestField.showEditor_();
+                    const panel = document.querySelector('.spark-combined-motor-selector');
+                    const bounds = panel.getBoundingClientRect();
+                    return {fits: bounds.left >= 0 && bounds.top >= 0 &&
+                        bounds.right <= innerWidth && bounds.bottom <= innerHeight,
+                        noScroll: panel.scrollWidth <= panel.clientWidth &&
+                            panel.scrollHeight <= panel.clientHeight,
+                        buttons: panel.querySelectorAll('button').length};
+                })()`);
+                assert.deepStrictEqual(layout, {fits: true, noScroll: true, buttons: 4},
+                    'paired motor popup must fit at ' + width + ' px');
+            }
+            window.webContents.invalidate(); await pause(100);
+            fs.writeFileSync(path.join(output, 'spark-paired-motors.png'),
+                (await window.webContents.capturePage()).toPNG());
+            await evaluate('window.findLocaleTestBlocks().ScratchBlocks.DropDownDiv.hideWithoutAnimation()');
+            const pairCleanup = await evaluate(`(() => {
+                sparkPairTestField.showEditor_();
+                const field = sparkPairTestField;
+                field.sourceBlock_.getParent().dispose(false);
+                delete window.sparkPairTestField;
+                return {closed: !field.portEditor_,
+                    ownerCleared: window.findLocaleTestBlocks().ScratchBlocks.DropDownDiv.owner_ !== field};
+            })()`);
+            assert.deepStrictEqual(pairCleanup, {closed: true, ownerCleared: true});
+            console.log('Spark paired motors: E/F/G/H ordered double-selection, third-click reset, no duplicates, undo/redo, save/reopen and popup disposal passed.');
+            await evaluate(`(() => {
+                const editor = window.findLocaleTestBlocks();
+                editor.workspace.clear();
+                editor.ScratchBlocks.Xml.domToWorkspace(window.sparkPortColourSnapshot, editor.workspace);
+                delete window.sparkPortColourSnapshot;
+            })()`);
             await evaluate(`(() => {
                 const editor = window.findLocaleTestBlocks(), B = editor.ScratchBlocks;
                 let tail = editor.workspace.getAllBlocks().find(b => b.type === 'spark_event_whenflagclicked');
@@ -456,6 +911,248 @@ if (!process.versions.electron) {
             assert.ok(sparkProgram.includes('_motor.run_for_power_seconds(4, 50, 1)'));
             assert.ok(sparkProgram.includes('_matrix.show('));
             assert.ok(sparkProgram.includes('_motor.stop(4)'));
+            assert.ok(await evaluate('Boolean(document.querySelector("#spark-program-controls"))'));
+            assert.ok(!await evaluate('Boolean(document.querySelector("#est-program-controls"))'));
+            assert.equal(await evaluate('document.querySelector("#spark-program-controls [data-action=run]").disabled'), true);
+            await evaluate('document.querySelector("#spark-connection").click()');
+            await pause(150);
+            assert.equal(await evaluate('document.querySelector("#spark-auto-connect").checked'), true);
+            await evaluate('document.querySelector("#spark-auto-connect").click()');
+            await pause(150);
+            assert.equal(sparkState.discovery.enabled, false, 'auto-connect toggle reaches main IPC');
+            await evaluate('document.querySelector("#spark-auto-connect").click()');
+            await pause(150);
+            assert.equal(sparkState.discovery.enabled, true);
+            await pause(120);
+            assert.equal(sparkRequests.length, 0, 'scanning must not automatically open serial ports');
+            await evaluate('document.querySelector("#spark-usb-connect").click()');
+            await pause(180);
+            assert.deepStrictEqual(sparkRequests[0], {action: 'connect', path: 'COM_TEST'});
+            const pairedBlock = await evaluate(`(() => {
+                const editor = window.findLocaleTestBlocks(), B = editor.ScratchBlocks;
+                const xml = Array.from(sparkUiFixtureXml.children).find(node =>
+                    node.getAttribute('type') === 'spark_combined_motor_starting').cloneNode(true);
+                const pair = B.Xml.domToBlock(xml, editor.workspace);
+                const start = editor.workspace.getAllBlocks().find(b => b.type === 'spark_event_whenflagclicked');
+                const next = start.nextConnection.targetConnection;
+                if (next) start.nextConnection.disconnect();
+                start.nextConnection.connect(pair.previousConnection);
+                if (next) pair.nextConnection.connect(next);
+                pair.getInputTargetBlock('PORT').setFieldValue('G', 'MOTOR');
+                return pair.id;
+            })()`);
+            await pause(400);
+            const requestsBeforeIncomplete = sparkRequests.length;
+            for (const action of ['download', 'run']) {
+                await evaluate(`document.querySelector('#spark-program-controls [data-action=${action}]').click()`);
+                await pause(180);
+                assert.equal(sparkRequests.length, requestsBeforeIncomplete, 'incomplete pair must not reach hardware');
+                assert.ok(nativeMessages.pop().detail.includes('SPARK_MOTOR_PAIR_INCOMPLETE'));
+            }
+            await evaluate(`(() => {
+                const editor = window.findLocaleTestBlocks();
+                editor.workspace.getBlockById(${JSON.stringify(pairedBlock)}).getInputTargetBlock('PORT')
+                    .setFieldValue('H+G', 'MOTOR');
+            })()`);
+            await pause(400);
+            assert.ok((await evaluate('window.findLocaleTestBlocks().workspaceToCode()')).includes('_motor.pair(7,6,'));
+            console.log('Spark paired motor validation: pending right motor blocks download/run; completed pair generates left/right arguments in click order.');
+            await evaluate(`(() => {
+                const editor = window.findLocaleTestBlocks();
+                const pair = editor.workspace.getBlockById(${JSON.stringify(pairedBlock)});
+                const previous = pair.previousConnection.targetConnection;
+                const next = pair.nextConnection.targetConnection;
+                pair.previousConnection.disconnect();
+                if (next) pair.nextConnection.disconnect();
+                if (previous && next) previous.connect(next);
+                pair.dispose(false);
+            })()`);
+            await pause(400);
+            assert.equal(await evaluate('document.querySelector("#spark-program-controls [data-action=run]").disabled'), false);
+            for (const locale of ['zh-cn', 'zh-tw', 'pt-br', 'ru', 'en']) {
+                await evaluate(`window.dispatchEvent(new CustomEvent('est-home-set-locale',
+                    {detail:{locale:${JSON.stringify(locale)}}}))`);
+                await pause(500);
+                if (!await evaluate('Boolean(document.querySelector("#spark-hardware-panel"))')) {
+                    await evaluate('document.querySelector("#spark-connection").click()');
+                    await pause(120);
+                }
+                const geometry = await evaluate(`(() => {
+                    const panel = document.querySelector('#spark-hardware-panel');
+                    const rect = panel.getBoundingClientRect();
+                    return {fits: rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight,
+                        overflow: panel.scrollWidth > panel.clientWidth,
+                        text: panel.textContent, rows: panel.querySelectorAll('[class*=SparkRuntime_port_]').length};
+                })()`);
+                assert.ok(geometry.fits && !geometry.overflow, locale + ': Spark panel must fit');
+                assert.equal(geometry.rows, 4);
+                assert.ok(!/SPARK_|threadValue|ultrasion/.test(geometry.text), geometry.text);
+            }
+            for (const width of [800, 1000, 1280]) {
+                window.setSize(width, 760); await pause(180);
+                assert.ok(await evaluate(`(() => { const p = document.querySelector('#spark-hardware-panel');
+                    const r = p.getBoundingClientRect(); return p.scrollWidth <= p.clientWidth &&
+                    r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight; })()`));
+                fs.writeFileSync(path.join(output, 'spark-usb-panel-' + width + '.png'),
+                    (await window.webContents.capturePage()).toPNG());
+            }
+            window.setSize(1280, 860);
+            for (const locale of ['zh-cn', 'zh-tw', 'pt-br', 'ru', 'en']) {
+                await evaluate(`window.dispatchEvent(new CustomEvent('est-home-set-locale',
+                    {detail:{locale:${JSON.stringify(locale)}}}))`);
+                await pause(350);
+                if (!await evaluate('Boolean(document.querySelector("#spark-hardware-panel"))')) {
+                    await evaluate('document.querySelector("#spark-connection").click()');
+                }
+                if (!await evaluate('Boolean(document.querySelector("#spark-firmware-panel"))')) {
+                    await evaluate('document.querySelector("#spark-firmware-toggle").click()');
+                }
+                await pause(150);
+                assert.equal(await evaluate('document.querySelectorAll("#spark-firmware-panel tbody tr").length'), 5);
+                assert.equal(await evaluate('document.querySelector("#spark-firmware-start").disabled'), true);
+                const text = await evaluate('document.querySelector("#spark-firmware-panel").textContent');
+                assert.ok(!/SPARK_|firmware[A-Z]/.test(text), text);
+                assert.ok(!text.includes('SPARK_FW_BOOT_UNVERIFIED'), text);
+                await evaluate('document.querySelector("#spark-firmware-confirm").click()');
+                await pause(60);
+                assert.equal(await evaluate('document.querySelector("#spark-firmware-start").disabled'), false);
+                await evaluate('document.querySelector("#spark-firmware-start").click()');
+                await pause(80);
+                assert.equal(await evaluate('document.querySelector("#spark-program-controls [data-action=run]").disabled'), true);
+                assert.equal(await evaluate('document.querySelector("#spark-firmware-check").disabled'), true);
+                assert.ok(await evaluate('Boolean(document.querySelector("#spark-firmware-panel progress"))'));
+                if (locale === 'zh-cn') {
+                    await evaluate('document.querySelector("#spark-hardware-panel header button").click()');
+                    await evaluate('document.querySelector("#spark-connection").click()');
+                    await pause(50);
+                    assert.ok(await evaluate('Boolean(document.querySelector("#spark-firmware-panel progress"))'),
+                        'reopening the panel must show the active update');
+                }
+                await pause(350);
+                assert.equal(sparkState.firmware.phase, 'complete');
+                assert.equal(sparkRequests[sparkRequests.length - 1].action, 'firmware');
+                assert.equal(sparkRequests[sparkRequests.length - 1].confirmedErase, true);
+                const before = firmwareChecks;
+                await evaluate('document.querySelector("#spark-firmware-check").click()');
+                await pause(150);
+                assert.equal(firmwareChecks, before + 1);
+                for (const width of [800, 1280]) {
+                    window.setSize(width, 760); await pause(150);
+                    assert.ok(await evaluate(`(() => { const p = document.querySelector('#spark-hardware-panel');
+                        const r = p.getBoundingClientRect(); return p.scrollWidth <= p.clientWidth &&
+                        r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight; })()`));
+                    await evaluate('document.querySelector("#spark-firmware-toggle").scrollIntoView({block:"start"})');
+                    assert.ok(await evaluate(`(() => {
+                        const close = document.querySelector('#spark-hardware-panel header button');
+                        const r = close.getBoundingClientRect();
+                        return r.top >= 0 && r.bottom <= innerHeight &&
+                            close.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
+                    })()`), 'close button remains visible and clickable after scrolling');
+                    fs.writeFileSync(path.join(output, `spark-firmware-${locale}-${width}.png`),
+                        (await window.webContents.capturePage()).toPNG());
+                }
+            }
+            await evaluate('document.querySelector("#spark-usb-connect").click()');
+            await pause(100);
+            await evaluate('document.querySelector("#spark-firmware-recovery").click()');
+            await evaluate('document.querySelector("#spark-firmware-confirm").click()');
+            await pause(50);
+            assert.equal(await evaluate('document.querySelector("#spark-firmware-start").disabled'), false);
+            await evaluate('document.querySelector("#spark-firmware-start").click()');
+            await pause(450);
+            assert.equal(sparkRequests[sparkRequests.length - 1].recovery, true);
+            assert.equal(sparkRequests[sparkRequests.length - 1].path, 'COM_TEST');
+            await evaluate('document.querySelector("#spark-firmware-toggle").click()');
+            window.setSize(1280, 860);
+            console.log('Spark firmware UI: erase confirmation, progress, busy controls, reopen, recovery, recheck and five locales at 800/1280 passed.');
+            await evaluate('document.querySelector("#spark-mode-ble").click()');
+            await pause(150);
+            assert.equal(sparkState.connectionMode, 'ble');
+            sparkState = {...sparkState, bleDevice: {id: 'AA:BB:CC:DD:EE:FF', name: 'Spark_AI'}};
+            window.webContents.send('spark-state-change', sparkState);
+            await pause(100);
+            assert.ok(await evaluate('Boolean(document.querySelector("#spark-ble-forget"))'));
+            assert.ok(await evaluate('Boolean(document.querySelector("#spark-auto-connect"))'));
+            for (const locale of ['zh-cn', 'zh-tw', 'pt-br', 'ru', 'en']) {
+                await evaluate(`window.dispatchEvent(new CustomEvent('est-home-set-locale',
+                    {detail:{locale:${JSON.stringify(locale)}}}))`);
+                await pause(350);
+                if (!await evaluate('Boolean(document.querySelector("#spark-hardware-panel"))')) {
+                    await evaluate('document.querySelector("#spark-connection").click()');
+                }
+                window.webContents.send('spark-ble-scan-state', {scanning: true, devices: [
+                    {id: 'AA:BB:CC:DD:EE:FF', name: 'Spark_AI'},
+                    {id: '00:11:22:33:44:55', name: 'Spark_AI_Second_Device_With_A_Long_Name'}
+                ]});
+                await pause(100);
+                for (const width of [800, 1280]) {
+                    window.setSize(width, 760); await pause(120);
+                    const geometry = await evaluate(`(() => { const p = document.querySelector('#spark-hardware-panel');
+                        const r = p.getBoundingClientRect(); return {fits: p.scrollWidth <= p.clientWidth &&
+                            r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight,
+                            text: p.innerText, devices: p.querySelectorAll('li').length}; })()`);
+                    assert.ok(geometry.fits, locale + ': BLE layout fits');
+                    assert.equal(geometry.devices, 2);
+                    assert.ok(!/SPARK_|searchBluetooth|noBluetoothDevices/.test(geometry.text));
+                    fs.writeFileSync(path.join(output, `spark-ble-${locale}-${width}.png`),
+                        (await window.webContents.capturePage()).toPNG());
+                }
+            }
+            window.webContents.send('spark-ble-scan-state', {scanning: false, devices: []});
+            await pause(100);
+            sparkState = {...sparkState, busy: true, reconnecting: true};
+            window.webContents.send('spark-state-change', sparkState); await pause(100);
+            assert.equal(await evaluate('document.querySelector("#spark-auto-connect").disabled'), false);
+            assert.equal(await evaluate('document.querySelector("#spark-ble-forget").disabled'), true);
+            sparkState = {...sparkState, busy: false, reconnecting: false};
+            window.webContents.send('spark-state-change', sparkState); await pause(100);
+            await evaluate('document.querySelector("#spark-ble-forget").click()'); await pause(100);
+            assert.equal(sparkState.bleDevice, null);
+            await evaluate('document.querySelector("#spark-mode-usb").click()');
+            await pause(100);
+            await evaluate('document.querySelector("#spark-usb-connect").click()');
+            await pause(150);
+            window.setSize(1280, 860);
+            await evaluate('document.querySelector("#spark-hardware-panel header button").click()');
+            await evaluate('document.querySelector("#spark-program-controls [class*=slot-display]").click()');
+            assert.equal(await evaluate('document.querySelectorAll("#spark-program-controls [data-slot]").length'), 10);
+            await evaluate(`document.querySelector('#spark-program-controls [data-slot="9"]').click()`);
+            for (const action of ['download', 'run', 'stop']) {
+                await evaluate(`document.querySelector('#spark-program-controls [data-action=${action}]').click()`);
+                await pause(50);
+                assert.equal(await evaluate('document.querySelector("#spark-program-controls [data-action=run]").disabled'), true);
+                await pause(250);
+                assert.equal(sparkRequests.at(-1).action, action);
+                if (action !== 'stop') {
+                    assert.equal(sparkRequests.at(-1).slot, 9);
+                    assert.equal(sparkRequests.at(-1).source, sparkProgram);
+                }
+            }
+            interruptSparkDownload = true;
+            await evaluate('document.querySelector("#spark-program-controls [data-action=download]").click()');
+            await pause(350);
+            assert.equal(sparkState.warning, 'SPARK_DOWNLOAD_INCOMPLETE');
+            for (const action of ['download', 'run', 'stop']) {
+                assert.equal(await evaluate(`document.querySelector('#spark-program-controls [data-action=${action}]').disabled`),
+                    false, 'interrupted download warning must not disable ' + action);
+            }
+            for (const [locale, text] of [['zh-cn', '下载未完成'], ['zh-tw', '下載未完成'],
+                ['pt-br', 'Transferência incompleta'], ['ru', 'Загрузка не завершена'], ['en', 'Download incomplete']]) {
+                await evaluate(`window.dispatchEvent(new CustomEvent('est-home-set-locale',
+                    {detail:{locale:${JSON.stringify(locale)}}}))`);
+                await pause(300);
+                assert.ok(await evaluate(`document.querySelector('#spark-program-controls [role=status]').textContent.includes(${JSON.stringify(text)})`));
+            }
+            await evaluate('document.querySelector("#spark-program-controls [data-action=download]").click()');
+            await pause(350);
+            assert.equal(sparkState.warning, null);
+            assert.equal(sparkState.result.downloaded, true);
+            console.log('Spark download interruption UI: nonblocking five-locale warning, enabled run/download/stop and immediate full retry passed.');
+            sparkState = {...sparkState, busy: true, operation: {phase: 'downloading', bytes: 20, total: 110}};
+            window.webContents.send('spark-state-change', sparkState); await pause(100);
+            await evaluate('document.querySelector("#spark-program-controls [class*=SparkRuntime_icon-button]").click()');
+            await pause(100); assert.equal(sparkRequests.at(-1).action, 'cancel');
+            console.log('Spark runtime UI: explicit USB connection, four real port types, five locales, 800/1000/1280 layouts, slots 0-9, routed download/run/stop and cancellation passed.');
             assert.ok(await evaluate('Boolean(document.querySelector("[class*=EstCodeDrawerToggle_toggle-button]"))'));
             await evaluate('document.querySelector("[class*=EstCodeDrawerToggle_toggle-button]").click()');
             await pause(250);
@@ -528,6 +1225,72 @@ if (!process.versions.electron) {
                 await evaluate('document.querySelector("[role=dialog] header button").click()');
             }
             console.log('Hardware selector UI passed: three products, isolated drafts, saved project reopen, legacy migration and 1280/1000/800 px layouts. Screenshots: ' + output);
+            const startupSparkData = await evaluate('(async () => Array.from(new Uint8Array(await savedSparkHardwareProject.arrayBuffer())))()');
+            const reloadHardwareEditor = async () => {
+                await evaluate('window.onbeforeunload = null; undefined');
+                await window.loadFile(path.resolve(__dirname, '../dist/renderer/index.html'));
+                let mounted = false;
+                for (let attempt = 0; attempt < 150 && !mounted; attempt++) {
+                    mounted = await evaluate(`(() => {
+                        window.findLocaleTestBlocks = () => {
+                            for (const element of document.querySelectorAll('div')) {
+                                let fiber = element[Object.keys(element).find(key =>
+                                    key.startsWith('__reactInternalInstance'))];
+                                for (; fiber; fiber = fiber.return) {
+                                    const instance = fiber.stateNode;
+                                    if (instance && instance.ScratchBlocks && instance.workspace &&
+                                        typeof instance.setLocale === 'function' && instance.workspace.getFlyout()) {
+                                        return instance;
+                                    }
+                                }
+                            }
+                            return null;
+                        };
+                        const editor = findLocaleTestBlocks();
+                        return Boolean(editor && editor.props.vm.runtime.targets.length);
+                    })()`);
+                    await pause(100);
+                }
+                assert.ok(mounted, 'editor must mount after a cold renderer start');
+                await pause(700);
+                return evaluate(`(() => {
+                    const editor = findLocaleTestBlocks(), vm = editor.props.vm;
+                    return {menu: document.querySelector('#est-hardware-select').textContent.trim(),
+                        hardwareId: vm.runtime.estStudioHardwareId,
+                        projectHardwareId: JSON.parse(vm.toJSON()).meta.estStudio.hardwareId,
+                        blocks: editor.workspace.getAllBlocks().map(block => block.type),
+                        estControls: Boolean(document.querySelector('[class*="EstProgramControls_controls"]:not(#spark-program-controls)')),
+                        sparkControls: Boolean(document.querySelector('#spark-program-controls'))};
+                })()`);
+            };
+            window.setSize(1280, 860);
+            for (const [id, name, blocks] of [
+                ['spark-ai', 'Spark AI', ['spark_event_whenflagclicked']],
+                ['new-ai', 'New AI', []],
+                ['est', 'EST', ['event_program_start']]
+            ]) {
+                await chooseHardware(id);
+                console.log('Checking remembered hardware startup: ' + id);
+                const cold = await reloadHardwareEditor();
+                assert.equal(selectedHardware, id, 'startup must not reset the main-process selection to EST');
+                assert.equal(cold.hardwareId, id);
+                assert.equal(cold.projectHardwareId, id);
+                assert.ok(cold.menu.includes(name));
+                assert.deepStrictEqual(cold.blocks, blocks, 'default blocks must match the remembered hardware');
+                assert.equal(cold.estControls, id === 'est');
+                assert.equal(cold.sparkControls, id === 'spark-ai');
+            }
+            await chooseHardware('new-ai');
+            startupProjectData = Uint8Array.from(startupSparkData);
+            console.log('Checking explicitly opened hardware project on startup');
+            const explicitProject = await reloadHardwareEditor();
+            assert.equal(selectedHardware, 'spark-ai', 'an explicitly opened project overrides the saved hardware');
+            assert.equal(explicitProject.hardwareId, 'spark-ai');
+            assert.ok(explicitProject.menu.includes('Spark AI'));
+            assert.equal(await evaluate('findLocaleTestBlocks().props.vm.runtime.getTargetForStage().variables["spark-value"].value'), 123);
+            startupProjectData = null;
+            assert.deepStrictEqual(unhandledRejections, [], 'hardware startup must not leave unhandled rejections');
+            console.log('Hardware startup UI passed: remembered EST/Spark AI/New AI initialize matching menus, blocks and controls; an explicit project overrides the saved choice.');
             clearTimeout(timeout);
             app.exit(0);
         } catch (error) {

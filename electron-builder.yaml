@@ -26,6 +26,10 @@ files:
       - '!**/*.map'
 extraFiles: ['LICENSE', 'LICENSE.ScratchFoundation', 'TRADEMARK']
 extraResources:
+  - from: resources/spark-ai
+    to: spark-ai
+    filter:
+      - '**/*'
   - from: resources/est-build-library
     to: est-build-library
     filter:

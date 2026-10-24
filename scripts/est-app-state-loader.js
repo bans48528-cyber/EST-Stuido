@@ -71,7 +71,7 @@ module.exports = function (source) {
             '            const locale = detectLocale(Object.keys(locales));\n',
             `            const supportedLocales = Object.keys(locales);
             const savedLocale = window.localStorage.getItem('est-studio-locale');
-            const locale = supportedLocales.includes(savedLocale) ? savedLocale : 'pt-br';
+            const locale = supportedLocales.includes(savedLocale) ? savedLocale : 'zh-cn';
 `
         )
         .replace(guiStateSetup, localGuiStateSetup)

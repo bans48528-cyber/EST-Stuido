@@ -1,0 +1,33 @@
+{
+  "id": "spark-ai-110-original-1.1.9",
+  "hardwareId": "spark-ai",
+  "version": 110,
+  "source": "Spark AI 1.1.9 / LB_FWLIB",
+  "files": [
+    {
+      "path": "app/app.bin",
+      "bytes": 199936,
+      "sha256": "ad8d5b56617013911e00931e5a671aa0d3c720499603f3076d4b667fb3c017f6"
+    },
+    {
+      "path": "app/calibrate.o",
+      "bytes": 774,
+      "sha256": "c07f83f5832bb8f6edd0643b740a4009c393ec8d6e641f358057284a4b69558d"
+    },
+    {
+      "path": "app/remote.o",
+      "bytes": 2191,
+      "sha256": "b4ac39e0e25a0f7fbdf1115c894c2e13cec371434793fc8eb86d29275a63bdf5"
+    },
+    {
+      "path": "app/updata.txt",
+      "bytes": 2,
+      "sha256": "565339bc4d33d72817b583024112eb7f5cdf3e5eef0252d6ec1b9c9a94e12bb3"
+    },
+    {
+      "path": "version/version.txt",
+      "bytes": 3,
+      "sha256": "9bdb2af6799204a299c603994b8e400e4b1fd625efdb74066cc869fee42c9df3"
+    }
+  ]
+}

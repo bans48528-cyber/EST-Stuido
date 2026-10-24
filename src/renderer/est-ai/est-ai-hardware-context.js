@@ -49,3 +49,12 @@ export const createEstAiHardwareContext = connection => {
         }))
     };
 };
+
+export const createSparkAiHardwareContext = connection => {
+    if (!connection || !connection.connected || connection.stale || !connection.status) return null;
+    const ports = Array.isArray(connection.status.ports) ? connection.status.ports : [];
+    return {source: 'Spark AI live snapshot',
+        motorPorts: ['E', 'F', 'G', 'H'].map(port => ({port, type: 'not-detectable'})),
+        sensorPorts: ['A', 'B', 'C', 'D'].map((port, index) => ({port,
+            type: (ports.find(item => item.port === index) || {}).type || 'unavailable'}))};
+};

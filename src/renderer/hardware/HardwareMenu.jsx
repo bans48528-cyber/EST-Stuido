@@ -7,6 +7,7 @@ import {HARDWARE_PROFILES} from '../../common/hardware-profiles';
 import {getEstText} from '../est-i18n';
 import EstStatusPanel from '../EstStatusPanel.jsx';
 import EstHardwareStatusButton from '../EstHardwareStatusButton.jsx';
+import SparkConnection from '../spark-ai/SparkConnection.jsx';
 import {HARDWARE_CHANGED_EVENT, getHardwareContext} from './context';
 import {hardwareErrorText, requestHardwareSwitch} from './project';
 import deviceIcon from 'openblock-gui/src/components/menu-bar/icon--device.svg';
@@ -84,10 +85,11 @@ class HardwareMenu extends React.Component {
                 </button>
                 {!busy && profile.adapter === 'est-hid' ? <React.Fragment>
                     <EstStatusPanel /><EstHardwareStatusButton />
-                </React.Fragment> : <span className={styles.pending} role="status">
+                </React.Fragment> : (!busy && profile.adapter === 'spark-usb' ? <SparkConnection locale={locale} /> :
+                    <span className={styles.pending} role="status">
                     {t(busy ? 'hardwareChoice.switching' :
                         (profile.compiler ? 'hardwareChoice.blocksReady' : 'hardwareChoice.pending'))}
-                </span>}
+                    </span>)}
                 {open ? createPortal(
                     <div className={styles.backdrop} onMouseDown={event => {
                         if (event.target === event.currentTarget) this.close();

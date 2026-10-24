@@ -4,6 +4,7 @@
 import {ipcRenderer} from 'electron';
 
 import ReactDOM from 'react-dom';
+import {initializeHardwareSelection} from './hardware/startup';
 
 ipcRenderer.on('ready-to-show', () => {
     // Start without any element in focus, otherwise the first link starts with focus and shows an orange box.
@@ -19,7 +20,7 @@ case 'loading':
     routeModulePromise = import('./loading.jsx');
     break;
 case 'app':
-    routeModulePromise = import('./app.jsx');
+    routeModulePromise = initializeHardwareSelection().then(() => import('./app.jsx'));
     break;
 case 'vision':
     routeModulePromise = import('./vision.jsx');

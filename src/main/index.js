@@ -30,6 +30,11 @@ import {VisionCameraSource} from './est/vision-camera-source';
 import {VisionWindowManager} from './est/vision-window';
 import {HardwareSession} from './hardware/session';
 import {HardwareDraftStore} from './hardware/drafts';
+import {HardwareSelectionPreferences} from './hardware/selection-preferences';
+import {SparkDeviceService} from './spark-ai/device-service';
+import {SparkBleBridge} from './spark-ai/ble-bridge';
+import {SparkConnectionPreferences} from './spark-ai/connection-preferences';
+import {SparkFirmwareUpdateService} from './spark-ai/firmware-update-service';
 
 import formatMessage from 'format-message';
 import openBlockDesktopLocales from 'openblock-l10n/locales/desktop-msgs';
@@ -39,6 +44,18 @@ const estDeviceService = new EstDeviceService({
     transportFactory: createNodeHidEstTransportFactory()
 });
 const estVisionSimulator = new EstVisionSimulator(estDeviceService);
+const sparkBleBridge = new SparkBleBridge({allowed: () => !hardwareSession.switching &&
+    hardwareSession.hardwareId === 'spark-ai' && sparkDeviceService.connectionMode === 'ble'});
+const sparkDeviceService = new SparkDeviceService({
+    createBleTransport: id => sparkBleBridge.createTransport(id),
+    reconnectBleDevice: identity => sparkBleBridge.reconnectDevice(identity),
+    getBleIdentity: id => sparkBleBridge.getIdentity(id),
+    isBleReady: () => sparkBleBridge.ready,
+    preferences: new SparkConnectionPreferences(path.join(app.getPath('appData'), 'EST Studio',
+        'hardware', 'spark-connection.json'))
+});
+const sparkFirmwareUpdateService = new SparkFirmwareUpdateService({device: sparkDeviceService});
+sparkDeviceService.on('cancel-ble-scan', () => sparkBleBridge.cancelScan());
 const estVisionCamera = new VisionCameraSource(estDeviceService, estVisionSimulator);
 const estStudioAppId = 'com.eststudio.desktop';
 const estFirmwareUpdateState = {
@@ -46,12 +63,15 @@ const estFirmwareUpdateState = {
 };
 const hardwareSession = new HardwareSession({
     service: estDeviceService,
+    preferences: new HardwareSelectionPreferences(path.join(app.getPath('appData'), 'EST Studio',
+        'hardware', 'selection.json')),
+    adapters: {'spark-usb': sparkDeviceService},
     stopSources: () => {
         estVisionCamera.stop();
         estVisionSimulator.stop({clear: false});
         estVisionWindow.close(); // eslint-disable-line no-use-before-define
     },
-    isFirmwareBusy: () => estFirmwareUpdateState.inProgress
+    isFirmwareBusy: () => estFirmwareUpdateState.inProgress || sparkFirmwareUpdateService.busy
 });
 let hardwareDrafts;
 const getHardwareDrafts = () => {
@@ -783,6 +803,9 @@ const createWindow = ({search = null, url = 'index.html', ...browserWindowOption
         window.setIcon(windowIcon);
     }
     const webContents = window.webContents;
+    window.on('close', event => {
+        if (sparkFirmwareUpdateService.busy) event.preventDefault();
+    });
 
     // Keep renderer failures visible in the development terminal. This is
     // intentionally limited to diagnostics and does not alter the UI.
@@ -905,6 +928,7 @@ const createMainWindow = () => {
         title: `${productName} ${version}` // something like "Scratch 3.14"
     });
     const webContents = window.webContents;
+    sparkBleBridge.attach(webContents);
 
     const update = new Updater(webContents);
     remote.initialize();
@@ -1051,6 +1075,9 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', event => {
+    if (sparkFirmwareUpdateService.busy) {
+        event.preventDefault(); return;
+    }
     if (isQuitting) {
         return;
     }
@@ -1058,7 +1085,7 @@ app.on('before-quit', event => {
     isQuitting = true;
     estVisionWindow.close();
     estVisionSimulator.stop({clear: false});
-    estDeviceService.shutdown()
+    Promise.all([estDeviceService.shutdown(), sparkDeviceService.shutdown()])
         .catch(error => console.error('EST shutdown failed', error))
         .finally(() => app.quit());
 });
@@ -1292,6 +1319,80 @@ ipcMain.handle('hardware-draft-read', (event, hardwareId) => {
 });
 const hardwareUnavailableState = () => ({state: 'hardware-unavailable', compatible: false, status: null});
 const canUseEstAdapter = () => !hardwareSession.switching && hardwareSession.hardwareId === 'est';
+
+sparkDeviceService.on('state', state => {
+    if (!_windows.main || _windows.main.isDestroyed() || hardwareSession.switching ||
+        hardwareSession.hardwareId !== 'spark-ai') return;
+    _windows.main.webContents.send('spark-state-change', state);
+});
+const sparkOperation = (event, action) => {
+    requireMainHardwareWindow(event);
+    return hardwareSession.operation(action, 'spark-usb');
+};
+ipcMain.handle('spark-state', event => {
+    requireMainHardwareWindow(event);
+    hardwareSession.requireAdapter('spark-usb');
+    return sparkDeviceService.getState();
+});
+ipcMain.handle('spark-list-devices', event => {
+    requireMainHardwareWindow(event);
+    return hardwareSession.background(() => sparkDeviceService.listDevices(), 'spark-usb');
+});
+ipcMain.handle('spark-firmware-inspect', event => sparkOperation(event,
+    () => sparkFirmwareUpdateService.inspect(sparkDeviceService.getState())));
+ipcMain.handle('spark-firmware-update', (event, request) => sparkOperation(event,
+    () => sparkFirmwareUpdateService.start(request)));
+ipcMain.handle('spark-connect', (event, request) => sparkOperation(event, () => sparkDeviceService.connect(request)));
+ipcMain.handle('spark-connection-mode', (event, mode) => sparkOperation(event,
+    () => sparkDeviceService.setConnectionMode(mode)));
+ipcMain.handle('spark-ble-scan', event => sparkOperation(event, () => {
+    if (sparkDeviceService.busy || sparkDeviceService.connected) throw new Error('SPARK_BUSY');
+    sparkBleBridge.beginScan();
+}));
+ipcMain.handle('spark-ble-select', (event, id) => sparkOperation(event, () => sparkBleBridge.select(id)));
+ipcMain.handle('spark-ble-bind', (event, id) => sparkOperation(event, () => sparkBleBridge.bindDevice(id)));
+ipcMain.handle('spark-ble-cancel-scan', event => {
+    requireMainHardwareWindow(event);
+    if (!sparkDeviceService.bleReconnecting) sparkBleBridge.cancelScan();
+});
+ipcMain.handle('spark-ble-forget', event => sparkOperation(event, () => sparkDeviceService.forgetBleDevice()));
+ipcMain.on('spark-ble-ready', event => {
+    if (_windows.main && event.sender === _windows.main.webContents) {
+        sparkBleBridge.ready = true;
+        sparkDeviceService.scheduleDiscovery(0);
+    }
+});
+ipcMain.on('spark-ble-reply', (event, message) => {
+    if (_windows.main && event.sender === _windows.main.webContents) sparkBleBridge.reply(message);
+});
+ipcMain.on('spark-ble-data', (event, message) => {
+    if (_windows.main && event.sender === _windows.main.webContents) sparkBleBridge.receive(message);
+});
+ipcMain.handle('spark-set-auto-connect', (event, enabled) => sparkOperation(event,
+    () => sparkDeviceService.setAutoConnect(enabled)));
+ipcMain.handle('spark-disconnect', (event, request) => sparkOperation(event, () => {
+    if (sparkDeviceService.pythonProgramActive && !(request && request.confirmRunning === true)) {
+        throw new Error('SPARK_DISCONNECT_CONFIRM');
+    }
+    return sparkDeviceService.disconnect();
+}));
+ipcMain.handle('spark-download-program', (event, request) => sparkOperation(event,
+    () => sparkDeviceService.downloadProgram({...request, run: false})));
+ipcMain.handle('spark-run-program', (event, request) => sparkOperation(event,
+    () => sparkDeviceService.downloadProgram({...request, run: true})));
+ipcMain.handle('spark-stop-program', event => sparkOperation(event, () => sparkDeviceService.stopCurrentProgram()));
+ipcMain.handle('spark-set-monitoring', (event, enabled) => sparkOperation(event,
+    () => sparkDeviceService.setMonitoring(enabled)));
+ipcMain.handle('spark-cancel', event => {
+    requireMainHardwareWindow(event);
+    hardwareSession.requireAdapter('spark-usb');
+    sparkDeviceService.cancel();
+});
+ipcMain.handle('spark-clear-logs', event => {
+    requireMainHardwareWindow(event);
+    hardwareSession.requireAdapter('spark-usb');
+    sparkDeviceService.clearLogs();
+});
 
 ipcMain.handle('est-list-devices', () => (
     estFirmwareUpdateState.inProgress || !canUseEstAdapter() ? [] :

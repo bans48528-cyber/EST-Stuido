@@ -1,6 +1,6 @@
 import {compileEstBlockIrToXml} from './est-block-compiler';
 import {getEstAiProcedureCode} from './est-native-spec';
-import {isEstHardwareActive} from '../hardware/context';
+import {getHardwareContext, isAiHardwareActive} from '../hardware/context';
 import {getEstText} from '../est-i18n';
 
 let importSequence = 0;
@@ -59,15 +59,19 @@ const avoidNameCollisions = (ir, workspace) => {
 export const EST_AI_IMPORT_REQUEST_EVENT = 'est-ai-import-request';
 
 export const importEstBlockIrToWorkspace = ({ScratchBlocks, workspace, vm, ir, mode}) => {
-    if (!isEstHardwareActive()) throw new Error(getEstText('hardwareChoice.HARDWARE_NOT_READY'));
+    const hardwareId = getHardwareContext().profile.id;
+    if (!isAiHardwareActive() || (ir.hardwareId || 'est') !== hardwareId ||
+        (vm && vm.runtime && vm.runtime.estStudioHardwareId && vm.runtime.estStudioHardwareId !== hardwareId)) {
+        throw new Error(getEstText('hardwareChoice.HARDWARE_NOT_READY'));
+    }
     if (!ScratchBlocks || !ScratchBlocks.Xml || !workspace) {
         throw new Error('EST AI 工作区尚未准备好');
     }
     const sourceIr = mode ? {...ir, mode} : ir;
-    const validated = compileEstBlockIrToXml(sourceIr);
+    const validated = compileEstBlockIrToXml(sourceIr, {hardwareId});
     const compiled = compileEstBlockIrToXml(validated.mode === 'insert' ?
         avoidNameCollisions(validated.normalized, workspace) : validated.normalized,
-    {namespace: `est-ai-${Date.now()}-${++importSequence}`});
+    {hardwareId, namespace: `est-ai-${Date.now()}-${++importSequence}`});
     const dom = ScratchBlocks.Xml.textToDom(compiled.xml);
     const Events = ScratchBlocks.Events;
     const existingGroup = Events && typeof Events.getGroup === 'function' ? Events.getGroup() : null;

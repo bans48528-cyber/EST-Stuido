@@ -2,7 +2,7 @@ import editorMessageOverrides from './est-editor-message-overrides.json';
 import cameraMessages from '../common/est-camera-messages.json';
 import visionGuideMessages from './est-vision/guide-messages.json';
 
-export const EST_DEFAULT_LOCALE = 'pt-br';
+export const EST_DEFAULT_LOCALE = 'zh-cn';
 export const EST_LOCALE_CHANGED_EVENT = 'est-locale-changed';
 
 export const EST_LOCALE_NAMES = {

@@ -5,7 +5,7 @@ export class VisionWindowManager {
         this.createWindow = createWindow;
         this.stopSource = stopSource;
         this.window = null;
-        this.locale = 'pt-br';
+        this.locale = 'zh-cn';
     }
 
     owns (sender) {
@@ -19,7 +19,7 @@ export class VisionWindowManager {
     setLocale (locale = this.locale) {
         const normalized = String(locale).toLowerCase()
             .replace(/_/g, '-');
-        this.locale = Object.prototype.hasOwnProperty.call(cameraMessages, normalized) ? normalized : 'pt-br';
+        this.locale = Object.prototype.hasOwnProperty.call(cameraMessages, normalized) ? normalized : 'zh-cn';
         if (this.window && !this.window.isDestroyed()) {
             this.window.setTitle(`EST Studio - ${this.text('camera.title')}`);
             this.window.webContents.send('est-vision-locale', this.locale);

@@ -57,6 +57,7 @@ registerEstAiIpc({
     }
 });
 ipcMain.handle('est-auto-connect', () => ({state: 'not-found', status: null}));
+ipcMain.handle('spark-state', () => ({connected: false}));
 ipcMain.handle('test-storage', () => {
     const encrypted = fs.readFileSync(configPath);
     assert.ok(!encrypted.toString('utf8').includes('test-key-not-real'));
@@ -116,7 +117,7 @@ ipcMain.handle('test-capture', async (event, name, rectangle) => {
     }
 });
 ipcMain.handle('test-resize', (event, width, height) => window.setContentSize(width, height));
-ipcMain.handle('test-python', (event, name, source) => {
+ipcMain.handle('test-python', (event, name, source, hardwareId = 'est') => {
     const {spawnSync} = require('child_process');
     const candidates = process.env.PYTHON ? [{command: process.env.PYTHON, args: []}] :
         [{command: 'python', args: []}, {command: 'python3', args: []}, {command: 'py', args: ['-3']}];
@@ -133,6 +134,7 @@ ipcMain.handle('test-python', (event, name, source) => {
     });
     assert.strictEqual(result.status, 0, result.stdout + result.stderr);
     console.log(`Real Blockly Python syntax passed: ${name}`);
+    if (hardwareId === 'spark-ai') return;
     const simulationScript = path.join(__dirname, 'check-generated-program.py');
     const simulated = spawnSync(python.command, python.args.concat(simulationScript), {
         input: JSON.stringify({name, source}),

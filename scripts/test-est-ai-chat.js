@@ -67,7 +67,8 @@ const {
 } =
     require('../src/renderer/est-ai/est-ai-chat');
 const {createEstAiHardwareContext} = require('../src/renderer/est-ai/est-ai-hardware-context');
-const {createEstAiService, registerEstAiIpc, requestEstAiCompletion} = require('../src/main/est/ai-service');
+const {createEstAiService, registerEstAiIpc, requestEstAiCompletion, parseEstAiCompletionResponse} =
+    require('../src/main/est/ai-service');
 const {createEstAiKeyStore} = require('../src/main/est/ai-key-store');
 const {normalizeEstAiConfig, normalizeEstAiBaseUrl, defaultEstAiConfig} = require('../src/common/est-ai-config');
 const deepseekConfig = {
@@ -101,8 +102,10 @@ const run = async () => {
     let destroyed = false;
     let expectedUrl = 'https://api.deepseek.com/chat/completions';
     let expectedKey = 'Bearer test-key-not-real';
+    let requestedUrls = [];
     https.request = (url, options, onResponse) => {
-        assert.strictEqual(url, expectedUrl);
+        assert.ok(Array.isArray(expectedUrl) ? expectedUrl.includes(url) : url === expectedUrl, url);
+        requestedUrls.push(url);
         assert.strictEqual(options.method, 'POST');
         assert.strictEqual(options.headers.Authorization || '', expectedKey);
         const request = new EventEmitter();
@@ -115,12 +118,12 @@ const run = async () => {
             if (keepPending) return;
             setImmediate(() => {
                 const response = new EventEmitter();
-                response.statusCode = responseStatus;
+                response.statusCode = typeof responseStatus === 'function' ? responseStatus(url) : responseStatus;
                 response.destroy = () => {
                     destroyed = true;
                 };
                 onResponse(response);
-                response.emit('data', Buffer.from(responseBody));
+                response.emit('data', Buffer.from(typeof responseBody === 'function' ? responseBody(url) : responseBody));
                 response.emit('end');
             });
         };
@@ -141,6 +144,27 @@ const run = async () => {
         await requestEstAiCompletion({...transportInput, config: customConfig});
         assert.strictEqual(sentBody.model, 'my-model');
         assert.deepStrictEqual(Object.keys(sentBody).sort(), ['messages', 'model', 'stream']);
+        const rootUrl = 'https://example.com/chat/completions';
+        const versionedUrl = 'https://example.com/v1/chat/completions';
+        const rootRequest = {...transportInput, config: {...customConfig, baseUrl: 'https://example.com'}};
+        expectedUrl = [rootUrl, versionedUrl];
+        requestedUrls = [];
+        responseBody = url => url === rootUrl ? '<!doctype html><html>Private gateway page</html>' :
+            JSON.stringify({choices: [{finish_reason: 'stop', message: {content: validContent}}]});
+        assert.strictEqual(await requestEstAiCompletion(rootRequest), validContent);
+        assert.deepStrictEqual(requestedUrls, [rootUrl, versionedUrl], 'HTML fallback stays on the configured origin');
+        requestedUrls = [];
+        responseStatus = url => url === rootUrl ? 200 : 401;
+        await assert.rejects(requestEstAiCompletion(rootRequest), error => error.code === 'HTTP_401');
+        assert.deepStrictEqual(requestedUrls, [rootUrl, versionedUrl], 'Invalid credentials do not cause more retries');
+        responseStatus = 200;
+        expectedUrl = 'https://example.com/custom/chat/completions';
+        responseBody = '<html>Private page</html>';
+        requestedUrls = [];
+        await assert.rejects(requestEstAiCompletion({...rootRequest,
+            config: {...customConfig, baseUrl: 'https://example.com/custom'}}), error => error.code === 'AI_HTML_RESPONSE');
+        assert.strictEqual(requestedUrls.length, 1, 'Explicit configured paths are never guessed or replaced');
+        responseBody = JSON.stringify({choices: [{finish_reason: 'stop', message: {content: validContent}}]});
         expectedUrl = 'http://127.0.0.1:11434/v1/chat/completions';
         expectedKey = '';
         await requestEstAiCompletion({...transportInput,
@@ -163,7 +187,37 @@ const run = async () => {
         }
         responseStatus = 200;
         responseBody = JSON.stringify({choices: [{finish_reason: 'length', message: {content: validContent}}]});
-        await assert.rejects(requestEstAiCompletion(transportInput), /完整/);
+        await assert.rejects(requestEstAiCompletion(transportInput), error => error.code === 'AI_OUTPUT_LIMIT');
+        for (const finishReason of [null, undefined, 'stop']) {
+            responseBody = JSON.stringify({choices: [{finish_reason: finishReason, message: {content: validContent}}]});
+            assert.strictEqual(await requestEstAiCompletion(transportInput), validContent);
+        }
+        for (const [reason, message, expectedCode] of [
+            ['length', {content: validContent}, 'AI_OUTPUT_LIMIT'],
+            ['content_filter', {content: validContent}, 'AI_REFUSED'],
+            ['stop', {content: validContent, refusal: 'Private refusal detail'}, 'AI_REFUSED'],
+            ['tool_calls', {content: validContent}, 'AI_UNEXPECTED_TOOLS'],
+            ['stop', {content: validContent, tool_calls: [{id: 'private-tool'}]}, 'AI_UNEXPECTED_TOOLS'],
+            ['stop', {content: null, reasoning_content: 'Private reasoning'}, 'AI_EMPTY_RESPONSE'],
+            ['stop', {content: ''}, 'AI_EMPTY_RESPONSE'],
+            ['stop', {content: '   '}, 'AI_EMPTY_RESPONSE'],
+            [null, {content: '{"message":"incomplete"'}, 'AI_INCOMPLETE_RESPONSE'],
+            ['unknown', {content: validContent}, 'AI_INCOMPLETE_RESPONSE']
+        ]) {
+            responseBody = JSON.stringify({choices: [{finish_reason: reason, message}]});
+            await assert.rejects(requestEstAiCompletion(transportInput), error => {
+                assert.strictEqual(error.code, expectedCode);
+                assert.doesNotMatch(error.message, /Private|private-tool/);
+                return true;
+            });
+        }
+        for (const source of ['not JSON', '{}', '{"error":{"message":"Private upstream details"}}']) {
+            assert.throws(() => parseEstAiCompletionResponse(source), error => {
+                assert.strictEqual(error.code, 'AI_RESPONSE_FORMAT');
+                assert.doesNotMatch(error.message, /Private/);
+                return true;
+            });
+        }
         responseBody = 'x'.repeat((1024 * 1024) + 1);
         await assert.rejects(requestEstAiCompletion(transportInput), /过长/);
         assert.ok(destroyed);

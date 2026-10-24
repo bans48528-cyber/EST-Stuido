@@ -138,7 +138,7 @@ class EstDesktopApp extends React.Component {
                     aria-hidden={this.state.homeVisible}
                 >
                     <WrappedGui />
-                    <HardwareGate><EstAiPanel visible={!this.state.homeMounted} /></HardwareGate>
+                    <HardwareGate feature="ai"><EstAiPanel visible={!this.state.homeMounted} /></HardwareGate>
                 </div>
                 {this.state.homeMounted ? (
                     <EstHome

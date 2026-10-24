@@ -16,6 +16,7 @@ import {buildEstProgramRequest} from './est-program-name';
 import styles from './EstProgramControls.css';
 import {withEstHardware} from './hardware/HardwareGate.jsx';
 import {getHardwareProfile} from '../common/hardware-profiles';
+import SparkProgramControls from './spark-ai/SparkProgramControls.jsx';
 
 const PROGRAM_SLOT_CHANGE_EVENT = 'est-program-slot-change';
 const SLOT_STORAGE_KEY = 'estStudio.programSlot';
@@ -383,4 +384,5 @@ export {
     SLOT_OPTIONS
 };
 
-export default withEstHardware(connect(mapStateToProps)(EstProgramControls));
+const EstControls = withEstHardware(connect(mapStateToProps)(EstProgramControls));
+export default props => <React.Fragment><EstControls {...props} /><SparkProgramControls /></React.Fragment>;

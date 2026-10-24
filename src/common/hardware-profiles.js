@@ -18,13 +18,13 @@ export const HARDWARE_PROFILES = Object.freeze([
     Object.freeze({
         id: 'spark-ai',
         name: 'Spark AI',
-        status: 'blocks-ready',
-        adapter: null,
+        status: 'ready',
+        adapter: 'spark-usb',
         compiler: 'spark-python',
         extensions: Object.freeze([]),
         motorPorts: Object.freeze(['E', 'F', 'G', 'H']),
         sensorPorts: Object.freeze(['A', 'B', 'C', 'D']),
-        programSlots: 0,
+        programSlots: 10,
         screen: null
     }),
     Object.freeze({

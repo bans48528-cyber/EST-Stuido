@@ -2,6 +2,8 @@ import catalog from './catalog.json';
 import {sparkText} from './messages';
 import {getCurrentEstLocale, getEstText} from '../est-i18n';
 import {registerSparkMatrixField} from './matrix-field';
+import {registerSparkCombinedMotorField} from './combined-motor-field';
+import {registerSparkGamepadField} from './gamepad-field';
 
 export const sparkBlockId = id => `spark_${id}`;
 const categoryStyles = {
@@ -13,6 +15,13 @@ const categoryStyles = {
     control: ['#FFB515', '#E39B00', '#C18401', 'category.control'],
     sensing: ['#1DCCF0', '#00A8C9', '#008AA6', 'category.sensing'],
     operators: ['#59C059', '#46A646', '#389438', 'home.blockGuide.category.operators']
+};
+const pickerCategories = {
+    motor_box: 'motor',
+    combined_motor_box: 'combined_motor',
+    touching_menu: 'sensing',
+    sensing_menu: 'sensing',
+    handShank_menu: 'sensing'
 };
 const nativeMessages = {
     control_wait: 'CONTROL_WAIT',
@@ -36,18 +45,10 @@ const mapField = (arg, locale, shadowId) => {
             options: arg.motorList.filter(port => port !== 'null').map(port => [port, port])};
     }
     if (arg.type === 'field_combined_motor') {
-        const ports = arg.motorList.filter(port => port !== 'null');
-        return {type: 'field_dropdown',
-            name: arg.name,
-            options: ports.reduce((pairs, left) => pairs.concat(ports.map(right =>
-                [`${left}+${right}`, `${left}+${right}`])), [])};
+        return {...arg, type: 'field_spark_combined_motor'};
     }
     if (arg.type === 'field_handShank') {
-        return {type: 'field_dropdown',
-            name: arg.name,
-            options: arg.handShankValue.map(value => [
-                {up: '↑', down: '↓', left: '←', right: '→'}[value] || value, value
-            ])};
+        return {...arg, type: 'field_spark_gamepad'};
     }
     if (arg.type === 'field_piano') {
         return {type: 'field_dropdown',
@@ -69,14 +70,19 @@ const mapField = (arg, locale, shadowId) => {
 
 export const defineSparkBlocksWithLocale = (ScratchBlocks, locale = getCurrentEstLocale()) => {
     registerSparkMatrixField(ScratchBlocks);
+    registerSparkCombinedMotorField(ScratchBlocks);
+    registerSparkGamepadField(ScratchBlocks);
     const dictionary = ScratchBlocks.ScratchMsgs.locales[locale] || ScratchBlocks.ScratchMsgs.locales.en;
     [...catalog.blocks, ...catalog.shadows].forEach(row => {
         const definition = JSON.parse(JSON.stringify(row.definition));
-        const style = categoryStyles[row.category] || (row.id === 'piano' ? categoryStyles.sound : [
-            definition.colour || '#FFFFFF',
-            definition.colourSecondary || '#FFFFFF',
-            definition.colourTertiary || '#D9D9D9'
-        ]);
+        const pickerStyle = categoryStyles[pickerCategories[row.id]];
+        // Match EST pickers: secondary fill and tertiary outline.
+        const style = pickerStyle ? [pickerStyle[1], pickerStyle[1], pickerStyle[2]] :
+            categoryStyles[row.category] || (row.id === 'piano' ? categoryStyles.sound : [
+                definition.colour || '#FFFFFF',
+                definition.colourSecondary || '#FFFFFF',
+                definition.colourTertiary || '#D9D9D9'
+            ]);
         delete definition.type;
         delete definition.id;
         definition.category = sparkBlockId(row.category || 'input');

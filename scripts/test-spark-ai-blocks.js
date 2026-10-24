@@ -20,6 +20,38 @@ const {defineSparkBlocksWithLocale, getSparkToolboxCategories, sparkBlockXml} =
     require('../src/renderer/spark-ai/blocks');
 const {registerSparkPythonGenerator} = require('../src/renderer/spark-ai/python-generator');
 const {registerSparkMatrixField} = require('../src/renderer/spark-ai/matrix-field');
+const {SPARK_MOTOR_PORTS, parseSparkMotorPair, selectSparkMotorPort} =
+    require('../src/renderer/spark-ai/combined-motor-field');
+const {SPARK_GAMEPAD_KEYS, SPARK_GAMEPAD_HOTSPOTS, gamepadFocusTarget, sparkGamepadLabel} =
+    require('../src/renderer/spark-ai/gamepad-field');
+assert.deepStrictEqual(SPARK_GAMEPAD_KEYS, ['up', 'down', 'left', 'right', 'Y', 'A', 'B', 'X', 'L1', 'R1']);
+assert.deepStrictEqual(SPARK_GAMEPAD_HOTSPOTS.map(key => key.value), SPARK_GAMEPAD_KEYS);
+assert.deepStrictEqual(['Y', 'X', 'A', 'B'].map(sparkGamepadLabel), ['1', '2', '3', '4'],
+    'number the face buttons clockwise from the top without changing stored key values');
+assert.deepStrictEqual(['up', 'down', 'left', 'right', 'L1', 'R1'].map(sparkGamepadLabel),
+    ['\u2191', '\u2193', '\u2190', '\u2192', 'L1', 'R1']);
+assert.equal(gamepadFocusTarget('up', 'ArrowDown'), 'down');
+assert.equal(gamepadFocusTarget('left', 'ArrowRight'), 'right');
+assert.equal(gamepadFocusTarget('X', 'ArrowLeft'), 'B');
+for (const key of SPARK_GAMEPAD_KEYS) {
+    for (const direction of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']) {
+        assert.ok(SPARK_GAMEPAD_KEYS.includes(gamepadFocusTarget(key, direction)));
+    }
+}
+assert.deepStrictEqual(SPARK_MOTOR_PORTS, ['E', 'F', 'G', 'H']);
+assert.deepStrictEqual(parseSparkMotorPair('H+E'), ['H', 'E'], 'preserve left/right order');
+assert.deepStrictEqual(parseSparkMotorPair('E+E'), ['E'], 'one port cannot drive both sides');
+for (const left of SPARK_MOTOR_PORTS) {
+    assert.equal(selectSparkMotorPort('', left), left);
+    assert.equal(selectSparkMotorPort(left, left), left, 'repeat click must not duplicate a port');
+    for (const right of SPARK_MOTOR_PORTS.filter(port => port !== left)) {
+        assert.equal(selectSparkMotorPort(left, right), `${left}+${right}`);
+        for (const next of SPARK_MOTOR_PORTS) {
+            assert.equal(selectSparkMotorPort(`${left}+${right}`, next), next,
+                'any third click starts a new pair with an unselected right motor');
+        }
+    }
+}
 const B = {INPUT_VALUE: 1,
     Variables: {NAME_TYPE: 'variable'},
     Procedures: {NAME_TYPE: 'procedure'},
@@ -139,6 +171,29 @@ for (const locale of ['zh-cn', 'zh-tw', 'en', 'pt-br', 'ru']) {
             assert.ok(!/[\u4e00-\u9fff]/.test(definition.message0), `${locale} ${row.id}`);
         }
     });
+    for (const [type, fill, outline] of [
+        ['motor_box', '#0078CC', '#005FA0'],
+        ['combined_motor_box', '#d8009b', '#a9007a'],
+        ['touching_menu', '#00A8C9', '#008AA6'],
+        ['sensing_menu', '#00A8C9', '#008AA6'],
+        ['handShank_menu', '#00A8C9', '#008AA6']
+    ]) {
+        let definition;
+        B.Blocks[`spark_${type}`].init.call({jsonInit: json => {
+            definition = json;
+        }});
+        assert.deepStrictEqual([definition.colour, definition.colourSecondary, definition.colourTertiary],
+            [fill, fill, outline], `${locale} ${type}: match EST port picker colours`);
+        if (type === 'handShank_menu') {
+            assert.equal(definition.args0[0].type, 'field_spark_gamepad');
+            assert.deepStrictEqual(definition.args0[0].handShankValue, SPARK_GAMEPAD_KEYS,
+                `${locale}: preserve all gamepad direction/button values`);
+        }
+        if (type === 'combined_motor_box') {
+            assert.equal(definition.args0[0].type, 'field_spark_combined_motor',
+                'use the ordered multi-select field, not a menu of all port permutations');
+        }
+    }
     assert.ok(!xml.includes('type="motor_stop"'), 'Spark IDs must not overwrite EST IDs');
 }
 const registry = {};
@@ -180,6 +235,31 @@ try {
 }
 
 g.init(workspace);
+const gamepad = makeRow(catalog.blocks.find(row => row.id === 'sensing_isHandling'));
+for (const key of SPARK_GAMEPAD_KEYS) {
+    gamepad.children.PORT.fields.HAND_SHANK = key;
+    for (const state of ['press', 'unpress']) {
+        gamepad.fields.BUTTON = state;
+        const code = g[gamepad.type](gamepad)[0];
+        assert.equal(code, `_key.key_remote("${key}","${state}")`);
+        programs.push({id: `gamepad-${key}-${state}`, code: `result = ${code}\n`});
+    }
+}
+const pair = makeRow(catalog.blocks.find(row => row.id === 'combined_motor_starting'));
+for (const left of SPARK_MOTOR_PORTS) {
+    pair.children.PORT.fields.MOTOR = left;
+    assert.equal(g[pair.type](pair), '# SPARK_MOTOR_PAIR_INCOMPLETE\n',
+        'a pending right motor must not produce a misaligned pair call');
+    for (const right of SPARK_MOTOR_PORTS.filter(port => port !== left)) {
+        pair.children.PORT.fields.MOTOR = `${left}+${right}`;
+        assert.ok(g[pair.type](pair).startsWith(`_motor.pair(${'ABCDEFGH'.indexOf(left)},${'ABCDEFGH'.indexOf(right)},`),
+        'generated ports follow selection order');
+    }
+}
+for (const invalid of ['E+E', 'E+X+F', 'A+B']) {
+    pair.children.PORT.fields.MOTOR = invalid;
+    assert.equal(g[pair.type](pair), '# SPARK_MOTOR_PAIR_INCOMPLETE\n');
+}
 const motor = makeRow(catalog.blocks[0]);
 motor.children.POWER.fields.NUM = '0';
 assert.ok(g[motor.type](motor).includes(', 0,'), 'an explicit zero must not fall back to 50 percent power');
@@ -236,3 +316,19 @@ assert.ok(!programs.some(program => /est_runtime|rt\.|import est\b/.test(program
 assert.ok(sparkBlockXml(catalog.blocks[0]).includes('spark_motor_box'));
 console.log('Spark AI passed: 66 fixed mappings, dropdown variants, 13 dynamic mappings, 5 locales, ' +
     'matrix encoding, nested control and Python syntax.');
+if (process.platform === 'win32' && process.arch === 'x64') {
+    const directory = fs.mkdtempSync(path.join(require('os').tmpdir(), 'spark-blocks-compile-'));
+    try {
+        const addon = path.join(root, 'resources/spark-ai/win32-x64/pika_bytecode_gen.node');
+        const result = spawnSync(process.execPath, ['-e',
+            'const fs=require("fs"),c=require(process.argv[1]),rows=JSON.parse(fs.readFileSync(0,"utf8"));' +
+            'for(const r of rows){fs.writeFileSync("program.py",r.code.trim()||"pass");' +
+            'const s=c.compile("program.py","program.py.o");' +
+            'if(s!==0)throw Error(r.id+": status "+s+"\\n"+r.code);' +
+            'if(!fs.statSync("program.py.o").size)throw Error(r.id+": empty bytecode");}' +
+            'console.log("Native Pika compiled "+rows.length+" generated programs")', addon],
+        {cwd: directory, input: JSON.stringify(programs), encoding: 'utf8', windowsHide: true, timeout: 20000});
+        assert.equal(result.status, 0, result.stdout + result.stderr);
+        console.log(`Native Pika compiled ${programs.length} generated programs`);
+    } finally { fs.rmSync(directory, {recursive: true, force: true}); }
+}

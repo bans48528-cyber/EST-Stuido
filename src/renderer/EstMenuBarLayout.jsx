@@ -3,7 +3,7 @@ import {createPortal} from 'react-dom';
 import EstAiMascot from './EstAiMascot.jsx';
 
 import homeMenuIcon from './est-home-assets/home-menu-icon.png';
-import {HARDWARE_CHANGED_EVENT, isEstHardwareActive} from './hardware/context';
+import {HARDWARE_CHANGED_EVENT, isAiHardwareActive} from './hardware/context';
 
 import {
     EST_LOCALE_CHANGED_EVENT,
@@ -152,7 +152,7 @@ class EstMenuBarLayout extends React.Component {
     updateAiButtonState () {
         if (!this.aiButton) return;
         const state = window.estAiMenuState || {visible: true, open: false};
-        this.aiButton.hidden = state.visible === false || !isEstHardwareActive();
+        this.aiButton.hidden = state.visible === false || !isAiHardwareActive();
         this.aiButton.setAttribute('aria-pressed', state.open ? 'true' : 'false');
         if (this.state.aiVisible !== !this.aiButton.hidden) {
             this.setState({aiVisible: !this.aiButton.hidden});

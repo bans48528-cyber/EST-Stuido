@@ -40,7 +40,7 @@ const procedureMutation = (procedure, argumentIds, definition) => {
 };
 
 const compileNodeWithChain = (node, remainingNodes, topLevelPosition, context) => {
-    const spec = getEstAiNodeSpec(node, context.procedures);
+    const spec = getEstAiNodeSpec(node, context.procedures, context.hardwareId);
     const position = topLevelPosition ?
         ` x="${escapeXml(topLevelPosition.x)}" y="${escapeXml(topLevelPosition.y)}"` : '';
     const parts = [`<block type="${escapeXml(node.type)}"${position}>`];
@@ -89,11 +89,13 @@ const compileNodeWithChain = (node, remainingNodes, topLevelPosition, context) =
 };
 
 export const compileEstBlockIrToXml = (ir, options = {}) => {
-    const validation = assertValidEstBlockIr(ir);
+    const hardwareId = options.hardwareId || 'est';
+    const validation = assertValidEstBlockIr(ir, {hardwareId});
     const startX = Number.isFinite(options.startX) ? options.startX : 360;
     const startY = Number.isFinite(options.startY) ? options.startY : 160;
     const stackGap = Number.isFinite(options.stackGap) ? options.stackGap : 260;
-    const context = {variables: validation.normalized.variables || [],
+    const context = {hardwareId,
+        variables: validation.normalized.variables || [],
         procedures: validation.normalized.procedures || [],
         namespace: options.namespace || 'est-ai'};
     const variablesXml = context.variables.length ? `<variables>${context.variables.map((variable, index) =>
