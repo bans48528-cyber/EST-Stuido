@@ -26,6 +26,10 @@ files:
       - '!**/*.map'
 extraFiles: ['LICENSE', 'LICENSE.ScratchFoundation', 'TRADEMARK']
 extraResources:
+  - from: resources/new-ai
+    to: new-ai
+    filter:
+      - '**/*'
   - from: resources/spark-ai
     to: spark-ai
     filter:
@@ -54,6 +58,8 @@ fileAssociations:
   icon: buildResources/OpenBlockFile.ico
 
 compression: maximum
+asarUnpack:
+  - node_modules/node-hid/**/*
 
 mac:
   category: public.app-category.education

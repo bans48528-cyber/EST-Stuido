@@ -765,6 +765,9 @@ export class EstDeviceService {
             await this.autoConnectPromise;
         }
         await this.disconnect();
+        if (this.transportFactory && typeof this.transportFactory.dispose === 'function') {
+            await this.transportFactory.dispose();
+        }
     }
 
     request (command, payload = new Uint8Array()) {

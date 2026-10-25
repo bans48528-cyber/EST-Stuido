@@ -3,16 +3,16 @@ import {sparkText} from './messages';
 
 export const SPARK_MOTOR_PORTS = ['E', 'F', 'G', 'H'];
 export const SPARK_MOTOR_PAIR_INCOMPLETE = 'SPARK_MOTOR_PAIR_INCOMPLETE';
-export const parseSparkMotorPair = value => [...new Set(String(value || '').split('+')
-    .filter(port => SPARK_MOTOR_PORTS.includes(port)))].slice(0, 2);
-export const selectSparkMotorPort = (value, port) => {
-    const selected = parseSparkMotorPair(value);
-    if (!SPARK_MOTOR_PORTS.includes(port)) return selected.join('+');
+export const parseSparkMotorPair = (value, available = SPARK_MOTOR_PORTS) => [...new Set(String(value || '').split('+')
+    .filter(port => available.includes(port)))].slice(0, 2);
+export const selectSparkMotorPort = (value, port, available = SPARK_MOTOR_PORTS) => {
+    const selected = parseSparkMotorPair(value, available);
+    if (!available.includes(port)) return selected.join('+');
     if (selected.length === 2) return port;
     return (selected.includes(port) ? selected : [...selected, port]).join('+');
 };
 
-const registered = new WeakSet();
+const registered = new WeakMap();
 const element = (tag, style, text) => {
     const node = document.createElement(tag);
     Object.assign(node.style, style);
@@ -20,35 +20,39 @@ const element = (tag, style, text) => {
     return node;
 };
 
-export const registerSparkCombinedMotorField = ScratchBlocks => {
-    if (registered.has(ScratchBlocks) || !ScratchBlocks.Field || typeof document === 'undefined') return;
+export const registerSparkCombinedMotorField = (ScratchBlocks, {
+    ports = SPARK_MOTOR_PORTS, type = 'field_spark_combined_motor'
+} = {}) => {
+    const types = registered.get(ScratchBlocks) || new Set();
+    if (types.has(type) || !ScratchBlocks.Field || typeof document === 'undefined') return;
+    const parse = value => parseSparkMotorPair(value, ports);
     const Native = ScratchBlocks.Field.fromJson({type: 'field_dropdown', options: [['E', 'E']]}).constructor;
     const Field = function () {
-        Native.call(this, SPARK_MOTOR_PORTS.map(port => [port, port]));
-        this.setValue('E+F');
+        Native.call(this, ports.map(port => [port, port]));
+        this.setValue(ports.slice(0, 2).join('+'));
     };
     Field.prototype = Object.create(Native.prototype);
     Field.prototype.constructor = Field;
     Field.fromJson = () => new Field();
     Field.prototype.setValue = function (value) {
         if (value === null || typeof value === 'undefined') return;
-        const ports = parseSparkMotorPair(value);
-        if (!ports.length) return;
-        Native.prototype.setValue.call(this, ports.join('+'));
-        if (ports.length === 1) this.setText(`${ports[0]}+?`);
+        const selected = parse(value);
+        if (!selected.length) return;
+        Native.prototype.setValue.call(this, selected.join('+'));
+        if (selected.length === 1) this.setText(`${selected[0]}+?`);
         this.updateEditor_();
     };
     Field.prototype.updateEditor_ = function () {
         if (!this.portEditor_) return;
-        const ports = parseSparkMotorPair(this.getValue());
+        const selected = parse(this.getValue());
         const t = key => sparkText(key, getCurrentEstLocale());
         const labels = ['左电机', '右电机'];
         this.sideLabels_.forEach((label, index) => {
-            label.textContent = `${t(labels[index])}: ${ports[index] || t('待选')}`;
+            label.textContent = `${t(labels[index])}: ${selected[index] || t('待选')}`;
         });
         this.portButtons_.forEach((button, index) => {
-            const port = SPARK_MOTOR_PORTS[index];
-            const side = ports.indexOf(port);
+            const port = ports[index];
+            const side = selected.indexOf(port);
             button.setAttribute('aria-pressed', String(side !== -1));
             button.title = `${port}: ${t(side === -1 ? '待选' : labels[side])}`;
             button.style.background = side === -1 ? 'transparent' : this.sourceBlock_.getColour();
@@ -70,7 +74,8 @@ export const registerSparkCombinedMotorField = ScratchBlocks => {
             background,
             color: '#ffffff',
             fontFamily: 'inherit'});
-        panel.className = 'spark-combined-motor-selector';
+        panel.className = type === 'field_spark_combined_motor' ?
+            'spark-combined-motor-selector' : 'new-combined-motor-selector';
         panel.setAttribute('role', 'group');
         panel.setAttribute('aria-label', sparkText('组合电机', getCurrentEstLocale()));
         const summary = element('div', {display: 'grid',
@@ -91,7 +96,7 @@ export const registerSparkCombinedMotorField = ScratchBlocks => {
             gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
             gap: '8px'});
         const colour = this.sourceBlock_.getColourTertiary();
-        this.portButtons_ = SPARK_MOTOR_PORTS.map(port => {
+        this.portButtons_ = ports.map(port => {
             const button = element('button', {height: '42px',
                 padding: '0',
                 borderRadius: '6px',
@@ -102,7 +107,7 @@ export const registerSparkCombinedMotorField = ScratchBlocks => {
                 cursor: 'pointer'}, port);
             button.type = 'button';
             button.dataset.motorPort = port;
-            button.onclick = () => this.setValue(selectSparkMotorPort(this.getValue(), port));
+            button.onclick = () => this.setValue(selectSparkMotorPort(this.getValue(), port, ports));
             button.onmouseenter = button.onfocus = () => {
                 button.style.background = 'rgba(0, 0, 0, 0.2)';
             };
@@ -116,8 +121,8 @@ export const registerSparkCombinedMotorField = ScratchBlocks => {
             if (event.key === 'Escape') {
                 dropdown.hide();
             } else if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
-                const next = event.key === 'Home' ? 0 : (event.key === 'End' ? 3 :
-                    (index + (event.key === 'ArrowLeft' ? 3 : 1)) % 4);
+                const next = event.key === 'Home' ? 0 : (event.key === 'End' ? ports.length - 1 :
+                    (index + (event.key === 'ArrowLeft' ? ports.length - 1 : 1)) % ports.length);
                 this.portButtons_[next].focus();
             } else return;
             event.preventDefault();
@@ -150,6 +155,7 @@ export const registerSparkCombinedMotorField = ScratchBlocks => {
         if (this.portEditor_) ScratchBlocks.DropDownDiv.hideWithoutAnimation();
         Native.prototype.dispose.call(this);
     };
-    ScratchBlocks.Field.register('field_spark_combined_motor', Field);
-    registered.add(ScratchBlocks);
+    ScratchBlocks.Field.register(type, Field);
+    types.add(type);
+    registered.set(ScratchBlocks, types);
 };

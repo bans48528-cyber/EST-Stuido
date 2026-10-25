@@ -16,6 +16,9 @@ import styles from '../../src/renderer/EstAiPanel.css';
 import mascotStyles from '../../src/renderer/EstAiMascot.css';
 import {runCoverageUiTests} from './coverage-ui';
 import {runSparkAiUiTests} from './spark-ui';
+import {runNewAiUiTests} from './new-ui';
+import {runNewAiOnlineTests} from './new-online';
+import {runTypingPerformance} from './typing-performance';
 
 const delay = () => new Promise(resolve => setTimeout(resolve, 40));
 const settlePaint = () => new Promise(resolve => setTimeout(resolve, 220));
@@ -64,8 +67,11 @@ const renderApp = () => ReactDOM.render(React.createElement(
         }})
 ), document.getElementById('root'));
 renderApp();
+window.runNewAiOnlineTests = () => runNewAiOnlineTests({workspace, panel, until});
+window.runAiTypingPerformance = strict => runTypingPerformance({panel, until, workspace, strict});
 
 window.runEstAiUiTests = async () => {
+    await window.runAiTypingPerformance(true);
     const mainWorkspace = ScratchBlocks.mainWorkspace;
     const button = label => document.querySelector(`button[aria-label="${label}"]`);
     const setInput = (element, value) => Simulate.change(element, {target: {value}});
@@ -109,6 +115,7 @@ window.runEstAiUiTests = async () => {
     window.dispatchEvent(new Event('blur'));
     await until(() => mascot().dataset.animated === 'false' && compactMascot.dataset.animated === 'false');
     assert.strictEqual(getComputedStyle(body()).animationPlayState, 'paused');
+    assert.strictEqual(getComputedStyle(mascot()).animationPlayState, 'paused');
     window.dispatchEvent(new Event('focus'));
     await until(() => mascot().dataset.animated === 'true');
     mascot().style.display = 'none';
@@ -118,6 +125,8 @@ window.runEstAiUiTests = async () => {
     await ipcRenderer.invoke('test-motion', true);
     await until(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
     assert.strictEqual(getComputedStyle(body()).animationName, 'none');
+    assert.strictEqual(getComputedStyle(mascot()).animationName, 'none');
+    assert.strictEqual(getComputedStyle(compactMascot).animationName, 'none');
     assert.strictEqual(getComputedStyle(compactMascot.querySelector(`.${mascotStyles.body}`)).animationName, 'none');
     await ipcRenderer.invoke('test-motion', false);
     assert.strictEqual(panel.panel.current.parentElement, document.body, 'Float must escape the app stacking context');
@@ -308,6 +317,7 @@ window.runEstAiUiTests = async () => {
     }
     await runCoverageUiTests({workspace, panel, until});
     await runSparkAiUiTests({workspace, panel, until});
+    await runNewAiUiTests({workspace, panel, until});
     ReactDOM.unmountComponentAtNode(document.getElementById('root'));
     workspace.dispose();
     return 'EST AI UI passed: real SVG previews, insert/replace undo, menu layering, focus, IME, drag and resize';

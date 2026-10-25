@@ -108,6 +108,7 @@
     box-shadow: 0 18px 64px #202e422a, 0 3px 12px #202e4210;
     isolation: isolate;
     overflow: hidden;
+    contain: layout style paint;
 }
 
 .panel * { box-sizing: border-box; }
@@ -245,10 +246,11 @@
 @keyframes pulse { 0%, 80%, 100% { opacity: .35; } 40% { opacity: 1; } }
 
 .composerArea { flex-shrink: 0; padding: 11px 0 8px; }
-.composer { display: flex; align-items: flex-end; gap: 9px; min-height: 53px; padding: 7px 8px 7px 17px; border: 1px solid #ccd1d6; border-radius: 26px; background: #fff; }
+.composer { position: relative; display: flex; align-items: flex-end; gap: 9px; min-height: 53px; padding: 7px 8px 7px 17px; border: 1px solid #ccd1d6; border-radius: 26px; background: #fff; }
 .composer:focus-within { border-color: #8bbbd0; box-shadow: 0 0 0 2px #58b5da0a; }
 .composer textarea { flex: 1; min-width: 0; min-height: 36px; max-height: 112px; padding: 8px 0; border: 0; outline: 0; background: transparent; color: #303b45; resize: none; font-size: 13px; line-height: 20px; }
 .composer textarea::placeholder { color: #9ba1a8; }
+.composer textarea.composerMeasure { position: absolute; top: 0; left: 0; width: 0; height: 0; min-height: 0; max-height: none; overflow: hidden; visibility: hidden; pointer-events: none; contain: strict; }
 .sendButton { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 36px; height: 36px; padding: 7px; border: 0; border-radius: 50%; background: #2c333b; color: #fff; }
 .sendButton svg { width: 21px; height: 21px; }
 .sendButton:hover:not(:disabled) { background: #069dcc; }

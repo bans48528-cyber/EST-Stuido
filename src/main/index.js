@@ -7,6 +7,8 @@ import {URL} from 'url';
 import {promisify} from 'util';
 
 import argv from './argv';
+import {InputCompatibility} from './input-compatibility';
+import inputCompatibilityMessages from '../common/input-compatibility-messages.json';
 import {getFilterForExtension} from './FileFilters';
 import Updater from './OpenblockDesktopUpdater';
 import MacOSMenu from './MacOSMenu';
@@ -35,10 +37,19 @@ import {SparkDeviceService} from './spark-ai/device-service';
 import {SparkBleBridge} from './spark-ai/ble-bridge';
 import {SparkConnectionPreferences} from './spark-ai/connection-preferences';
 import {SparkFirmwareUpdateService} from './spark-ai/firmware-update-service';
+import {NewAiDeviceService} from './new-ai/device-service';
+import {NewAiBleBridge} from './new-ai/ble-bridge';
+import {NewAiConnectionPreferences} from './new-ai/connection-preferences';
+import {NewAiFirmwareUpdateService} from './new-ai/firmware-update-service';
 
 import formatMessage from 'format-message';
 import openBlockDesktopLocales from 'openblock-l10n/locales/desktop-msgs';
 import estDesktopMessageOverrides from './est-desktop-message-overrides.json';
+
+const inputCompatibility = new InputCompatibility({
+    filename: path.join(app.getPath('appData'), 'EST Studio', 'input-compatibility.json'),
+    commandLine: app.commandLine
+});
 
 const estDeviceService = new EstDeviceService({
     transportFactory: createNodeHidEstTransportFactory()
@@ -55,7 +66,18 @@ const sparkDeviceService = new SparkDeviceService({
         'hardware', 'spark-connection.json'))
 });
 const sparkFirmwareUpdateService = new SparkFirmwareUpdateService({device: sparkDeviceService});
+const newAiBleBridge = new NewAiBleBridge({allowed: () => false});
+const newAiDeviceService = new NewAiDeviceService({
+    createBleTransport: id => newAiBleBridge.createTransport(id),
+    reconnectBleDevice: identity => newAiBleBridge.reconnectDevice(identity),
+    getBleIdentity: id => newAiBleBridge.getIdentity(id),
+    isBleReady: () => newAiBleBridge.ready,
+    preferences: new NewAiConnectionPreferences(path.join(app.getPath('appData'), 'EST Studio',
+        'hardware', 'new-connection.json'))
+});
+const newAiFirmwareUpdateService = new NewAiFirmwareUpdateService({device: newAiDeviceService});
 sparkDeviceService.on('cancel-ble-scan', () => sparkBleBridge.cancelScan());
+newAiDeviceService.on('cancel-ble-scan', () => newAiBleBridge.cancelScan());
 const estVisionCamera = new VisionCameraSource(estDeviceService, estVisionSimulator);
 const estStudioAppId = 'com.eststudio.desktop';
 const estFirmwareUpdateState = {
@@ -65,15 +87,19 @@ const hardwareSession = new HardwareSession({
     service: estDeviceService,
     preferences: new HardwareSelectionPreferences(path.join(app.getPath('appData'), 'EST Studio',
         'hardware', 'selection.json')),
-    adapters: {'spark-usb': sparkDeviceService},
+    adapters: {'spark-usb': sparkDeviceService, 'new-usb': newAiDeviceService},
     stopSources: () => {
         estVisionCamera.stop();
         estVisionSimulator.stop({clear: false});
         estVisionWindow.close(); // eslint-disable-line no-use-before-define
     },
-    isFirmwareBusy: () => estFirmwareUpdateState.inProgress || sparkFirmwareUpdateService.busy
+    isFirmwareBusy: () => estFirmwareUpdateState.inProgress || sparkFirmwareUpdateService.busy ||
+        newAiFirmwareUpdateService.busy
 });
 let hardwareDrafts;
+// The bridge only becomes available after both the service and hardware session exist.
+newAiBleBridge.allowed = () => !hardwareSession.switching && hardwareSession.hardwareId === 'new-ai' &&
+    newAiDeviceService.connectionMode === 'ble';
 const getHardwareDrafts = () => {
     if (!hardwareDrafts) hardwareDrafts = new HardwareDraftStore(path.join(app.getPath('userData'), 'hardware-drafts'));
     return hardwareDrafts;
@@ -624,6 +650,26 @@ const devToolKey = ((process.platform === 'darwin') ?
 // global window references prevent them from being garbage-collected
 const _windows = {};
 
+ipcMain.handle('est-input-compatibility-get', event => {
+    if (!_windows.main || event.sender !== _windows.main.webContents) throw new Error('Invalid settings window');
+    return inputCompatibility.getStatus();
+});
+ipcMain.handle('est-input-compatibility-set', async (event, request) => {
+    if (!_windows.main || event.sender !== _windows.main.webContents) throw new Error('Invalid settings window');
+    const status = await inputCompatibility.setEnabled(request && request.enabled);
+    if (request.notify === true) {
+        const copy = inputCompatibilityMessages[request.locale] || inputCompatibilityMessages.en;
+        await dialog.showMessageBox(_windows.main, {
+            type: 'info',
+            title: copy.label,
+            message: copy.saved,
+            detail: copy.hint,
+            buttons: [copy.ok]
+        });
+    }
+    return status;
+});
+
 const displayPermissionDeniedWarning = (browserWindow, permissionType) => {
     if (permissionType === 'camera' && estVisionWindow.owns(browserWindow.webContents)) {
         dialog.showMessageBox(browserWindow, {
@@ -804,7 +850,7 @@ const createWindow = ({search = null, url = 'index.html', ...browserWindowOption
     }
     const webContents = window.webContents;
     window.on('close', event => {
-        if (sparkFirmwareUpdateService.busy) event.preventDefault();
+        if (sparkFirmwareUpdateService.busy || newAiFirmwareUpdateService.busy) event.preventDefault();
     });
 
     // Keep renderer failures visible in the development terminal. This is
@@ -929,6 +975,7 @@ const createMainWindow = () => {
     });
     const webContents = window.webContents;
     sparkBleBridge.attach(webContents);
+    newAiBleBridge.attach(webContents);
 
     const update = new Updater(webContents);
     remote.initialize();
@@ -1075,7 +1122,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', event => {
-    if (sparkFirmwareUpdateService.busy) {
+    if (sparkFirmwareUpdateService.busy || newAiFirmwareUpdateService.busy) {
         event.preventDefault(); return;
     }
     if (isQuitting) {
@@ -1085,7 +1132,7 @@ app.on('before-quit', event => {
     isQuitting = true;
     estVisionWindow.close();
     estVisionSimulator.stop({clear: false});
-    Promise.all([estDeviceService.shutdown(), sparkDeviceService.shutdown()])
+    Promise.all([estDeviceService.shutdown(), sparkDeviceService.shutdown(), newAiDeviceService.shutdown()])
         .catch(error => console.error('EST shutdown failed', error))
         .finally(() => app.quit());
 });
@@ -1319,6 +1366,75 @@ ipcMain.handle('hardware-draft-read', (event, hardwareId) => {
 });
 const hardwareUnavailableState = () => ({state: 'hardware-unavailable', compatible: false, status: null});
 const canUseEstAdapter = () => !hardwareSession.switching && hardwareSession.hardwareId === 'est';
+
+newAiDeviceService.on('state', state => {
+    if (!_windows.main || _windows.main.isDestroyed() || hardwareSession.switching ||
+        hardwareSession.hardwareId !== 'new-ai') return;
+    _windows.main.webContents.send('new-ai-state-change', state);
+});
+const newAiOperation = (event, action) => {
+    requireMainHardwareWindow(event);
+    return hardwareSession.operation(action, 'new-usb');
+};
+ipcMain.handle('new-ai-state', event => {
+    requireMainHardwareWindow(event);
+    hardwareSession.requireAdapter('new-usb');
+    return newAiDeviceService.getState();
+});
+ipcMain.handle('new-ai-list-devices', event => {
+    requireMainHardwareWindow(event);
+    return hardwareSession.background(() => newAiDeviceService.listDevices(), 'new-usb');
+});
+ipcMain.handle('new-ai-connect', (event, request) =>
+    newAiOperation(event, () => newAiDeviceService.connect(request)));
+ipcMain.handle('new-ai-connection-mode', (event, mode) =>
+    newAiOperation(event, () => newAiDeviceService.setConnectionMode(mode)));
+ipcMain.handle('new-ai-ble-scan', event => newAiOperation(event, () => {
+    if (newAiDeviceService.busy || newAiDeviceService.connected) throw new Error('NEW_BUSY');
+    newAiBleBridge.beginScan();
+}));
+ipcMain.handle('new-ai-ble-select', (event, id) => newAiOperation(event, () => newAiBleBridge.select(id)));
+ipcMain.handle('new-ai-ble-bind', (event, id) => newAiOperation(event, () => newAiBleBridge.bindDevice(id)));
+ipcMain.handle('new-ai-ble-cancel-scan', event => {
+    requireMainHardwareWindow(event);
+    if (!newAiDeviceService.bleReconnecting) newAiBleBridge.cancelScan();
+});
+ipcMain.handle('new-ai-ble-forget', event => newAiOperation(event, () => newAiDeviceService.forgetBleDevice()));
+ipcMain.on('new-ai-ble-ready', event => {
+    if (_windows.main && event.sender === _windows.main.webContents) {
+        newAiBleBridge.ready = true;
+        newAiDeviceService.scheduleDiscovery(0);
+    }
+});
+ipcMain.on('new-ai-ble-reply', (event, message) => {
+    if (_windows.main && event.sender === _windows.main.webContents) newAiBleBridge.reply(message);
+});
+ipcMain.on('new-ai-ble-data', (event, message) => {
+    if (_windows.main && event.sender === _windows.main.webContents) newAiBleBridge.receive(message);
+});
+ipcMain.handle('new-ai-disconnect', (event, request) => newAiOperation(event, () => {
+    if (newAiDeviceService.pythonProgramActive && !(request && request.confirmRunning === true)) {
+        throw new Error('NEW_DISCONNECT_CONFIRM');
+    }
+    return newAiDeviceService.disconnect();
+}));
+ipcMain.handle('new-ai-set-auto-connect', (event, enabled) =>
+    newAiOperation(event, () => newAiDeviceService.setAutoConnect(enabled)));
+ipcMain.handle('new-ai-compile-program', (event, request) =>
+    newAiOperation(event, () => newAiDeviceService.compileProgram(request)));
+ipcMain.handle('new-ai-download-program', (event, request) =>
+    newAiOperation(event, () => newAiDeviceService.downloadProgram(request)));
+ipcMain.handle('new-ai-run-program', (event, request) =>
+    newAiOperation(event, () => newAiDeviceService.runProgram(request)));
+ipcMain.handle('new-ai-stop-program', event => newAiOperation(event, () => newAiDeviceService.stopCurrentProgram()));
+ipcMain.handle('new-ai-firmware-inspect', event => newAiOperation(event, () => newAiFirmwareUpdateService.inspect()));
+ipcMain.handle('new-ai-firmware-update', (event, request) =>
+    newAiOperation(event, () => newAiFirmwareUpdateService.start(request)));
+ipcMain.handle('new-ai-cancel', event => {
+    requireMainHardwareWindow(event);
+    hardwareSession.requireAdapter('new-usb');
+    newAiDeviceService.cancel();
+});
 
 sparkDeviceService.on('state', state => {
     if (!_windows.main || _windows.main.isDestroyed() || hardwareSession.switching ||

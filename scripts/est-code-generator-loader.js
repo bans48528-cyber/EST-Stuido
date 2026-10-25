@@ -16,6 +16,7 @@ module.exports = function (source) {
     if (resourcePath.endsWith('/lib/code-generator.js')) {
         const targetReturn =
             "    if (getHardwareContext().profile.compiler === 'spark-python') return 'SparkPython';\n" +
+            "    if (getHardwareContext().profile.compiler === 'new-python') return 'NewPython';\n" +
             "    return 'Python';";
         return `import {getHardwareContext} from 'est-hardware-context';\n${source.replace(nullReturn, targetReturn)}`;
     }

@@ -338,6 +338,7 @@ const makeConfig = function (defaultConfig, options) {
                 'est-camera-button$': path.resolve(__dirname, 'src/renderer/EstCameraButton.jsx'),
                 'est-language-menu$': EST_LANGUAGE_MENU,
                 'est-menu-bar-layout$': EST_MENU_BAR_LAYOUT,
+                'est-input-compatibility-menu$': path.resolve(__dirname, 'src/renderer/EstInputCompatibilityMenu.jsx'),
                 'est-menu-logo$': EST_MENU_LOGO,
                 'est-program-controls$': EST_PROGRAM_CONTROLS,
                 'est-block-definitions$': EST_BLOCK_DEFINITIONS,
@@ -352,7 +353,9 @@ const makeConfig = function (defaultConfig, options) {
                 'est-hardware-context$': HARDWARE_CONTEXT,
                 'est-hardware-code-drafts$': path.resolve(__dirname, './src/renderer/hardware/code-drafts.js'),
                 'spark-ai-blocks$': path.resolve(__dirname, './src/renderer/spark-ai/blocks.js'),
-                'spark-ai-python-generator$': path.resolve(__dirname, './src/renderer/spark-ai/python-generator.js')
+                'spark-ai-python-generator$': path.resolve(__dirname, './src/renderer/spark-ai/python-generator.js'),
+                'new-ai-blocks$': path.resolve(__dirname, './src/renderer/new-ai/blocks.js'),
+                'new-ai-python-generator$': path.resolve(__dirname, './src/renderer/new-ai/python-generator.js')
             }
         }
     });

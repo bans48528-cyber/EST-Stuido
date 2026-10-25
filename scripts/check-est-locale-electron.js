@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 
 if (!process.versions.electron) {
-    const result = require('child_process').spawnSync(require('electron'), [__filename], {
+    const result = require('child_process').spawnSync(require('electron'), [__filename, ...process.argv.slice(2)], {
         windowsHide: true, stdio: 'inherit', env: {...process.env, NODE_OPTIONS: ''}
     });
     process.exitCode = result.status === null ? 1 : result.status;
@@ -36,6 +36,42 @@ if (!process.versions.electron) {
         compilerSupported: true, stale: false, monitoring: true, status: null, operation: null, logs: [],
         discovery: {enabled: true, status: 'waiting', ports: sparkPorts, revision: 0}};
     const sparkRequests = [];
+    const newAiRequests = [];
+    const newAiFirmwareRelease = require('../src/main/new-ai/firmware-release.json');
+    const newAiPorts = [{path: 'COM_NEW', friendlyName: 'NEW AI USB (mock)', vendorId: '0483', productId: '5740'}];
+    const newAiStatus = {version: 321, battery: 86.5, running: false,
+        ports: Array.from({length: 8}, (_, port) => ({port, label: 'ABCDEFGH'[port], type: port ? 'none' : 'big_motor'}))};
+    let newAiState = {state: 'disconnected', connected: false, busy: false, status: null,
+        connectionMode: 'usb', bleDevice: null, reconnecting: false,
+        compilerSupported: true, downloadSupported: false, programSupported: false,
+        discovery: {enabled: true, active: true, status: 'waiting', ports: newAiPorts}};
+    const newAiAuto = {usb: true, ble: true};
+    let newAiBleScanning = false;
+    const mockNewAiCompile = async (event, request, download = false, run = false) => {
+        assert.equal(selectedHardware, 'new-ai');
+        newAiRequests.push({action: run ? 'run' : (download ? 'download' : 'compile'), ...request});
+        if (download) assert.ok(Number.isInteger(request.slot) && request.slot >= 0 && request.slot < 20);
+        newAiState = {...newAiState, busy: true, result: null,
+            operation: {phase: 'compiling', bytes: 0, total: 0}};
+        event.sender.send('new-ai-state-change', newAiState);
+        await new Promise(resolve => setTimeout(resolve, 60));
+        if (download) {
+            newAiState = {...newAiState, operation: {phase: 'downloading', bytes: 20, total: 100}};
+            event.sender.send('new-ai-state-change', newAiState);
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
+        if (run) {
+            newAiState = {...newAiState, operation: {phase: 'starting', bytes: 100, total: 100}};
+            event.sender.send('new-ai-state-change', newAiState);
+            await new Promise(resolve => setTimeout(resolve, 120));
+        }
+        const result = {compiled: true, size: 100, ...(download ? {downloaded: true, slot: request.slot} : {}),
+            ...(run ? {startRequested: true, runObserved: true} : {})};
+        newAiState = {...newAiState, busy: false, operation: null, result,
+            ...(run ? {status: {...newAiStatus, running: true}} : {})};
+        event.sender.send('new-ai-state-change', newAiState);
+        return result;
+    };
     let interruptSparkDownload = false;
     let firmwareChecks = 0;
     const firmwareRelease = require('../src/main/spark-ai/firmware-release.json');
@@ -82,6 +118,107 @@ if (!process.versions.electron) {
         'hardware-draft-write': (event, draft) => { hardwareDrafts.set(draft.hardwareId, draft); },
         'hardware-draft-read': (event, hardwareId) => hardwareDrafts.get(hardwareId) || null,
         'spark-state': () => sparkState,
+        'new-ai-state': () => newAiState,
+        'new-ai-list-devices': () => newAiPorts,
+        'new-ai-connection-mode': (event, mode) => {
+            assert.ok(['usb', 'ble'].includes(mode));
+            newAiAuto[newAiState.connectionMode] = newAiState.discovery.enabled;
+            newAiRequests.push({action: 'mode', mode});
+            newAiState = {...newAiState, connectionMode: mode, state: 'disconnected', connected: false,
+                busy: false, port: null, status: null, identityVerified: false, downloadSupported: false,
+                discovery: {...newAiState.discovery, enabled: newAiAuto[mode]}};
+            event.sender.send('new-ai-state-change', newAiState);
+            return newAiState;
+        },
+        'new-ai-ble-scan': event => {
+            assert.equal(newAiState.connectionMode, 'ble');
+            newAiRequests.push({action: 'ble-scan'}); newAiBleScanning = true;
+            event.sender.send('new-ai-ble-scan-state', {scanning: true, devices: [
+                {id: '11:22:33:44:55:66', name: 'EST_BLUE NEW AI (mock)'}]});
+        },
+        'new-ai-ble-select': (event, id) => {
+            assert.equal(id, '11:22:33:44:55:66');
+            newAiRequests.push({action: 'ble-select', id}); newAiBleScanning = false;
+            event.sender.send('new-ai-ble-scan-state', {scanning: false, devices: []});
+            return event.sender.executeJavaScript('window.finishNewAiBleChoice()');
+        },
+        'new-ai-ble-bind': (event, id) => {
+            assert.equal(id, 'opaque-new-ai-test'); newAiRequests.push({action: 'ble-bind', id});
+        },
+        'new-ai-ble-cancel-scan': event => {
+            if (!newAiBleScanning) return;
+            newAiBleScanning = false;
+            newAiRequests.push({action: 'ble-cancel'});
+            event.sender.send('new-ai-ble-scan-state', {scanning: false, cancelled: true, devices: []});
+        },
+        'new-ai-ble-forget': event => {
+            newAiRequests.push({action: 'ble-forget'}); newAiState = {...newAiState, bleDevice: null};
+            event.sender.send('new-ai-state-change', newAiState);
+        },
+        'new-ai-connect': async (event, request) => {
+            assert.equal(selectedHardware, 'new-ai');
+            newAiRequests.push({action: 'connect', ...request});
+            newAiState = {...newAiState, state: 'verifying', busy: true};
+            event.sender.send('new-ai-state-change', newAiState);
+            await new Promise(resolve => setTimeout(resolve, 120));
+            newAiState = {...newAiState, state: 'connected', busy: false, connected: true,
+                port: request.path || request.id, status: newAiStatus, identityVerified: true,
+                ...(request.type === 'ble' ? {bleDevice: {id: '11:22:33:44:55:66',
+                    name: 'EST_BLUE NEW AI (mock)'}} : {}),
+                downloadSupported: true, programSupported: true};
+            event.sender.send('new-ai-state-change', newAiState);
+            return newAiState;
+        },
+        'new-ai-disconnect': event => {
+            newAiRequests.push({action: 'disconnect'});
+            newAiState = {...newAiState, state: 'disconnected', connected: false, port: null, status: null,
+                downloadSupported: false, programSupported: false,
+                discovery: {...newAiState.discovery, enabled: false}};
+            event.sender.send('new-ai-state-change', newAiState);
+        },
+        'new-ai-set-auto-connect': (event, enabled) => {
+            newAiRequests.push({action: 'automatic', enabled});
+            newAiState = {...newAiState, discovery: {...newAiState.discovery, enabled}};
+            event.sender.send('new-ai-state-change', newAiState);
+        },
+        'new-ai-compile-program': (event, request) => mockNewAiCompile(event, request),
+        'new-ai-download-program': (event, request) => mockNewAiCompile(event, request, true),
+        'new-ai-run-program': (event, request) => mockNewAiCompile(event, request, true, true),
+        'new-ai-stop-program': async event => {
+            assert.equal(selectedHardware, 'new-ai');
+            newAiRequests.push({action: 'stop'});
+            newAiState = {...newAiState, busy: true, result: null,
+                operation: {phase: 'stopping', bytes: 0, total: 0}};
+            event.sender.send('new-ai-state-change', newAiState);
+            await new Promise(resolve => setTimeout(resolve, 120));
+            const result = {stopObserved: true};
+            newAiState = {...newAiState, busy: false, operation: null, result,
+                status: {...newAiStatus, running: false}};
+            event.sender.send('new-ai-state-change', newAiState);
+            return result;
+        },
+        'new-ai-firmware-inspect': () => ({...newAiFirmwareRelease, releaseId: newAiFirmwareRelease.id,
+            valid: true, files: newAiFirmwareRelease.files.map(file => ({...file, valid: true, error: null}))}),
+        'new-ai-firmware-update': async (event, request) => {
+            assert.equal(selectedHardware, 'new-ai');
+            assert.equal(request.confirmedErase, true);
+            if (newAiState.status && newAiState.status.legacyProtocol) assert.equal(request.confirmedLegacyIdle, true);
+            newAiRequests.push({action: 'firmware', ...request});
+            newAiState = {...newAiState, busy: true, result: null, downloadSupported: false, programSupported: false,
+                firmware: {active: true, phase: 'checking', bytes: 0, total: 2116990}};
+            event.sender.send('new-ai-state-change', newAiState);
+            await new Promise(resolve => setTimeout(resolve, 80));
+            newAiState = {...newAiState, connected: false, port: null, status: null,
+                firmware: {active: true, phase: 'transferring', bytes: 100000, total: 2116990, file: 'app/pikaNewAi.bin'}};
+            event.sender.send('new-ai-state-change', newAiState);
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const result = {transferComplete: true, reconnected: true, versionMatched: true, version: 321};
+            newAiState = {...newAiState, busy: false, connected: true, port: 'COM_NEW', status: newAiStatus,
+                downloadSupported: true, programSupported: true,
+                firmware: {active: false, phase: 'complete', bytes: 2116990, total: 2116990, result}};
+            event.sender.send('new-ai-state-change', newAiState);
+            return result;
+        },
         'spark-firmware-inspect': () => {
             firmwareChecks++;
             return {...firmwareRelease, releaseId: firmwareRelease.id, valid: true, canUpdate: true,
@@ -159,8 +296,26 @@ if (!process.versions.electron) {
     const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     const timeout = setTimeout(() => app.exit(1), 180000);
     app.whenReady().then(async () => {
-        const window = new BrowserWindow({show: false, width: 1280, height: 860,
-            webPreferences: {nodeIntegration: true, contextIsolation: false, backgroundThrottling: false, offscreen: true}});
+        const comparisonIndex = process.argv.indexOf('--perf-renderer');
+        const comparisonDirectory = comparisonIndex < 0 ? null : path.resolve(process.argv[comparisonIndex + 1]);
+        const rendererRootIndex = process.argv.indexOf('--renderer-root');
+        const rendererRoot = rendererRootIndex < 0 ? path.resolve(__dirname, '../dist/renderer') :
+            path.resolve(process.argv[rendererRootIndex + 1]);
+        const window = new BrowserWindow({
+            show: false,
+            width: 1280,
+            height: 860,
+            webPreferences: {
+                nodeIntegration: true,
+                contextIsolation: false,
+                backgroundThrottling: false,
+                offscreen: !comparisonDirectory
+            }
+        });
+        const setNewAiTestState = patch => {
+            newAiState = {...newAiState, ...patch};
+            window.webContents.send('new-ai-state-change', newAiState);
+        };
         remote.enable(window.webContents);
         const unhandledRejections = [];
         window.webContents.on('console-message', (event, level, message, line, source) => {
@@ -181,7 +336,18 @@ if (!process.versions.electron) {
             return result.value;
         };
         try {
-            await window.loadFile(path.resolve(__dirname, '../dist/renderer/index.html'));
+            if (comparisonDirectory) {
+                // Only the test host is used: no product main process, serial ports, HID or AI transport.
+                window.webContents.session.webRequest.onBeforeRequest((details, callback) =>
+                    callback({cancel: /^https?:|^wss?:/.test(details.url)}));
+                await window.loadFile(path.join(comparisonDirectory, 'index.html'));
+                window.setTitle(`${path.basename(comparisonDirectory)} · OpenBlock 性能对照 · 自动测试`);
+                window.show(); window.focus();
+                await require('./perf-ui-comparison/measure')({window, evaluate, pause,
+                    output: comparisonDirectory, label: path.basename(comparisonDirectory)});
+                clearTimeout(timeout); app.exit(0); return;
+            }
+            await window.loadFile(path.join(rendererRoot, 'index.html'));
             let ready = false;
             for (let i = 0; i < 150 && !ready; i++) {
                 ready = await evaluate(`(() => {
@@ -472,6 +638,21 @@ if (!process.versions.electron) {
                 assert.equal(selectedHardware, id);
                 assert.equal(await evaluate('JSON.parse(window.findLocaleTestBlocks().props.vm.toJSON()).meta.estStudio.hardwareId'), id);
             };
+            if (process.argv.includes('--new-colour-only')) {
+                await require('./check-new-ai-colour-ui')({evaluate, pause, window, output, chooseHardware});
+                assert.deepStrictEqual(unhandledRejections, []);
+                clearTimeout(timeout);
+                app.exit(0);
+                return;
+            }
+            if (process.argv.includes('--new-ai-only')) {
+                await require('./check-new-ai-ui')({evaluate, pause, window, output, chooseHardware, newAiRequests,
+                    setNewAiTestState});
+                assert.deepStrictEqual(unhandledRejections, []);
+                clearTimeout(timeout);
+                app.exit(0);
+                return;
+            }
             await evaluate('window.beforeHardwareSwitch = window.findLocaleTestBlocks().props.vm.toJSON()');
             await chooseHardware('spark-ai');
             const pendingCategories = await evaluate(`Array.from(document.querySelectorAll('.scratchCategoryMenuItemLabel'))
@@ -1225,10 +1406,12 @@ if (!process.versions.electron) {
                 await evaluate('document.querySelector("[role=dialog] header button").click()');
             }
             console.log('Hardware selector UI passed: three products, isolated drafts, saved project reopen, legacy migration and 1280/1000/800 px layouts. Screenshots: ' + output);
+            await require('./check-new-ai-ui')({evaluate, pause, window, output, chooseHardware, newAiRequests,
+                setNewAiTestState});
             const startupSparkData = await evaluate('(async () => Array.from(new Uint8Array(await savedSparkHardwareProject.arrayBuffer())))()');
             const reloadHardwareEditor = async () => {
                 await evaluate('window.onbeforeunload = null; undefined');
-                await window.loadFile(path.resolve(__dirname, '../dist/renderer/index.html'));
+                await window.loadFile(path.join(rendererRoot, 'index.html'));
                 let mounted = false;
                 for (let attempt = 0; attempt < 150 && !mounted; attempt++) {
                     mounted = await evaluate(`(() => {
@@ -1259,14 +1442,15 @@ if (!process.versions.electron) {
                         hardwareId: vm.runtime.estStudioHardwareId,
                         projectHardwareId: JSON.parse(vm.toJSON()).meta.estStudio.hardwareId,
                         blocks: editor.workspace.getAllBlocks().map(block => block.type),
-                        estControls: Boolean(document.querySelector('[class*="EstProgramControls_controls"]:not(#spark-program-controls)')),
-                        sparkControls: Boolean(document.querySelector('#spark-program-controls'))};
+                        estControls: Boolean(document.querySelector('[class*="EstProgramControls_controls"]:not(#spark-program-controls):not(#new-ai-program-controls)')),
+                        sparkControls: Boolean(document.querySelector('#spark-program-controls')),
+                        newControls: Boolean(document.querySelector('#new-ai-program-controls'))};
                 })()`);
             };
             window.setSize(1280, 860);
             for (const [id, name, blocks] of [
                 ['spark-ai', 'Spark AI', ['spark_event_whenflagclicked']],
-                ['new-ai', 'New AI', []],
+                ['new-ai', 'New AI', ['new_event_whenflagclicked']],
                 ['est', 'EST', ['event_program_start']]
             ]) {
                 await chooseHardware(id);
@@ -1279,6 +1463,7 @@ if (!process.versions.electron) {
                 assert.deepStrictEqual(cold.blocks, blocks, 'default blocks must match the remembered hardware');
                 assert.equal(cold.estControls, id === 'est');
                 assert.equal(cold.sparkControls, id === 'spark-ai');
+                assert.equal(cold.newControls, id === 'new-ai');
             }
             await chooseHardware('new-ai');
             startupProjectData = Uint8Array.from(startupSparkData);

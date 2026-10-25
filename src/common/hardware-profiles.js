@@ -30,14 +30,14 @@ export const HARDWARE_PROFILES = Object.freeze([
     Object.freeze({
         id: 'new-ai',
         name: 'New AI',
-        status: 'pending',
-        adapter: null,
-        compiler: null,
+        status: 'program-ready',
+        adapter: 'new-usb',
+        compiler: 'new-python',
         extensions: Object.freeze([]),
-        motorPorts: Object.freeze([]),
-        sensorPorts: Object.freeze([]),
-        programSlots: 0,
-        screen: null
+        motorPorts: Object.freeze(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']),
+        sensorPorts: Object.freeze(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']),
+        programSlots: 20,
+        screen: Object.freeze({width: 7, height: 9, format: 'rgb'})
     })
 ]);
 

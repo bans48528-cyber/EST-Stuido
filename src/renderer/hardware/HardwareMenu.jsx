@@ -8,10 +8,17 @@ import {getEstText} from '../est-i18n';
 import EstStatusPanel from '../EstStatusPanel.jsx';
 import EstHardwareStatusButton from '../EstHardwareStatusButton.jsx';
 import SparkConnection from '../spark-ai/SparkConnection.jsx';
+import NewAiConnection from '../new-ai/NewAiConnection.jsx';
 import {HARDWARE_CHANGED_EVENT, getHardwareContext} from './context';
 import {hardwareErrorText, requestHardwareSwitch} from './project';
 import deviceIcon from 'openblock-gui/src/components/menu-bar/icon--device.svg';
 import styles from './HardwareMenu.css';
+
+const profileStatusKey = item => {
+    const readyKeys = {ready: 'ready', 'program-ready': 'programReady', 'download-ready': 'downloadReady'};
+    return `hardwareChoice.${readyKeys[item.status] ||
+        (item.adapter ? 'connectionReady' : (item.compiler ? 'blocksReady' : 'pending'))}`;
+};
 
 class HardwareMenu extends React.Component {
     constructor (props) {
@@ -86,10 +93,11 @@ class HardwareMenu extends React.Component {
                 {!busy && profile.adapter === 'est-hid' ? <React.Fragment>
                     <EstStatusPanel /><EstHardwareStatusButton />
                 </React.Fragment> : (!busy && profile.adapter === 'spark-usb' ? <SparkConnection locale={locale} /> :
+                    (!busy && profile.adapter === 'new-usb' ? <NewAiConnection locale={locale} /> :
                     <span className={styles.pending} role="status">
                     {t(busy ? 'hardwareChoice.switching' :
                         (profile.compiler ? 'hardwareChoice.blocksReady' : 'hardwareChoice.pending'))}
-                    </span>)}
+                    </span>))}
                 {open ? createPortal(
                     <div className={styles.backdrop} onMouseDown={event => {
                         if (event.target === event.currentTarget) this.close();
@@ -110,8 +118,7 @@ class HardwareMenu extends React.Component {
                                     <img src={deviceIcon} className={styles.productIcon} alt="" draggable={false} />
                                     <strong>{item.name}</strong>
                                     <span className={styles.productStatus}>
-                                        {t(item.status === 'ready' ? 'hardwareChoice.ready' :
-                                            (item.compiler ? 'hardwareChoice.blocksReady' : 'hardwareChoice.pending'))}
+                                        {t(profileStatusKey(item))}
                                     </span>
                                     {profile.id === item.id ? <span className={styles.current}>
                                         {t('hardwareChoice.current')}

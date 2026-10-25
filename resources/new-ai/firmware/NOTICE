@@ -1,0 +1,13 @@
+Original, unmodified NEW AI 2.2.29 / LB_FWLIB resources, resource version 321.
+All 109 files are pinned by size and SHA-256 in src/main/new-ai/firmware-release.json,
+using the user's 2026-10-23 extraction resources_manifest.json as the source of hashes.
+The package is separate from Spark AI and EST firmware. No firmware was rebuilt.
+
+Boot1 is not included or rewritten. Boot1 receives these files into external storage,
+then loads app/LB_Boot2.bin into RAM. Boot2 writes app/pikaNewAi.bin to the H7 application
+region. Legacy named images and sensor resources are preserved exactly as distributed;
+uploading the resource bundle does not send the sensor upgrade command (0x32).
+
+Source-to-binary build provenance has not been established for the supplied repositories.
+A matching device version report confirms the reported resource version, not a remote
+cryptographic attestation of the installed image. This integration does not claim one.

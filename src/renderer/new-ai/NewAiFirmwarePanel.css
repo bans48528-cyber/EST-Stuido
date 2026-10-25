@@ -1,0 +1,9 @@
+.files {
+    max-height: 240px;
+    overflow: auto;
+    margin-top: 8px;
+}
+
+.files th {
+    font-weight: normal;
+}

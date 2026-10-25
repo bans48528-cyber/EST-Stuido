@@ -35,6 +35,40 @@ const runChild = async () => {
     const {ensureElectronNativeArch} = require('./ensure-electron-native-arch');
     ensureElectronNativeArch();
 
+    if (process.argv.includes('--discovery-only')) {
+        registerEstBabelLoader();
+        // Load the add-on in both environments to check context-aware native loading.
+        require('node-hid').devices(0x0483, 0x5750);
+        const {createNodeHidEstTransportFactory} = require(path.join(projectRoot,
+            'src', 'main', 'est', 'transports', 'node-hid.js'));
+        const factory = createNodeHidEstTransportFactory();
+        let eventLoopTicks = 0;
+        const timer = setInterval(() => {
+            eventLoopTicks++;
+        }, 1);
+        const samples = [];
+        try {
+            for (let index = 0; index < 3; index++) {
+                const start = process.hrtime.bigint();
+                const devices = await factory.listDevices();
+                if (devices.some(device => device.vendorId !== 0x0483 || device.productId !== 0x5750)) {
+                    throw new Error('Worker returned a device outside the EST VID/PID');
+                }
+                samples.push({count: devices.length, elapsedMs: Number(process.hrtime.bigint() - start) / 1e6});
+            }
+        } finally {
+            clearInterval(timer); factory.dispose();
+        }
+        if (!eventLoopTicks) throw new Error('Main event loop did not run during native worker enumeration');
+        printJson('HID worker discovery', {electron: process.versions.electron,
+            arch: process.arch,
+            eventLoopTicks,
+            samples,
+            deviceHandlesOpened: 0,
+            deviceCommandsSent: 0});
+        return;
+    }
+
     const HID = require('node-hid');
     const devices = HID.devices();
     const estDevices = devices.filter(device => device.vendorId === 0x0483 && device.productId === 0x5750);
@@ -76,7 +110,7 @@ const runChild = async () => {
         programError: connection.status && connection.status.programStatus &&
             connection.status.programStatus.error
     });
-    await service.disconnect();
+    await service.shutdown();
 };
 
 if (process.env.EST_HID_CHECK_CHILD === '1') {
@@ -85,7 +119,7 @@ if (process.env.EST_HID_CHECK_CHILD === '1') {
         process.exit(1);
     });
 } else {
-    const result = spawnSync(electronPath, [__filename], {
+    const result = spawnSync(electronPath, [__filename, ...process.argv.slice(2)], {
         cwd: projectRoot,
         env: {
             ...process.env,

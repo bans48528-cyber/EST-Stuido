@@ -94,7 +94,7 @@ const {makeSparkCoverageCases, makeProgram, makeSparkNativeProgram} = require('.
     assert.throws(() => importEstBlockIrToWorkspace({workspace, ir: {...SPARK_AI_SAMPLE_IR, hardwareId: 'est'}}));
     assert.equal(clears, 0);
     setHardwareContext('new-ai');
-    assert.ok(!isAiHardwareActive());
+    assert.ok(isAiHardwareActive());
     assert.throws(() => importEstBlockIrToWorkspace({workspace, ir: SPARK_AI_SAMPLE_IR}));
     setHardwareContext('est');
     console.log('Spark AI assistant passed: 66 blocks, model-specific ports/pairs/matrix, ' +

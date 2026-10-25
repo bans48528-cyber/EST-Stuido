@@ -1,0 +1,23 @@
+/* eslint-disable max-len */
+// zh-cn, en, pt-br, zh-tw, ru
+export default {
+    bluetooth: ['蓝牙', 'Bluetooth', 'Bluetooth', '藍牙', 'Bluetooth'],
+    connectionMode: ['连接方式', 'Connection method', 'Tipo de conexão', '連線方式', 'Способ подключения'],
+    waitingBle: ['等待 NEW AI 蓝牙', 'Waiting for NEW AI Bluetooth', 'Aguardando Bluetooth do NEW AI', '等待 NEW AI 藍牙', 'Ожидание Bluetooth NEW AI'],
+    searchBluetooth: ['搜索蓝牙设备', 'Search Bluetooth devices', 'Buscar dispositivos Bluetooth', '搜尋藍牙裝置', 'Найти Bluetooth-устройства'],
+    cancelSearch: ['取消搜索', 'Cancel search', 'Cancelar busca', '取消搜尋', 'Отменить поиск'],
+    searchingBluetooth: ['正在搜索，请选择 NEW AI 主机。', 'Searching. Select your NEW AI device.', 'Buscando. Selecione seu NEW AI.', '搜尋中，請選擇 NEW AI 主機。', 'Поиск. Выберите устройство NEW AI.'],
+    noBluetoothDevices: ['暂未发现设备，请开启主机蓝牙并靠近电脑。', 'No devices found yet. Enable Bluetooth on the device and move it closer.', 'Nenhum dispositivo encontrado. Ative o Bluetooth do dispositivo e aproxime-o do computador.', '尚未發現裝置，請開啟主機藍牙並靠近電腦。', 'Устройства пока не найдены. Включите Bluetooth на блоке и поднесите его ближе.'],
+    bleHint: ['开启主机蓝牙后搜索并选择设备。收到 NEW AI 状态数据后才会确认连接。', 'Enable Bluetooth on the device, then search and select it. Connection is confirmed only after NEW AI status data arrives.', 'Ative o Bluetooth do dispositivo, busque e selecione-o. A conexão só é confirmada após receber dados de status do NEW AI.', '開啟主機藍牙後搜尋並選擇裝置。收到 NEW AI 狀態資料後才會確認連線。', 'Включите Bluetooth на блоке, найдите и выберите его. Подключение подтверждается только после получения состояния NEW AI.'],
+    rememberedDevice: ['已记住的设备', 'Remembered device', 'Dispositivo salvo', '已記住的裝置', 'Сохранённое устройство'],
+    forgetDevice: ['忘记设备', 'Forget device', 'Esquecer dispositivo', '忘記裝置', 'Забыть устройство'],
+    bleReconnecting: ['正在连接已记住的蓝牙主机…', 'Reconnecting to the remembered Bluetooth device…', 'Reconectando ao dispositivo Bluetooth salvo…', '正在連線已記住的藍牙主機…', 'Переподключение к сохранённому Bluetooth-устройству…'],
+    pauseReconnect: ['暂停重连', 'Pause reconnect', 'Pausar reconexão', '暫停重連', 'Приостановить подключение'],
+    NEW_BLE_UNAVAILABLE: ['蓝牙不可用，请确认电脑蓝牙已开启后重试。', 'Bluetooth is unavailable. Enable Bluetooth on the computer and try again.', 'Bluetooth indisponível. Ative o Bluetooth do computador e tente novamente.', '藍牙無法使用，請確認電腦藍牙已開啟後再試。', 'Bluetooth недоступен. Включите Bluetooth на компьютере и повторите попытку.'],
+    NEW_BLE_SERVICE: ['设备没有提供所需的蓝牙服务，请选择 NEW AI 主机。', 'The device does not provide the required Bluetooth service. Select a NEW AI device.', 'O dispositivo não oferece o serviço Bluetooth necessário. Selecione um NEW AI.', '裝置未提供所需的藍牙服務，請選擇 NEW AI 主機。', 'Устройство не предоставляет нужную службу Bluetooth. Выберите NEW AI.'],
+    NEW_BLE_CONNECT: ['蓝牙连接失败，请确认主机蓝牙已开启，并关闭其他占用它的软件。', 'Bluetooth connection failed. Enable Bluetooth on the device and close other applications using it.', 'Falha na conexão Bluetooth. Ative o Bluetooth do dispositivo e feche outros aplicativos que o utilizam.', '藍牙連線失敗，請確認主機藍牙已開啟，並關閉其他佔用它的軟體。', 'Не удалось подключиться по Bluetooth. Включите Bluetooth на блоке и закройте другие использующие его приложения.'],
+    NEW_BLE_DEVICE_INVALID: ['蓝牙选择已失效，请重新搜索并选择设备。', 'The Bluetooth selection expired. Search and select the device again.', 'A seleção Bluetooth expirou. Busque e selecione o dispositivo novamente.', '藍牙選擇已失效，請重新搜尋並選擇裝置。', 'Выбор Bluetooth-устройства устарел. Найдите и выберите устройство заново.'],
+    NEW_BLE_TIMEOUT: ['蓝牙操作超时，连接已取消；请靠近主机后重新连接。', 'Bluetooth operation timed out and the connection was cancelled. Move closer and reconnect.', 'A operação Bluetooth excedeu o tempo limite e a conexão foi cancelada. Aproxime-se e reconecte.', '藍牙操作逾時，連線已取消；請靠近主機後重新連線。', 'Время операции Bluetooth истекло, подключение отменено. Поднесите блок ближе и подключитесь снова.'],
+    NEW_BLE_WRITE: ['蓝牙发送失败，已停止后续发送；请重新连接后完整下载。', 'Bluetooth transmission failed. Further writes stopped. Reconnect and download the complete program again.', 'Falha no envio Bluetooth. Os envios seguintes foram interrompidos. Reconecte e transfira o programa completo novamente.', '藍牙傳送失敗，已停止後續傳送；請重新連線後完整下載。', 'Ошибка передачи Bluetooth. Отправка остановлена. Подключитесь заново и загрузите программу полностью.'],
+    NEW_FW_USB_ONLY: ['固件更新仅支持 USB，请先切换到 USB 并连接主机。', 'Firmware updates require USB. Switch to USB and connect the device first.', 'A atualização de firmware requer USB. Mude para USB e conecte o dispositivo primeiro.', '韌體更新僅支援 USB，請先切換至 USB 並連接主機。', 'Для обновления прошивки нужен USB. Переключитесь на USB и подключите блок.']
+};

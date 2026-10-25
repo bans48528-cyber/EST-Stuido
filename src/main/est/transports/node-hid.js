@@ -1,6 +1,7 @@
 import HID from 'node-hid';
 
 import {EstTransport} from './transport';
+import {HidDiscovery} from './hid-discovery';
 
 export class NodeHidEstTransport extends EstTransport {
     constructor (handle, reportId = 0) {
@@ -70,7 +71,11 @@ export class NodeHidEstTransport extends EstTransport {
     }
 }
 
-export const createNodeHidEstTransportFactory = () => ({
-    listDevices: () => Promise.resolve(HID.devices()),
-    open: device => Promise.resolve(new NodeHidEstTransport(new HID.HID(device.path)))
-});
+export const createNodeHidEstTransportFactory = () => {
+    const discovery = new HidDiscovery();
+    return {
+        listDevices: () => discovery.listDevices(),
+        open: device => Promise.resolve(new NodeHidEstTransport(new HID.HID(device.path))),
+        dispose: () => discovery.close()
+    };
+};

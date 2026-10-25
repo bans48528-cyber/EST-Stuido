@@ -627,7 +627,20 @@ module.exports = function (source) {
         );
     }
 
+    const fileMenuEnd = '                                    )}</SB3Downloader>\n' +
+        '                                </MenuSection>\n';
+    if (transformedSource.includes(fileMenuEnd)) {
+        transformedSource = transformedSource.replace(fileMenuEnd, `${fileMenuEnd}` +
+            '                                <EstInputCompatibilityMenu\n' +
+            '                                    locale={this.props.locale}\n' +
+            '                                    onRequestClose={this.props.onRequestCloseFile}\n' +
+            '                                />\n');
+    } else if (source.includes('onStartSelectingFileUpload')) {
+        throw new Error('Unable to locate the file menu for input compatibility settings.');
+    }
+
     return [
+        "import EstInputCompatibilityMenu from 'est-input-compatibility-menu';",
         "import EstCameraButton from 'est-camera-button';",
         "import EstCodeDrawerToggle from 'est-code-drawer-toggle';",
         "import HardwareMenu from 'est-hardware-menu';",

@@ -19,4 +19,4 @@ export const setHardwareContext = (id, loading = false) => {
 
 export const isEstHardwareActive = () => !busy && getHardwareProfile(hardwareId).adapter === 'est-hid';
 
-export const isAiHardwareActive = () => !busy && ['est', 'spark-ai'].includes(hardwareId);
+export const isAiHardwareActive = () => !busy && ['est', 'spark-ai', 'new-ai'].includes(hardwareId);

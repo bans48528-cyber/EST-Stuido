@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const babel = require('@babel/core');
 const root = path.resolve(__dirname, '..');
 const load = (file, overrides = {}) => {
@@ -12,7 +13,7 @@ const load = (file, overrides = {}) => {
     new Function('require', 'module', 'exports', code)(name => {
         if (Object.prototype.hasOwnProperty.call(overrides, name)) return overrides[name];
         if (name.endsWith('.css')) return {};
-        if (name.startsWith('.')) return load(path.resolve(path.dirname(filename), name + '.js'), overrides);
+        if (name.startsWith('.')) return load(path.resolve(path.dirname(filename), `${name}.js`), overrides);
         return require(name);
     }, module, module.exports);
     return module.exports;
@@ -20,7 +21,9 @@ const load = (file, overrides = {}) => {
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const deferred = () => {
     let resolve;
-    const promise = new Promise(done => { resolve = done; });
+    const promise = new Promise(done => {
+        resolve = done;
+    });
     return {promise, resolve};
 };
 
@@ -30,12 +33,20 @@ const deferred = () => {
     let onRead;
     let closed = false;
     const transport = new NodeHidEstTransport({
-        read: callback => { nativeReads++; onRead = callback; },
-        readTimeout: () => { throw new Error('Synchronous HID reads must never run'); },
-        close: () => { closed = true; }
+        read: callback => {
+            nativeReads++; onRead = callback;
+        },
+        readTimeout: () => {
+            throw new Error('Synchronous HID reads must never run');
+        },
+        close: () => {
+            closed = true;
+        }
     });
     let ticks = 0;
-    const timer = setInterval(() => { ticks++; }, 5);
+    const timer = setInterval(() => {
+        ticks++;
+    }, 5);
     for (let i = 0; i < 4; i++) assert.equal((await transport.read(30)).length, 0);
     clearInterval(timer);
     assert.ok(ticks >= 5, 'event loop must continue while HID replies are missing');
@@ -53,30 +64,98 @@ const deferred = () => {
     onRead(null, [5]);
     await assert.rejects(transport.read(10), /disconnected/);
 
+    const {HidDiscovery} = load('src/main/est/transports/hid-discovery.js');
+    const fixtureDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'est-hid-discovery-'));
+    const nativeFixture = path.join(fixtureDirectory, 'native.cjs');
+    fs.writeFileSync(nativeFixture, `
+        const {isMainThread}=require('worker_threads');
+        if(isMainThread)throw Error('Native enumeration must run outside the main thread');
+        exports.devices=(vendorId,productId)=>{
+            const end=Date.now()+150;while(Date.now()<end){}
+            return ['a','b'].map(path=>({path,vendorId,productId}));
+        };
+    `);
+    const discovery = new HidDiscovery({nativePath: nativeFixture, timeoutMs: 1000});
+    const firstScan = discovery.listDevices();
+    assert.strictEqual(discovery.listDevices(), firstScan, 'concurrent discovery must share one native scan');
+    let enumerationTicks = 0;
+    const enumerationTimer = setInterval(() => {
+        enumerationTicks++;
+    }, 5);
+    const discovered = await firstScan;
+    clearInterval(enumerationTimer);
+    assert.ok(enumerationTicks >= 3, 'the main event loop must run during a blocking native scan');
+    assert.deepStrictEqual(discovered, ['a', 'b'].map(devicePath => ({
+        path: devicePath, vendorId: 0x0483, productId: 0x5750
+    })), 'discovery filters by EST IDs and preserves multiple devices');
+    discovery.close();
+    await assert.rejects(discovery.listDevices(), /closed/);
+
+    const slowDiscovery = new HidDiscovery({nativePath: nativeFixture, timeoutMs: 20});
+    const timedScan = slowDiscovery.listDevices();
+    await assert.rejects(timedScan, /timed out/);
+    assert.strictEqual(slowDiscovery.listDevices(), timedScan,
+        'a timed-out native scan keeps its slot instead of creating an accumulating queue');
+    slowDiscovery.timeoutMs = 1000;
+    await pause(300);
+    assert.equal((await slowDiscovery.listDevices()).length, 2, 'discovery recovers after the late native reply');
+    const closingScan = slowDiscovery.listDevices();
+    const closedScan = assert.rejects(closingScan, /closed/);
+    slowDiscovery.close();
+    await closedScan;
+
+    const badDiscovery = new HidDiscovery({nativePath: path.join(fixtureDirectory, 'missing.cjs')});
+    await assert.rejects(badDiscovery.listDevices(), /Cannot find module/);
+    badDiscovery.nativePath = nativeFixture;
+    assert.equal((await badDiscovery.listDevices()).length, 2, 'a crashed worker is recreated on retry');
+    badDiscovery.close();
+
+    const fakeRequire = name => {
+        assert.equal(name, 'bindings');
+        return () => 'C:/app/resources/app.asar/node_modules/node-hid/build/Release/HID.node';
+    };
+    fakeRequire.resolve = () => 'C:/app/resources/app.asar/node_modules/node-hid/nodehid.js';
+    const {resolveHidNativePath} = load('src/main/est/transports/hid-discovery.js', {
+        module: {createRequire: () => fakeRequire}
+    });
+    assert.equal(resolveHidNativePath(),
+        'C:/app/resources/app.asar.unpacked/node_modules/node-hid/build/Release/HID.node',
+        'packaged workers load the unpacked native add-on');
+    console.log('HID discovery passed: real worker isolation, EST-only IDs, one pending scan, timeout/retry/shutdown.');
+
     let calls = 0;
     let reply = {state: 'connected', status: {motors: [{angle: 1}], programStatus: {state: 0}}};
     let gate = null;
     const timers = new Map();
     let id = 0;
-    global.window = {innerWidth: 1280, innerHeight: 800,
-        addEventListener: () => {}, removeEventListener: () => {},
-        setTimeout: (callback, delay) => { timers.set(++id, {callback, delay}); return id; },
+    global.window = {innerWidth: 1280,
+        innerHeight: 800,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        setTimeout: (callback, delay) => {
+            timers.set(++id, {callback, delay}); return id;
+        },
         clearTimeout: key => timers.delete(key)};
     global.document = {hidden: false, addEventListener: () => {}, removeEventListener: () => {}};
     const {EstHardwareStatusButton} = load('src/renderer/EstHardwareStatusButton.jsx', {
-        '@electron/remote': {}, '@electron/remote/renderer': {},
+        '@electron/remote': {},
+        '@electron/remote/renderer': {},
         'react-redux': {connect: () => component => component},
         './est-i18n': {getEstText: key => key},
-        electron: {ipcRenderer: {on: () => {}, removeListener: () => {}, invoke: async name => {
-            assert.equal(name, 'est-hardware-status'); calls++;
-            return gate ? gate.promise : reply;
-        }}}
+        'electron': {ipcRenderer: {on: () => {},
+            removeListener: () => {},
+            invoke: async name => {
+                assert.equal(name, 'est-hardware-status'); calls++;
+                return gate ? gate.promise : reply;
+            }}}
     });
     const panel = new EstHardwareStatusButton({locale: 'zh-cn'});
     let renders = 0;
     panel.setState = (update, callback) => {
         const patch = typeof update === 'function' ? update(panel.state) : update;
-        if (patch) { panel.state = {...panel.state, ...patch}; renders++; panel.componentDidUpdate(); }
+        if (patch) {
+            panel.state = {...panel.state, ...patch}; renders++; panel.componentDidUpdate();
+        }
         if (callback) callback();
     };
     panel.state.isOpen = true;
@@ -114,4 +193,6 @@ const deferred = () => {
     assert.equal(timers.size, 0);
     await pause(1);
     console.log(`Hardware refresh passed: ${ticks} event-loop ticks during 120 ms HID wait; no overlapping reads, stale replies, repeated renders or hidden polling.`);
-})().catch(error => { console.error(error); process.exitCode = 1; });
+})().catch(error => {
+    console.error(error); process.exitCode = 1;
+});

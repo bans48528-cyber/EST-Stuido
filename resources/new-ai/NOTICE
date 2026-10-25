@@ -1,0 +1,6 @@
+Pika compiler executable from NEW AI 2.2.29, supplied local research extraction
+dated 2026-10-23. Original source location: resources/ByteCode/python.exe.
+Version evidence: PikaScript 1.13.4 core in the supplied NEW AI source snapshot.
+The executable and sample bytecode hashes are recorded in compiler-manifest.json
+and scripts/new-ai-compiler-fixtures.json. Only compile mode (-c/-o) is used.
+Generated programs are not executed on the computer.

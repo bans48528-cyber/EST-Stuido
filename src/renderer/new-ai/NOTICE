@@ -1,0 +1,26 @@
+NEW AI 2.2.29 integration
+
+Block definitions, Python generators and task orchestration are mechanically
+imported from the user's supplied NEW AI 2.2.29 research extraction dated
+2026-10-23. The imported Blockly core/procedure sources identify copyright
+2021 openblock.cc and Apache License 2.0:
+https://www.apache.org/licenses/LICENSE-2.0
+
+Original firmware API spellings are intentional. Integration corrections are
+kept in python-generator.js and in the importer's documented message-only
+task finisher correction. The separate USB adapter, program control, firmware
+updater and live monitoring are EST Studio integration code; they are not
+imported from the original transport. The separately bundled compiler is
+described by resources/new-ai/compiler-manifest.json. Original firmware bundle
+provenance and update boundaries are described in resources/new-ai/firmware/NOTICE.
+The programming assistant contract is derived from the same block catalog and
+uses NEW AI's separate generator, A-H port snapshot and workspace import path.
+Sensor firmware flashing is not exposed by the graphical interface. The explicit
+update-new-ai-motor-usb.js maintenance tool targets only the A-port big motor.
+Block and dropdown translations in messages.js are EST Studio integration work.
+They are applied when registering block definitions; the imported catalog,
+firmware field values and Python generators remain language-independent.
+USB and Bluetooth use separate saved connection preferences and verified NEW AI
+monitor identities. Bluetooth shares the desktop GATT transport with Spark AI,
+uses 128-byte protocol payloads and retains NEW AI's own framing and run state.
+Firmware updates remain USB-only; Bluetooth does not enter the recovery loader.

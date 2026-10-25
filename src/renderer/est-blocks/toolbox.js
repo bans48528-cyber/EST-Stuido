@@ -2,6 +2,7 @@
 import {CATEGORY_COLOURS} from './definitions';
 import {getHardwareContext} from '../hardware/context';
 import {getSparkToolboxCategories} from '../spark-ai/blocks';
+import {getNewToolboxCategories} from '../new-ai/blocks';
 import {
     getCurrentEstLocale,
     getEstText
@@ -247,6 +248,7 @@ const operatorCategory = () => `
 
 export const getEstToolboxCategories = (locale = getCurrentEstLocale(), includeVision = false) => {
     if (getHardwareContext().profile.compiler === 'spark-python') return getSparkToolboxCategories(locale);
+    if (getHardwareContext().profile.compiler === 'new-python') return getNewToolboxCategories(locale);
     if (getHardwareContext().profile.compiler !== 'est-python') return operatorCategory();
     return [
         motorCategory(locale),

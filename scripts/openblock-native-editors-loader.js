@@ -189,6 +189,7 @@ module.exports = function (source) {
             .replace(messageBoxImport, `${messageBoxImport}${estAiWorkspaceImport}` +
                 `import {attachHardwareCodeDrafts} from 'est-hardware-code-drafts';\n` +
                 `import {defineSparkBlocksWithLocale} from 'spark-ai-blocks';\n` +
+                `import {defineNewBlocksWithLocale} from 'new-ai-blocks';\n` +
                 `import {defineEstBlocksWithLocale} from 'est-block-definitions';\n`)
             .replace(localeVisibilityMarker, `        if (prevProps.isVisible && this.props.isVisible && prevProps.locale !== this.props.locale) {
             this.setLocale();
@@ -196,6 +197,7 @@ module.exports = function (source) {
 ${localeVisibilityMarker}`)
             .replace(setLocaleMarker, `    setLocale (refreshWorkspace = true) {
         defineSparkBlocksWithLocale(this.ScratchBlocks, this.props.locale);
+        defineNewBlocksWithLocale(this.ScratchBlocks, this.props.locale);
         defineEstBlocksWithLocale(this.ScratchBlocks, this.props.locale);
         this.ScratchBlocks.ScratchMsgs.setLocale(this.props.locale);`)
             .replace(deviceLibraryImport, '')

@@ -4,7 +4,6 @@ import {
     EST_AI_MAX_BLOCKS,
     EST_AI_MAX_DEPTH,
     EST_AI_MAX_STACKS,
-    getEstAiBlockSpec,
     getEstAiNodeSpec
 } from './est-block-spec';
 import {normalizeEstAiBitmap} from './est-ai-bitmap';
@@ -21,10 +20,12 @@ const CONTINUOUS_MOTION_BLOCKS = new Set([
     'drive_start_dual_speed',
     'spark_motor_startWithPower',
     'spark_combined_mov_dir_power',
-    'spark_combined_motor_startWithPower'
+    'spark_combined_motor_startWithPower',
+    'new_motor_starting', 'new_motor_startWithPower', 'new_combined_motor_startWithPower',
+    'new_combined_linepatrol', 'new_combined_linepatrol_ltr'
 ]);
 const MOTION_STOP_BLOCKS = new Set(['motor_stop', 'drive_stop', 'spark_motor_stop', 'spark_combined_motor_stop',
-    'spark_control_stop']);
+    'spark_control_stop', 'new_motor_stop', 'new_combined_motor_stop', 'new_control_stop']);
 
 const isPlainObject = value => (
     value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -196,8 +197,9 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
             return;
         }
         if (descriptor.kind === 'matrix') {
-            if (typeof fields[name] !== 'string' || !/^[01]{35}$/.test(fields[name])) {
-                addError(state, 'INVALID_MATRIX', `${path}.fields.${name}`, '矩阵图案必须是 35 位 0/1 字符串');
+            const length = descriptor.length || 35;
+            if (typeof fields[name] !== 'string' || fields[name].length !== length || !/^[01]+$/.test(fields[name])) {
+                addError(state, 'INVALID_MATRIX', `${path}.fields.${name}`, `矩阵图案必须是 ${length} 位 0/1 字符串`);
             }
             normalizedFields[name] = fields[name];
             return;
@@ -262,6 +264,11 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
                 addError(state, 'INVALID_TEXT', inputPath, '文本必须是长度不超过 1024 的字符串或数值');
             }
             normalizedInputs[name] = value;
+        } else if (descriptor.kind === 'colour') {
+            if (typeof value !== 'string' || !/^#[0-9a-f]{6}$/i.test(value)) {
+                addError(state, 'INVALID_COLOUR', inputPath, '颜色必须是 #RRGGBB 格式');
+            }
+            normalizedInputs[name] = value;
         } else if (descriptor.kind === 'enum') {
             const enumValue = String(value);
             if (!descriptor.values.includes(enumValue)) {
@@ -287,7 +294,7 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
     });
 
     const normalized = {type: node.type};
-    if (node.type === 'spark_control_break' && !state.loopDepth) {
+    if (['spark_control_break', 'new_control_break'].includes(node.type) && !state.loopDepth) {
         addError(state, 'BREAK_OUTSIDE_LOOP', path, '退出循环积木必须位于循环内部');
     }
     if (Object.keys(spec.fields).length) normalized.fields = normalizedFields;
@@ -300,13 +307,14 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
             normalized[property] = [];
             return;
         }
-        const loop = ['spark_control_repeat', 'spark_control_forever', 'spark_control_repeat_until']
+        const loop = ['spark_control_repeat', 'spark_control_forever', 'spark_control_repeat_until',
+            'new_control_repeat', 'new_control_forever', 'new_control_repeat_until']
             .includes(node.type);
         if (loop) state.loopDepth++;
         normalized[property] = node[property].map((child, index) => {
             const childPath = `${branchPath}[${index}]`;
             const normalizedChild = normalizeNode(child, 'statement', childPath, depth + 1, state);
-            const childSpec = normalizedChild && getEstAiBlockSpec(normalizedChild.type, state.hardwareId);
+            const childSpec = normalizedChild && getEstAiNodeSpec(normalizedChild, state.procedures, state.hardwareId);
             if (childSpec && index < node[property].length - 1 && !childSpec.acceptsNext) {
                 addError(
                     state,
@@ -338,7 +346,7 @@ const normalizeStatementSequence = (nodes, path, depth, state) => (
     nodes.map((node, index) => {
         const nodePath = `${path}[${index}]`;
         const normalized = normalizeNode(node, 'statement', nodePath, depth, state);
-        const spec = normalized && getEstAiBlockSpec(normalized.type, state.hardwareId);
+        const spec = normalized && getEstAiNodeSpec(normalized, state.procedures, state.hardwareId);
         if (spec && index < nodes.length - 1 && !spec.acceptsNext) {
             addError(
                 state,
@@ -360,7 +368,7 @@ const containsBlock = (nodes, predicate) => nodes.some(node => (
 const collectSafetyWarnings = (nodes, path, warnings) => {
     nodes.forEach((node, index) => {
         const nodePath = `${path}[${index}]`;
-        if (['control_forever', 'spark_control_forever'].includes(node.type) &&
+        if (['control_forever', 'spark_control_forever', 'new_control_forever'].includes(node.type) &&
             containsBlock(node.body || [], child => CONTINUOUS_MOTION_BLOCKS.has(child.type)) &&
             !containsBlock(node.body || [], child => MOTION_STOP_BLOCKS.has(child.type))) {
             warnings.push({
@@ -392,7 +400,7 @@ export const validateEstBlockIr = (ir, {hardwareId = 'est'} = {}) => {
         };
     }
     addUnknownKeys(state, ir, ROOT_KEYS, '$');
-    if (typeof ir.hardwareId !== 'undefined' && ir.hardwareId !== hardwareId) {
+    if ((hardwareId !== 'est' || typeof ir.hardwareId !== 'undefined') && ir.hardwareId !== hardwareId) {
         addError(state, 'HARDWARE_MISMATCH', '$.hardwareId', '程序硬件与当前硬件不一致');
     }
     state.variables = normalizeDeclarations(state, ir.variables, 'variables');

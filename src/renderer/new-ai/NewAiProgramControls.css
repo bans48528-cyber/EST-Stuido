@@ -1,0 +1,63 @@
+.program-controls {
+    min-width: max-content;
+}
+
+.operation-message {
+    left: auto;
+    right: 0;
+    transform: none;
+}
+
+.compile-icon {
+    display: none;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+@media (max-width: 1050px) {
+    .program-controls {
+        gap: 8px;
+        padding: 6px;
+    }
+
+    .slot-selector {
+        gap: 2px;
+        padding-right: 8px;
+    }
+
+    .slot-arrow {
+        width: 20px;
+        height: 48px;
+    }
+
+    .slot-display,
+    .control-button {
+        width: 48px;
+        height: 48px;
+    }
+
+    .actions {
+        gap: 8px;
+    }
+
+    .compile-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        padding: 6px;
+    }
+
+    .compile-icon {
+        display: block;
+    }
+
+    .compile-label {
+        display: none;
+    }
+}

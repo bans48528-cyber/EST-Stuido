@@ -54,14 +54,14 @@ const fakeService = () => ({
     assert.throws(() => readProjectHardware({meta: {estStudio: {version: 2, hardwareId: 'est'}}}), /VERSION/);
     for (const id of ['spark-ai', 'new-ai']) {
         const profile = getHardwareProfile(id);
-        assert.equal(profile.adapter, id === 'spark-ai' ? 'spark-usb' : null,
+        assert.equal(profile.adapter, id === 'spark-ai' ? 'spark-usb' : 'new-usb',
             'other hardware must not inherit EST protocol');
-        assert.equal(profile.compiler, id === 'spark-ai' ? 'spark-python' : null);
-        assert.equal(profile.programSlots, id === 'spark-ai' ? 10 : 0);
+        assert.equal(profile.compiler, id === 'spark-ai' ? 'spark-python' : 'new-python');
+        assert.equal(profile.programSlots, id === 'spark-ai' ? 10 : 20);
         assert.equal(readProjectHardware(createEstDefaultProjectData(id)).id, id);
         const blocks = createEstDefaultProjectData(id).targets[1].blocks;
         if (id === 'spark-ai') assert.equal(Object.values(blocks)[0].opcode, 'spark_event_whenflagclicked');
-        else assert.deepStrictEqual(blocks, {});
+        else assert.equal(Object.values(blocks)[0].opcode, 'new_event_whenflagclicked');
     }
     for (const dictionary of Object.values(messages)) {
         assert.deepStrictEqual(Object.keys(dictionary).sort(), Object.keys(messages.en).sort());
@@ -71,12 +71,14 @@ const fakeService = () => ({
     const service = fakeService();
     const sparkService = fakeService();
     sparkService.setDiscoveryActive = active => { sparkService.discoveryActive = active; };
+    const newService = fakeService();
+    newService.setDiscoveryActive = active => { newService.discoveryActive = active; };
     console.log('Checking hardware sessions...');
     let firmwareBusy = false;
     let sourceStops = 0;
     let remembered = 'est';
     const writes = [];
-    const session = new HardwareSession({service, adapters: {'spark-usb': sparkService},
+    const session = new HardwareSession({service, adapters: {'spark-usb': sparkService, 'new-usb': newService},
         preferences: {read: () => remembered, write: id => { writes.push(id); remembered = id; }},
         stopSources: () => { sourceStops++; },
         isFirmwareBusy: () => firmwareBusy});
@@ -123,8 +125,14 @@ const fakeService = () => ({
     readGate.resolve(); await background; await changing;
     assert.ok(lateFinished);
     assert.equal(session.hardwareId, 'new-ai');
+    assert.equal(newService.discoveryActive, true, 'NEW AI selection activates its isolated USB discovery');
+    assert.throws(() => session.requireAdapter('spark-usb'), /NOT_READY/);
+    session.requireAdapter('new-usb');
     assert.equal(service.disconnects, beforeDisconnect + 1);
     await session.select({hardwareId: 'est'});
+    assert.equal(newService.discoveryActive, false);
+    assert.equal(newService.disconnects, 1, 'switching from NEW AI releases its USB handle');
+    assert.equal(newService.stops, 0, 'read-only NEW AI selection never sends program control');
     service.pythonProgramActive = true;
     const stop = service.stopCurrentProgram;
     service.stopCurrentProgram = async () => { throw new Error('STOP failed'); };
@@ -160,9 +168,10 @@ const fakeService = () => ({
             const initial = createEstDefaultProjectData();
             assert.equal(readProjectHardware(initial).id, hardwareId);
             const blocks = Object.values(initial.targets[1].blocks);
-            assert.equal(blocks.length, hardwareId === 'new-ai' ? 0 : 1);
+            assert.equal(blocks.length, 1);
             if (blocks.length) assert.equal(blocks[0].opcode,
-                hardwareId === 'spark-ai' ? 'spark_event_whenflagclicked' : 'event_program_start');
+                ({'spark-ai': 'spark_event_whenflagclicked', 'new-ai': 'new_event_whenflagclicked',
+                    est: 'event_program_start'})[hardwareId]);
         }
         preferences.write('spark-ai');
         const restoredSpark = fakeService();

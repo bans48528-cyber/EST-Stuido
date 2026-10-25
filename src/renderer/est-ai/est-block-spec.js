@@ -9,6 +9,7 @@ import {
 import {EST_PIANO_MIN_MIDI_NOTE, EST_PIANO_MAX_MIDI_NOTE} from '../est-blocks/piano-resources';
 import {EST_AI_NATIVE_SPECS, getEstAiProcedureInputs} from './est-native-spec';
 import {SPARK_AI_BLOCK_SPEC} from '../spark-ai/ai-spec';
+import {NEW_AI_BLOCK_SPEC} from '../new-ai/ai-spec';
 
 export const EST_AI_IR_VERSION = 1;
 export const EST_AI_MAX_STACKS = 8;
@@ -276,6 +277,7 @@ export const EST_AI_RULE_CATEGORY_IDS = Object.freeze(Object.keys(EST_AI_RULE_CA
 export const getEstAiBlockCatalog = (hardwareId = 'est') => {
     if (hardwareId === 'est') return EST_AI_BLOCK_SPEC;
     if (hardwareId === 'spark-ai') return SPARK_AI_BLOCK_SPEC;
+    if (hardwareId === 'new-ai') return NEW_AI_BLOCK_SPEC;
     throw new Error('HARDWARE_NOT_READY');
 };
 
@@ -292,6 +294,9 @@ export const getEstAiBlockSpec = (type, hardwareId = 'est') => {
 export const getEstAiNodeSpec = (node, procedures = [], hardwareId = 'est') => {
     const base = getEstAiBlockSpec(node.type, hardwareId);
     if (!base) return null;
+    if (node.type === 'new_control_stop') {
+        return {...base, acceptsNext: Boolean(node.fields && node.fields.STOP_OPTION === 'other')};
+    }
     if (node.type !== 'procedures_call') return base;
     const procedure = procedures.find(item => item.name === (node.fields && node.fields.PROCEDURE));
     return procedure ? {...base, inputs: getEstAiProcedureInputs(procedure)} : base;

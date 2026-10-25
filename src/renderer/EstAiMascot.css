@@ -21,10 +21,10 @@
 .mascot[data-state="success"] .successEffect,
 .mascot[data-state="error"] .errorEffect { display: block; }
 
-.mascot[data-state="idle"] .body { animation: float 3.2s ease-in-out infinite; }
-.mascot[data-state="idle"] .eye { animation: blink 5.8s ease-in-out infinite; }
-.mascot[data-state="idle"] .antennaTip { animation: breathe 2.6s ease-in-out infinite; }
-.mascot[data-state="idle"] .shadow { animation: shadowBreathe 3.2s ease-in-out infinite; }
+/* Animate the fixed HTML box, rather than SVG geometry. SVG transforms caused a
+   full layout on every idle frame in Electron 15, including while typing elsewhere. */
+.mascot[data-state="idle"] { animation: float 3.2s ease-in-out infinite; }
+.mascot[data-state="idle"][data-animated="true"] { will-change: transform; }
 .mascot[data-state="thinking"] .body { animation: lean 1.8s ease-in-out infinite; }
 .mascot[data-state="thinking"] .antenna { animation: antennaThink 1.8s ease-in-out infinite; }
 .antenna { transform-origin: 50% 100% !important; }
@@ -52,16 +52,14 @@
 .mascot[data-compact="true"] { width: 34px; height: 36px; }
 .mascot[data-compact="true"] .shadow,
 .mascot[data-compact="true"] .effect { display: none; }
-.mascot[data-compact="true"] .body { animation-name: compactFloat; }
+.mascot[data-compact="true"][data-state="idle"] { animation-name: compactFloat; }
+.mascot[data-animated="false"],
 .mascot[data-animated="false"] *,
 .mascot[data-animated="false"] *::before,
 .mascot[data-animated="false"] *::after { animation-play-state: paused !important; }
 
-@keyframes float { 0%,100% { transform: translateY(1px); } 50% { transform: translateY(-5px) rotate(1deg); } }
-@keyframes compactFloat { 0%,100% { transform: translateY(1px); } 50% { transform: translateY(-3px); } }
-@keyframes blink { 0%,43%,47%,100% { transform: scaleY(1); } 45% { transform: scaleY(.08); } }
-@keyframes breathe { 0%,100% { opacity: .76; transform: scale(.94); } 50% { opacity: 1; transform: scale(1.07); } }
-@keyframes shadowBreathe { 0%,100% { opacity: .8; } 50% { opacity: .5; transform: scaleX(.85); } }
+@keyframes float { 0%,100% { transform: translate3d(0,1px,0); } 50% { transform: translate3d(0,-5px,0) rotate(1deg); } }
+@keyframes compactFloat { 0%,100% { transform: translate3d(0,1px,0); } 50% { transform: translate3d(0,-3px,0); } }
 @keyframes lean { 0%,100% { transform: translate(-3px,2px) rotate(-12deg); } 50% { transform: translate(3px,-4px) rotate(-7deg); } }
 @keyframes antennaThink { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(12deg); } }
 @keyframes orbit { to { transform: rotate(360deg); } }
@@ -77,7 +75,7 @@
 @keyframes sink { 0% { transform: translateY(0); } 25%,100% { transform: translateY(13px) rotate(-5deg); } 42%,62% { transform: translate(3px,14px) rotate(-2deg); } 52%,72% { transform: translate(-3px,14px) rotate(-6deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-    .mascot *, .mascot *::before, .mascot *::after { animation: none !important; transition: none !important; }
+    .mascot, .mascot *, .mascot *::before, .mascot *::after { animation: none !important; transition: none !important; }
     .mascot[data-state="thinking"] .body { transform: rotate(-8deg); }
     .mascot[data-state="replying"] .body { transform: rotate(3deg); }
     .mascot[data-state="success"] .body { transform: rotate(5deg); }

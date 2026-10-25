@@ -1,0 +1,9 @@
+{
+  "deviceList": [{"port":"0"},{"port":"1"},{"port":"2"},{"port":"3"},{"port":"4"},{"port":"5"},{"port":"6"},{"port":"7"}],
+  "remotelist": {"up":0,"down":0,"left":0,"right":0,"y":0,"a":0,"b":0,"x":0,"r1":0,"r2":0,"l1":0,"l2":0,"l_rock_x":0,"l_rock_y":0,"r_rock_x":0,"r_rock_y":0},
+  "gyrolist": {"yaw":220,"pitch":9,"roll":5},
+  "flashlist": {"all":31.73,"surplus":30.99},
+  "adclist": {"ch0":0.06,"ch1":0.06,"ch2":0.06,"ch3":0.06,"ch4":0.05,"ch5":0.06,"ch6":0.06,"ch7":0.06,"bat":15,"sound":0.12},
+  "versionlist": {"ver":214},
+  "estlist": {"est":"NULL"}
+}

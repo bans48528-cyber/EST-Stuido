@@ -1,12 +1,12 @@
 /* eslint-disable global-require, no-negated-condition */
-// Isolated Electron renderer test. Never opens the user's project or makes an API request.
+// Isolated Electron renderer test. Network is disabled unless --online-new-ai is explicitly supplied.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const {spawnSync} = require('child_process');
 
 if (!process.env.EST_AI_UI_CHILD) {
-    const result = spawnSync(process.execPath, [__filename], {
+    const result = spawnSync(process.execPath, [__filename, ...process.argv.slice(2)], {
         env: {...process.env, EST_AI_UI_CHILD: '1', NODE_OPTIONS: '--openssl-legacy-provider'},
         stdio: 'inherit',
         windowsHide: true
@@ -45,9 +45,10 @@ if (!process.env.EST_AI_UI_CHILD) {
             return;
         }
         fs.copyFileSync(path.join(fixture, 'index.html'), path.join(output, 'index.html'));
-        const result = spawnSync(require('electron'), [path.join(fixture, 'main.js'), output], {
-            env: {...process.env, NODE_OPTIONS: ''}, stdio: 'inherit', windowsHide: true
-        });
+        const result = spawnSync(require('electron'),
+            [path.join(fixture, 'main.js'), output, ...process.argv.slice(2)], {
+                env: {...process.env, NODE_OPTIONS: ''}, stdio: 'inherit', windowsHide: true
+            });
         process.exitCode = result.status === null ? 1 : result.status;
     });
 }

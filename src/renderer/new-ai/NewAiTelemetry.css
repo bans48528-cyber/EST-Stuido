@@ -1,0 +1,78 @@
+.summary dd,
+.values dd {
+    font-variant-numeric: tabular-nums;
+}
+
+.heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px 16px;
+    flex-wrap: wrap;
+    margin: 18px 0 10px;
+}
+
+.heading h3 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.readings {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin: 0;
+}
+
+.values > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: 100%;
+}
+
+.summary dt,
+.values dt,
+.muted {
+    color: #53677d;
+}
+
+.values dd {
+    margin: 0;
+}
+
+.targets {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.target {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    padding-top: 8px;
+    border-top: 1px solid #dce3ec;
+}
+
+.target > span {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 800px) {
+    .port {
+        grid-template-columns: 18px minmax(0, 1fr);
+    }
+
+    .readings {
+        grid-column: 2;
+    }
+}

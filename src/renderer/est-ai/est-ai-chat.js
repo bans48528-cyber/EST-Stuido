@@ -7,6 +7,7 @@ import {compileEstBlockIrToXml} from './est-block-compiler';
 import {getEstText} from '../est-i18n';
 import {getHardwareProfile} from '../../common/hardware-profiles';
 import {SPARK_AI_SAMPLE_IR, getSparkAiBlockDescription} from '../spark-ai/ai-spec';
+import {NEW_AI_SAMPLE_IR, getNewAiBlockDescription} from '../new-ai/ai-spec';
 
 export const SAMPLE_IR = {
     version: 1,
@@ -22,7 +23,8 @@ export const SAMPLE_IR = {
     }]
 };
 
-export const getAiSampleIr = (hardwareId = 'est') => (hardwareId === 'spark-ai' ? SPARK_AI_SAMPLE_IR : SAMPLE_IR);
+export const getAiSampleIr = (hardwareId = 'est') =>
+    ({'spark-ai': SPARK_AI_SAMPLE_IR, 'new-ai': NEW_AI_SAMPLE_IR}[hardwareId] || SAMPLE_IR);
 
 const RULE_CATEGORY_PATTERNS = {
     movement: /(前进|后退|倒车|小车|行驶|移动|转向|转弯|巡线|循迹|驱动|左转|右转|move|drive|steer|turn|line.?follow|wheel)/i,
@@ -111,9 +113,10 @@ export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareC
     const catalog = getEstAiBlockSpecsForCategories(selected, hardwareId).map(spec => ({
         ...spec,
         description: (hardwareId === 'spark-ai' && getSparkAiBlockDescription(spec.type, locale)) ||
+            (hardwareId === 'new-ai' && getNewAiBlockDescription(spec.type)) ||
             getEstText(`home.blockGuide.${spec.type}`, locale)
     }));
-    const start = hardwareId === 'spark-ai' ? 'spark_event_whenflagclicked' : 'event_program_start';
+    const start = getAiSampleIr(hardwareId).stacks[0].event.type;
     const lines = [
         'You are the EST Studio programming assistant. Reply in the user\'s language. Return only JSON.',
         'Response: {"message":"concise explanation or clarification question","ir":null or EST Block IR}.',
@@ -174,6 +177,31 @@ export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareC
             'Timer is milliseconds; wait/motor duration/note BEATS use seconds. ' +
                 'Line-patrol PORT_ONE/PORT_TWO use numeric sensor indices A=0,B=1,C=2,D=3.',
             'spark_control_break is valid only inside a repeat/forever/repeat-until loop.'
+        );
+    } else if (hardwareId === 'new-ai') {
+        lines.push(
+            'NEW AI uses only new_* toolbox blocks plus supplied native data/procedure blocks. ' +
+                'Do not use EST or Spark blocks/APIs.',
+            'A descriptor.shadow is UI metadata, never an IR node. The compiler creates literal shadows. ' +
+                'Use raw literals in inputs; do not emit new_text, new_math_* or picker nodes. ' +
+                'Examples: {"type":"new_matrix_lamp_text","inputs":{"matrix_text":"HELLO"}} and ' +
+                '{"type":"new_control_wait","inputs":{"DURATION":1}}. ' +
+                'Nested input blocks must themselves be listed as catalog block types.',
+            'All eight A-H ports are shared motor/sensor ports, not Spark separate E-H motors and A-D sensors.',
+            'Motor pair PORT is ordered, such as A+D: first=left motor, second=right; ports must differ. ' +
+                'Ask for installation roles when unknown. Never assign a detected sensor port as a motor.',
+            'RGB matrix: 7 columns by 9 rows. lamp is exactly 63 binary digits, row-major, with COLOR=#RRGGBB.',
+            'Single pixel x is row 0..8, y is column 0..6; brightness is 0..100. Not an EST 180x128 screen.',
+            'new_control_break is valid only inside a loop. new_control_stop may have a following block only ' +
+                'with STOP_OPTION="other"; single/all/exit are terminal.',
+            'Movement is configured with new_combined_motor_starting (ordered pair), direction and speed. ' +
+                'new_combined_motor_startWithPower consumes POWER_ONE/POWER_TWO; preserve that order.',
+            'Line-patrol PORT_ONE/PORT_TWO are numeric indices A=0 through H=7, not letters. ' +
+                'Gray V2 CHANNEL dropdowns use 0..6 for channels 1..7.',
+            'Camera recognition blocks refer to the physical NEW AI camera on an A-H port, not the PC webcam. ' +
+                'PC webcam vision input is not supported on this target.',
+            'Use only catalog sound names (without .wav), colour-card values, modes and note names. ' +
+                'Wait DURATION and note BEATS use seconds. Broadcast MSG1..MSG32 use values 0..31.'
         );
     } else if (selected.includes('display')) {
         lines.push(
@@ -244,7 +272,7 @@ export const selectEstAiRuleCategories = (messages, hardwareId = 'est') => {
     const matched = Object.keys(RULE_CATEGORY_PATTERNS).filter(
         category => RULE_CATEGORY_PATTERNS[category].test(text)
     );
-    if (hardwareId === 'spark-ai') {
+    if (['spark-ai', 'new-ai'].includes(hardwareId)) {
         const localized = {
             movement: /avanç|avanc|mover|andar|virar|движ|впер|назад|повор/i,
             motor: /motor|мотор|двигател/i,
@@ -256,6 +284,12 @@ export const selectEstAiRuleCategories = (messages, hardwareId = 'est') => {
         Object.keys(localized).forEach(category => {
             if (localized[category].test(text) && !matched.includes(category)) matched.push(category);
         });
+    }
+    if (hardwareId === 'new-ai') {
+        if (/摄像头|相机|人脸|手势|二维码|标签识别|视觉|camera|face|gesture|vision|câmera|camera|камера|лиц/i.test(text)) {
+            matched.push('vision');
+        }
+        if (/灰度|巡迹|循迹卡|NFC|gray|greyscale|grayscale|cinza|сер[ыо]/i.test(text)) matched.push('sensing');
     }
     if (!previous.length && !matched.length && !PROGRAM_INTENT_PATTERN.test(text)) return [];
     const requested = new Set(['event', ...previous, ...matched]);

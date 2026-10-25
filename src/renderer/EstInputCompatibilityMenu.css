@@ -1,0 +1,8 @@
+.option {
+    display: block;
+    width: 210px;
+    max-width: 240px;
+    padding: 6px 0;
+    white-space: normal;
+    line-height: 1.5;
+}

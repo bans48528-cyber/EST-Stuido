@@ -13,7 +13,7 @@ export default class HardwareGate extends React.Component {
     render () {
         const supported = this.props.feature === 'ai' ? isAiHardwareActive() :
             this.props.feature === 'compiler' ? Boolean(this.state.profile.compiler) :
-                this.state.profile.adapter === (this.props.feature === 'spark' ? 'spark-usb' : 'est-hid');
+                this.state.profile.adapter === ({spark: 'spark-usb', new: 'new-usb'}[this.props.feature] || 'est-hid');
         return !this.state.busy && supported ? this.props.children : null;
     }
 }
@@ -29,4 +29,7 @@ export const withHardwareCompiler = Component => props => (
 
 export const withSparkHardware = Component => props => (
     <HardwareGate feature="spark"><Component {...props} /></HardwareGate>
+);
+export const withNewAiHardware = Component => props => (
+    <HardwareGate feature="new"><Component {...props} /></HardwareGate>
 );

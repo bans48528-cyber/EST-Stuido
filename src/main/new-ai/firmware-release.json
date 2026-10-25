@@ -1,0 +1,554 @@
+{
+  "id": "new-ai-321-original-2.2.29",
+  "hardwareId": "new-ai",
+  "version": 321,
+  "source": "NEW AI 2.2.29 / LB_FWLIB",
+  "activationFile": "app/LB_Boot2.bin",
+  "files": [
+    {
+      "path": "app/54.o",
+      "bytes": 1523,
+      "sha256": "25ff5e61561a80d72b6a40c60502e2f73a4bf3abebd29d828c1b5ba1ed20e438"
+    },
+    {
+      "path": "app/app.bin",
+      "bytes": 165888,
+      "sha256": "f00019edd6da049ae920ad091ac644f97087de55690465dbb0b03501878c8df7"
+    },
+    {
+      "path": "app/calibrate.o",
+      "bytes": 774,
+      "sha256": "c07f83f5832bb8f6edd0643b740a4009c393ec8d6e641f358057284a4b69558d"
+    },
+    {
+      "path": "app/color.bin",
+      "bytes": 5432,
+      "sha256": "389ed381cdf52a2cb249ccd4211de5a0682809cd3ca31e9a2215b74c11703453"
+    },
+    {
+      "path": "app/gray.bin",
+      "bytes": 16464,
+      "sha256": "63d61cd17d7bb86dc957c341ed19c2c7ee4353c43701b12f41c67e32b813c608"
+    },
+    {
+      "path": "app/grayv2.bin",
+      "bytes": 14224,
+      "sha256": "1cbab297f1380117ee33df4d23b2ba58f06d422e524c6c4df2d65503c91bd434"
+    },
+    {
+      "path": "app/LB_Boot2.bin",
+      "bytes": 47436,
+      "sha256": "3a0922fb32405ce5e5e1233711bc4f1fe754bb75f645b614d89fd1d51089ad32"
+    },
+    {
+      "path": "app/motor.bin",
+      "bytes": 7512,
+      "sha256": "0a934e785bb5053be4bc5a756e752c02a98dfab042d427fbb6b334da82dfda86"
+    },
+    {
+      "path": "app/NEW_AI.bin",
+      "bytes": 71104,
+      "sha256": "a4f9ca1d86d3a3d960bf2deef5a8f2a158b47fccabcdb4fc2c00ae01d2cf0c5b"
+    },
+    {
+      "path": "app/pikaNewAi.bin",
+      "bytes": 350648,
+      "sha256": "5a983a14c6195ab3d467d3013b38539527d63bf53b112062be09f7b50bc24bec"
+    },
+    {
+      "path": "app/remote.o",
+      "bytes": 793,
+      "sha256": "be14a408b6590d697c8c58813a00111cac496b694a665e202f9c0b69c3dadfba"
+    },
+    {
+      "path": "app/small_motor.bin",
+      "bytes": 7512,
+      "sha256": "07cda7cad61ede755262911d4999c7f8ef9490bf4d1270660c5cd5ed8b8d4802"
+    },
+    {
+      "path": "boot/registryApp.txt",
+      "bytes": 12,
+      "sha256": "e22d969003f294ff6964428c63e920dfb6b16d23d48dde61e7982765108ec796"
+    },
+    {
+      "path": "config/Readme.txt",
+      "bytes": 8,
+      "sha256": "6a8bfe44d42abaf81ac43e30bc063d0c6871cb7c530ccec0a415f3c36c8032d2"
+    },
+    {
+      "path": "music/A Elec Guitar.wav",
+      "bytes": 21430,
+      "sha256": "45cf0d3a9efd354df7991dfe23f64dc3037363e8615e778c2ee0357350de1e86"
+    },
+    {
+      "path": "music/A Guitar.wav",
+      "bytes": 16994,
+      "sha256": "0db68e3ed3bcc81bd82de1d6893bf1c4c332e44f4586c526813dba42e29bcec2"
+    },
+    {
+      "path": "music/A Piano.wav",
+      "bytes": 21430,
+      "sha256": "05f610ca18e44c5b311cd255983a40d671ebc388843ceaec4392504cccc8b5ad"
+    },
+    {
+      "path": "music/a-#.wav",
+      "bytes": 11622,
+      "sha256": "3338de085409043d3d9c828c7accdfcc6bb17fbac0d5b3ccfbef5498828fc156"
+    },
+    {
+      "path": "music/a-#1.wav",
+      "bytes": 11648,
+      "sha256": "012543e99c288d2afbd1095e9717365e63a4ed0f0d2f9df04d002be3b1d5bcee"
+    },
+    {
+      "path": "music/a-#2.wav",
+      "bytes": 11648,
+      "sha256": "883135d6ce40c97058b6ed48eb6e8e7680f1c72d0d7358e4da6e33c0e15abb52"
+    },
+    {
+      "path": "music/a-.wav",
+      "bytes": 11622,
+      "sha256": "3b5fc57daf580ddde13a6f5bc6f8f79f8deab2ffae8f18d462b539055fd9cc5e"
+    },
+    {
+      "path": "music/a-1.wav",
+      "bytes": 11596,
+      "sha256": "9b9dd66a93c5dbdcfe48a613b557c20b9dfd5ec16b853f84239b2656351a82c9"
+    },
+    {
+      "path": "music/a-2.wav",
+      "bytes": 11622,
+      "sha256": "9f97ca481a50f9de274bc60ec0102c7878bb70374eb399cd436e7c92b5ca43a6"
+    },
+    {
+      "path": "music/A.wav",
+      "bytes": 8310,
+      "sha256": "9444304a9f7803af8cdea20f58e342900319f321856f6ef6cadec8af635e265d"
+    },
+    {
+      "path": "music/B Elec Guitar.wav",
+      "bytes": 21430,
+      "sha256": "87f4663fcfcfb781789d28ac2ffe7584d1cb5bd964279a2a950ed071f8e9eccd"
+    },
+    {
+      "path": "music/B Guitar.wav",
+      "bytes": 16134,
+      "sha256": "47266d4d13fb554bdcd00e3421e822a1ebac47451f56cd944ea50a7e26f4cfc8"
+    },
+    {
+      "path": "music/B Piano.wav",
+      "bytes": 21430,
+      "sha256": "749675860c25d81b1a2171a845c21044c6077dc255a11da00a6e5f17bbf94d63"
+    },
+    {
+      "path": "music/b-.wav",
+      "bytes": 11622,
+      "sha256": "7f9e300524545b5564ce08bf3cf5528570a60d9f76f56cee9a5006e7ba9d2761"
+    },
+    {
+      "path": "music/b-1.wav",
+      "bytes": 11648,
+      "sha256": "7090ac7d5a6ab0e86e9cf2149fd8e3fa1a497f2fe049b5d22749ee9e47d7bd09"
+    },
+    {
+      "path": "music/b-2.wav",
+      "bytes": 11648,
+      "sha256": "999d3b7b21835efebdcd6c32d087f73a18aca41e3c83735a965b80aaefeebe68"
+    },
+    {
+      "path": "music/B.wav",
+      "bytes": 7860,
+      "sha256": "261bf998dada359da49f55742faae69de710a3c906ab2fc38d244886148c571f"
+    },
+    {
+      "path": "music/black.wav",
+      "bytes": 11922,
+      "sha256": "54de9b29a630d280545f0767353c510299930837d18bbdf86cc369a5d63aa70d"
+    },
+    {
+      "path": "music/blue.wav",
+      "bytes": 11122,
+      "sha256": "327f44cfa717fa9c9535d2d7d509d5da84859dd2d67fed248f9819fc37e267a4"
+    },
+    {
+      "path": "music/brown.wav",
+      "bytes": 11122,
+      "sha256": "5bb658cfff3da17b5ef2bce6b15d0e14bb16724215f07e5db76585d15e860046"
+    },
+    {
+      "path": "music/Button.wav",
+      "bytes": 7838,
+      "sha256": "6673ab7528ae3215300229827a0a916992e2a51e9d8b0367b76c51a7a9a2987a"
+    },
+    {
+      "path": "music/C Elec Guitar.wav",
+      "bytes": 21430,
+      "sha256": "ee7c7e5a0f9afa8bdcf3ceda165e424715b760ff03943848a540239a4477749f"
+    },
+    {
+      "path": "music/C Guitar.wav",
+      "bytes": 21708,
+      "sha256": "210b5f4b8f5a6db9c772e21bfc3778370f064c1865448e734651e96266c9a98f"
+    },
+    {
+      "path": "music/C Piano.wav",
+      "bytes": 21430,
+      "sha256": "efde0dfd9512b674f0a966fb5dc4836baddeeca37bae2c42d7b2c1b5c3f22a4f"
+    },
+    {
+      "path": "music/c-#.wav",
+      "bytes": 11622,
+      "sha256": "1680472b3f10ad4c01ef38b3d9a2a1f370cf815fe34a3cb7f0f458f75b6c8e74"
+    },
+    {
+      "path": "music/c-#1.wav",
+      "bytes": 11622,
+      "sha256": "6ea6e0307770f3e2508705726384fcb9cd2a33352d880fe7b56e285d8edecd5e"
+    },
+    {
+      "path": "music/c-#2.wav",
+      "bytes": 11622,
+      "sha256": "f4b3394605805817d51cdac8871a783b972af906be61254c619bb044227b75ca"
+    },
+    {
+      "path": "music/c-.wav",
+      "bytes": 11596,
+      "sha256": "f5b8dd232dbd902226f5217f3d930a3354e694dd3c10c0416b26d08772c2ad95"
+    },
+    {
+      "path": "music/c-1.wav",
+      "bytes": 11648,
+      "sha256": "0e0f777d2600ddebf91a67b847356fcc49aa0a3a1465cabad20f721fd8c19d66"
+    },
+    {
+      "path": "music/c-2.wav",
+      "bytes": 11622,
+      "sha256": "8ef0b8deb52dcb553919f0a675cc95c03eabeca1e331bda79e8ac4275bee4736"
+    },
+    {
+      "path": "music/C.wav",
+      "bytes": 7990,
+      "sha256": "9199661d2292b4f93db1ffe7b8439f8f62a4f6680bee44efbe772374d2607bf5"
+    },
+    {
+      "path": "music/C2 Elec Guitar.wav",
+      "bytes": 21430,
+      "sha256": "979928aefc72a29a4dfbb046d3342a6a94a9d65d4f260a71cafa441f97d4994b"
+    },
+    {
+      "path": "music/C2 Piano.wav",
+      "bytes": 21430,
+      "sha256": "28f4358a01b4765501d40b04fd7c58b54e0ccef16062d791044ef0a83a2b3972"
+    },
+    {
+      "path": "music/checkSingle.wav",
+      "bytes": 74230,
+      "sha256": "92a6f9e71938d8a2d5a087dcf90882afdb13e06631b6930b4c91f51b5819950d"
+    },
+    {
+      "path": "music/continue.wav",
+      "bytes": 13538,
+      "sha256": "7eb475455c940c2f793346dbb33d45e8b2b1d9a58f473e847eddef5f38a3eba7"
+    },
+    {
+      "path": "music/D Elec Guitar.wav",
+      "bytes": 21430,
+      "sha256": "64feaec9481c982b90e7618575839698f18a7d78fc78d5c62da2c8cc99c842f6"
+    },
+    {
+      "path": "music/D Guitar.wav",
+      "bytes": 20350,
+      "sha256": "110de659eefdb9c5314b28751e21a401313f5b1db07438dee326c3eebe4e8784"
+    },
+    {
+      "path": "music/D Piano.wav",
+      "bytes": 21430,
+      "sha256": "b3d2df6400412159c82ff58bce6f3198c86b2b99b900862e6ddeb407b6a36498"
+    },
+    {
+      "path": "music/d-#.wav",
+      "bytes": 11648,
+      "sha256": "b2cf2dce392b0fa9b2921e1be1a25e1224a9b7cc05ec3736dae5ca6c68ee6778"
+    },
+    {
+      "path": "music/d-#1.wav",
+      "bytes": 11648,
+      "sha256": "93421eecb810094c45163f57def3b76c2e36f721b3e63ad60126fd779292b96f"
+    },
+    {
+      "path": "music/d-#2.wav",
+      "bytes": 11648,
+      "sha256": "237a98281424257fe29788eeaa805287dff210f1a1294899e75e6ba1cb2b5403"
+    },
+    {
+      "path": "music/d-.wav",
+      "bytes": 11622,
+      "sha256": "6c3e64c7d2e821be4fd47507d13446b6c512af1c64ba9a945b17047b17c4c31c"
+    },
+    {
+      "path": "music/d-1.wav",
+      "bytes": 11648,
+      "sha256": "0e32f366665d319362c64fb008e7e5fd36ebde7073cba6e552df9e0005722aad"
+    },
+    {
+      "path": "music/d-2.wav",
+      "bytes": 11622,
+      "sha256": "0b6f2a3ee0d14501d9aeabf778d4547e6370dc0b9765ed584e1f8a8309a4f53b"
+    },
+    {
+      "path": "music/D.wav",
+      "bytes": 8310,
+      "sha256": "e27305dc897dba786d9a66189843818dffd947ce0a3e320dd9eddb3678e372f7"
+    },
+    {
+      "path": "music/darkread.wav",
+      "bytes": 12322,
+      "sha256": "326baf396501539149a2eb6e86dc7ffd3c284c8203b3afeefbe70ea16892f224"
+    },
+    {
+      "path": "music/devUpdata.wav",
+      "bytes": 32094,
+      "sha256": "d4b51f2d297f2194c5d7a18a19bc139ba9b6de2cb73810bc9dab671eb732da83"
+    },
+    {
+      "path": "music/DownLoad.wav",
+      "bytes": 13030,
+      "sha256": "2ae08b78e6697fed9b2e4fc5a0dbe5858eacc9681ac061d6469ca672a0688ee7"
+    },
+    {
+      "path": "music/DownLoadError.wav",
+      "bytes": 14950,
+      "sha256": "023b15ab54ab8f216f62212cb1b31414ec858da3f6c922855596f8f4ff89bda2"
+    },
+    {
+      "path": "music/DownLoadOK.wav",
+      "bytes": 15752,
+      "sha256": "ecd5b922d31ee4bb0530be451def6efc6a03279690f1118b468edea5f7233402"
+    },
+    {
+      "path": "music/E Elec Guitar.wav",
+      "bytes": 21430,
+      "sha256": "dd6c984b6f157f2009dab7a67fa7f96ecf6b2a76d59dd33e737208d8ec5d90d4"
+    },
+    {
+      "path": "music/E Guitar.wav",
+      "bytes": 19362,
+      "sha256": "0c14bce2c4a490b0dd789e436b8cb75f097d96f1219d8ffd3b0c27a36b9a3578"
+    },
+    {
+      "path": "music/E Piano.wav",
+      "bytes": 21430,
+      "sha256": "944b71f2848e3c7ae8b3aae8594fbc9950537f87d3e7bbd5760d54f030c11e91"
+    },
+    {
+      "path": "music/e-.wav",
+      "bytes": 11648,
+      "sha256": "f5c5ca4662e833647d7a0f8b60953d408fc5d45c389030db9e8403bbc4074305"
+    },
+    {
+      "path": "music/e-1.wav",
+      "bytes": 11622,
+      "sha256": "8082012094e5a1b60102bca11e8bd32c69fb6209f9e6b9c524b69a00ec949450"
+    },
+    {
+      "path": "music/e-2.wav",
+      "bytes": 11648,
+      "sha256": "218a78e8a36d14109ea2efe271b7ba4b761da5280d87c55f03bf6ea325892e63"
+    },
+    {
+      "path": "music/Elec Piano A Minor.wav",
+      "bytes": 21430,
+      "sha256": "086143410316a243e5d8254facaa06d16d7f8c339bb4708d9005d2145d824862"
+    },
+    {
+      "path": "music/Elec Piano C Major.wav",
+      "bytes": 21430,
+      "sha256": "e06165d95de32baa3c7ad5117253a16fea733c4793706f5f58bc0b20256f3af6"
+    },
+    {
+      "path": "music/Elec Piano F Major.wav",
+      "bytes": 21430,
+      "sha256": "5f05f0e30e39b872e2e6f511cc823a29dd7e09792ced0e4c54ba3bb912ee02d8"
+    },
+    {
+      "path": "music/Elec Piano G Major.wav",
+      "bytes": 21360,
+      "sha256": "29c52788aee642827950d22baa21d49da0733ae4b870aa329a2fa0faca3e27a7"
+    },
+    {
+      "path": "music/Elec Piano Loop.wav",
+      "bytes": 21338,
+      "sha256": "a8db4331f76f27e27e643d6cdb326255c4ded20ffda9354030f560b21bc70a60"
+    },
+    {
+      "path": "music/error_player.wav",
+      "bytes": 29106,
+      "sha256": "1982c621ac4d22c310e136f5a52d45a51aa2ceb84d01bf13d91d9587186856ba"
+    },
+    {
+      "path": "music/F Elec Guitar.wav",
+      "bytes": 21430,
+      "sha256": "e295b0c5c48990d756646cdb6461c0572c2eb0e28ffd2e84dc3bc298a4e68deb"
+    },
+    {
+      "path": "music/F Guitar.wav",
+      "bytes": 18642,
+      "sha256": "e99a0eb59829c8c18326fcf14459c2f0b428f5873fb4b7c802690d3e83096fd5"
+    },
+    {
+      "path": "music/F Piano.wav",
+      "bytes": 21430,
+      "sha256": "f4a7bfa0beb84e7f2fabdac0b7937d17b44d0c46fc2187badda73bf701b978a2"
+    },
+    {
+      "path": "music/f-#.wav",
+      "bytes": 11622,
+      "sha256": "6a25d4ea99ac5c66e048dfb6de36ba50d2dbbe2846c6114a11135abb98d7ce89"
+    },
+    {
+      "path": "music/f-#1.wav",
+      "bytes": 11648,
+      "sha256": "1c44b48a5d5ab391325491bccccc52386fc29841578992121ebae86e04d1d44f"
+    },
+    {
+      "path": "music/f-#2.wav",
+      "bytes": 11622,
+      "sha256": "862e48030f66e641c495573ec2fda58b51d3799aacee6c7359811515a943e486"
+    },
+    {
+      "path": "music/f-.wav",
+      "bytes": 11648,
+      "sha256": "9841aeffad1d74bab2639c253ea603f60de43af0948f385aa1e70cfecf8f8619"
+    },
+    {
+      "path": "music/f-1.wav",
+      "bytes": 11570,
+      "sha256": "6e261a15b2aba3b16c6bf1f12d56cd8662e3cba06c482b299397f909494f243b"
+    },
+    {
+      "path": "music/f-2.wav",
+      "bytes": 11622,
+      "sha256": "5d2ccc2cb37c865e13ab0299326be6ec9ea4ae7ef895ba54d202fd8a1bd394d7"
+    },
+    {
+      "path": "music/G Elec Guitar.wav",
+      "bytes": 21430,
+      "sha256": "c99b03d9f7bec94ba851aa7690d303b9c878c6cd656ddb6ab33ee99dd27b8ea1"
+    },
+    {
+      "path": "music/G Guitar.wav",
+      "bytes": 17620,
+      "sha256": "6a5c6d6bde27b4ebc1ba6773a347976afbdbceb663b62cc74c8c5166ec0538b2"
+    },
+    {
+      "path": "music/G Piano.wav",
+      "bytes": 21430,
+      "sha256": "29b5de0911aac35ede389bd98ab24c5092f4621c7d999b45ecf403c4fbb351fe"
+    },
+    {
+      "path": "music/g-#.wav",
+      "bytes": 11622,
+      "sha256": "a4ee7ed21cdbea68076cb1089042f59a71654b62acc73b7d343814c80309d291"
+    },
+    {
+      "path": "music/g-#1.wav",
+      "bytes": 11622,
+      "sha256": "28346128ab144c1f8062d0ace294a7033f0943c6c14c70fb6ab869729c34456f"
+    },
+    {
+      "path": "music/g-#2.wav",
+      "bytes": 11622,
+      "sha256": "230d5b350360314d40fff1e2024a3e974e30a3bd1396ec06bb44996c0e64b6bb"
+    },
+    {
+      "path": "music/g-.wav",
+      "bytes": 11622,
+      "sha256": "b0987def9003822ecf84461861b6cb6e08575c89090116d0493e8e0f3b5fa4af"
+    },
+    {
+      "path": "music/g-1.wav",
+      "bytes": 11596,
+      "sha256": "fb53a79fcdcd87748b9b7061055275a54bcd6b90f98a8b114d04c0e832f3c389"
+    },
+    {
+      "path": "music/g-2.wav",
+      "bytes": 11648,
+      "sha256": "1a18196a8f52046d3bbf9d78635b8651e48a6e65445ace35d54c828bc2c896a3"
+    },
+    {
+      "path": "music/gencory_player.wav",
+      "bytes": 35030,
+      "sha256": "52ed0227aecb34a6179e6f84e230cec3dd5d808937b7ce29714cd269dc2c3015"
+    },
+    {
+      "path": "music/green.wav",
+      "bytes": 11122,
+      "sha256": "6a4a210c4ad9409a9a61b277b6b309eec15924aa06a57a46aac8b6bca3a898c1"
+    },
+    {
+      "path": "music/PowerDown.wav",
+      "bytes": 21866,
+      "sha256": "a10c55efa21227d21c5b03f749dc4fe1781501a0902248fffc4d1dfe8755c557"
+    },
+    {
+      "path": "music/PowerDownNEW.wav",
+      "bytes": 14720,
+      "sha256": "50b89b1f80d09400c5b4acb5b0bf5a32add9c1f3addb38a6392ba4a9f01d736f"
+    },
+    {
+      "path": "music/red.wav",
+      "bytes": 11522,
+      "sha256": "d780c13b5cdc2dd30390edde891a2f8aae314ac6fb0a1ad5662577d468464ae5"
+    },
+    {
+      "path": "music/Start.wav",
+      "bytes": 12408,
+      "sha256": "efa8b4864bdddf721b1b5a352bb7137c2183736227e0bcccf4d5597cd12d470d"
+    },
+    {
+      "path": "music/warning.wav",
+      "bytes": 19930,
+      "sha256": "552c8596e08d4c3dece5d4bc3652cbf288a083974779021f367fc2717033d1b4"
+    },
+    {
+      "path": "music/white.wav",
+      "bytes": 11122,
+      "sha256": "63a99cc23dac8b3129030cfd88f38818fdcecbcbdc7dcdd2329258b6e9bdcc3c"
+    },
+    {
+      "path": "music/yellow.wav",
+      "bytes": 11122,
+      "sha256": "6717f4e3271bda181f74ec410094e56a278be6c3b7f9cc08e59fbee42b53de1d"
+    },
+    {
+      "path": "version/BigMotorVersion.txt",
+      "bytes": 3,
+      "sha256": "d4ee9f58e5860574ca98e3b4839391e7a356328d4bd6afecefc2381df5f5b41b"
+    },
+    {
+      "path": "version/ColorVersion.txt",
+      "bytes": 3,
+      "sha256": "8d27ba37c5d810106b55f3fd6cdb35842007e88754184bfc0e6035f9bcede633"
+    },
+    {
+      "path": "version/gray.txt",
+      "bytes": 3,
+      "sha256": "1253e9373e781b7500266caa55150e08e210bc8cd8cc70d89985e3600155e860"
+    },
+    {
+      "path": "version/grayv2.txt",
+      "bytes": 3,
+      "sha256": "16dc368a89b428b2485484313ba67a3912ca03f2b2b42429174a4f8b3dc84e44"
+    },
+    {
+      "path": "version/MiddleMotorVersion.txt",
+      "bytes": 3,
+      "sha256": "4a8596a7790b5ca9e067da401c018b3206befbcf95c38121854d1a0158e7678a"
+    },
+    {
+      "path": "version/Version.txt",
+      "bytes": 3,
+      "sha256": "8d23cf6c86e834a7aa6eded54c26ce2bb2e74903538c61bdd5d2197997ab2f72"
+    }
+  ]
+}

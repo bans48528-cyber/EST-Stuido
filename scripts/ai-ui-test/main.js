@@ -7,6 +7,10 @@ const fs = require('fs');
 const path = require('path');
 
 const output = process.argv[2];
+const onlineNewAi = process.argv.includes('--online-new-ai');
+const typingOnly = process.argv.includes('--typing-only');
+const useRunningAi = process.argv.includes('--via-running-app');
+assert.ok(!useRunningAi || onlineNewAi, 'The running-app bridge requires explicit online mode');
 const guideCaptureDirectory = process.env.EST_AI_GUIDE_CAPTURE_DIR ?
     path.resolve(process.env.EST_AI_GUIDE_CAPTURE_DIR) : null;
 const userData = path.join(output, 'electron-data');
@@ -22,8 +26,14 @@ Module._extensions['.js'] = (module, filename) => {
 };
 const {registerEstAiIpc, createEstAiService} = require('../../src/main/est/ai-service');
 const {createEstAiKeyStore, getEstAiSettingsPath} = require('../../src/main/est/ai-key-store');
+const {NewAiCompiler} = require('../../src/main/new-ai/compiler');
 Module._extensions['.js'] = originalLoader;
 let window;
+ipcMain.handle('test-typing-report', (event, report) => {
+    assert.equal(event.sender, window.webContents);
+    fs.writeFileSync(path.join(output, 'typing-performance.json'), JSON.stringify(report, null, 2));
+    console.log(`Typing performance: ${JSON.stringify(report)}; output: ${output}`);
+});
 let reply = '';
 let replyError = '';
 let releaseReply = null;
@@ -41,7 +51,7 @@ const store = createEstAiKeyStore({
 const timeout = setTimeout(() => {
     console.error('EST AI UI test timed out');
     app.exit(1);
-}, 90000);
+}, onlineNewAi ? 420000 : 180000);
 registerEstAiIpc({
     ipcMain,
     isAllowedSender: event => window && event.sender === window.webContents,
@@ -56,8 +66,79 @@ registerEstAiIpc({
         });
     }
 });
-ipcMain.handle('est-auto-connect', () => ({state: 'not-found', status: null}));
+const hardwareRequests = {est: 0, newAi: 0};
+ipcMain.handle('est-auto-connect', () => {
+    hardwareRequests.est++; return {state: 'not-found', status: null};
+});
 ipcMain.handle('spark-state', () => ({connected: false}));
+ipcMain.handle('new-ai-state', () => {
+    hardwareRequests.newAi++;
+    return {connected: true,
+        stale: false,
+        status: {version: 321,
+            ports: [
+                {port: 0, type: 'big_motor'}, {port: 1, type: 'color'}, {port: 2, type: 'ultrasion'}
+            ]}};
+});
+ipcMain.handle('test-hardware-requests', () => ({...hardwareRequests}));
+let onlineService;
+let onlineCalls = 0;
+if (onlineNewAi) {
+    const productionStore = createEstAiKeyStore({safeStorage,
+        fs,
+        getPath: () => getEstAiSettingsPath(app)});
+    onlineService = createEstAiService({keyStore: {read: () => productionStore.read(),
+        write: () => {
+            throw new Error('Online validation must not change saved settings');
+        }}});
+    if (useRunningAi) onlineService = require('./running-ai-client');
+    ipcMain.handle('test-online-status', () => onlineService.status());
+    ipcMain.handle('est-ai-online-generate', async (event, request) => {
+        assert.equal(event.sender, window.webContents);
+        assert.ok(onlineCalls < 9, 'limit online validation to nine completions including repairs');
+        const call = ++onlineCalls;
+        const started = Date.now();
+        const timer = setTimeout(() => onlineService.cancel(request.id), 90000);
+        try {
+            const status = await onlineService.status();
+            assert.equal(new URL(status.config.baseUrl).origin, 'https://faroapi.com', 'only the approved endpoint');
+            assert.equal(status.config.model, 'deepseek-v4.1-flash', 'only the approved model');
+            const data = await onlineService.generate(request);
+            fs.writeFileSync(path.join(output, `new-ai-online-response-${call}.txt`), data.content);
+            console.log(JSON.stringify({onlineCall: call,
+                elapsedMs: Date.now() - started,
+                responseCharacters: data.content.length}));
+            return {ok: true, data};
+        } catch (error) {
+            return {ok: false, error: error.message, errorCode: error.code};
+        } finally {
+            clearTimeout(timer);
+        }
+    });
+    ipcMain.handle('test-online-record', (event, record) => {
+        assert.equal(event.sender, window.webContents);
+        const report = {softwareVersion: require('../../package.json').version,
+            ...record,
+            onlineCalls,
+            hardwareAccessed: false,
+            settingsChanged: false,
+            checkedAt: new Date().toISOString()};
+        fs.writeFileSync(path.join(output, 'new-ai-online-result.json'), JSON.stringify(report, null, 2));
+        console.log(JSON.stringify({onlineCase: record.cases.at(-1) && record.cases.at(-1).id,
+            casesPassed: record.cases.length,
+            error: record.error,
+            output}));
+    });
+}
+ipcMain.handle('test-new-ai-compile', async (event, cases) => {
+    const compiler = new NewAiCompiler();
+    for (const item of cases) {
+        fs.writeFileSync(path.join(output, `${item.name}.py`), item.source);
+        const result = await compiler.compile(item.source);
+        assert.ok(result.length > 16, item.name);
+    }
+    console.log(`NEW AI assistant native Pika compilation passed: ${cases.length} programs.`);
+});
 ipcMain.handle('test-storage', () => {
     const encrypted = fs.readFileSync(configPath);
     assert.ok(!encrypted.toString('utf8').includes('test-key-not-real'));
@@ -163,7 +244,9 @@ app.whenReady().then(async () => {
         });
         assert.throws(() => blockedStore.write('test-key-not-real'), /EEXIST|ENOTDIR/);
         await window.loadFile(path.join(output, 'index.html'));
-        const result = await window.webContents.executeJavaScript('window.runEstAiUiTests()');
+        const result = await window.webContents.executeJavaScript(typingOnly ?
+            `window.runAiTypingPerformance(${process.argv.includes('--strict-typing')})` : (onlineNewAi ?
+                'window.runNewAiOnlineTests()' : 'window.runEstAiUiTests()'));
         console.log(result);
         clearTimeout(timeout);
         app.exit(0);

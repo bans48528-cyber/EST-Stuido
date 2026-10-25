@@ -1,0 +1,19 @@
+{
+  "version": 321,
+  "NewAiState": "stop",
+  "bat": "86.5",
+  "heap": "227240",
+  "voic": "0.14",
+  "flash": {"total":"32.00 mb","free":"29.80 mb"},
+  "mem": {"yaw":"-6.5","pitch":"0","roll":"1.12"},
+  "deviceList": [
+    {"port":0,"big_motor":{"speed":"0","angle":"0","circly":"0","dt":"0","version":"142","SoftwareVersion":"142"}},
+    {"port":1,"touch":{"state":0}},
+    {"port":2,"ultrasion":{"cm":"25.5"}},
+    {"port":3,"color":{"r":0,"g":128,"b":255,"lux":1234,"version":139,"SoftwareVersion":139}},
+    {"port":4,"gray":{"1":100,"2":200,"3":300,"4":400,"b1":0,"b2":1,"b3":0,"b4":1,"version":105,"Softwareversion":105}},
+    {"port":5,"gray_v2":{"1":100,"2":200,"3":300,"4":400,"5":500,"6":600,"7":700,"b1":0,"b2":1,"b3":0,"b4":1,"b5":0,"b6":1,"b7":0,"t1":120,"t2":220,"t3":320,"t4":420,"t5":520,"t6":620,"t7":720,"version":101,"Softwareversion":101}},
+    {"port":6,"camera":{"mode":6,"configs":[{"id":1,"x":160,"y":120,"w":40,"h":60,"conf":92,"learned":1,"name":"target"},{"id":0,"x":0,"y":0,"w":0,"h":0,"conf":0,"learned":0}]}},
+    {"port":7,"nfc":{"id":12345678,"version":100}}
+  ]
+}

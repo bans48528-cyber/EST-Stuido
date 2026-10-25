@@ -31,7 +31,9 @@ const createBaseTarget = ({isStage, name}) => ({
 
 const createDefaultProgramBlocks = (compiler = 'est-python') => ({
     [DEFAULT_PROGRAM_START_BLOCK_ID]: {
-        opcode: compiler === 'spark-python' ? 'spark_event_whenflagclicked' : 'event_program_start',
+        opcode: ({'spark-python': 'spark_event_whenflagclicked',
+            'new-python': 'new_event_whenflagclicked'})[compiler] ||
+            'event_program_start',
         next: null,
         parent: null,
         inputs: {},

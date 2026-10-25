@@ -95,7 +95,7 @@ export const runSparkAiUiTests = async ({workspace, panel, until}) => {
     assert.throws(() => importEstBlockIrToWorkspace({ScratchBlocks, workspace, ir: proposal.ir}));
     assert.equal(workspace.getAllBlocks(false).length, 0);
     setHardwareContext('new-ai');
-    await until(() => aiButton.hidden);
+    await until(() => !aiButton.hidden && JSON.parse(panel.state.debugSource).hardwareId === 'new-ai');
     setHardwareContext('est');
     await until(() => !aiButton.hidden);
     console.log('Spark assistant UI passed: real previews, 66-block Python syntax, ' +

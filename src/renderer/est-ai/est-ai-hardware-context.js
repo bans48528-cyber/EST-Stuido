@@ -58,3 +58,15 @@ export const createSparkAiHardwareContext = connection => {
         sensorPorts: ['A', 'B', 'C', 'D'].map((port, index) => ({port,
             type: (ports.find(item => item.port === index) || {}).type || 'unavailable'}))};
 };
+
+export const createNewAiHardwareContext = connection => {
+    if (!connection || !connection.connected || connection.stale || !connection.status ||
+        connection.status.legacyProtocol || connection.status.version !== 321) return null;
+    const ports = Array.isArray(connection.status.ports) ? connection.status.ports : [];
+    const snapshot = 'ABCDEFGH'.split('').map((port, index) => ({port,
+        type: (ports.find(item => item.port === index) || {}).type || 'unavailable'}));
+    return {source: 'NEW AI live snapshot',
+        ports: snapshot,
+        motorPorts: snapshot.filter(item => ['big_motor', 'small_motor'].includes(item.type)),
+        sensorPorts: snapshot.filter(item => !['big_motor', 'small_motor', 'none', 'unavailable'].includes(item.type))};
+};

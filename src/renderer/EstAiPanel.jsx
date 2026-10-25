@@ -13,7 +13,8 @@ import {compileEstBlockIrToXml} from './est-ai/est-block-compiler';
 import {requestEstAiBlockImport} from './est-ai/est-ai-workspace';
 import {createEstProgramStackPreviews} from './est-ai/est-program-preview';
 import {generateEstAiReply, getAiSampleIr, SAMPLE_IR} from './est-ai/est-ai-chat';
-import {createEstAiHardwareContext, createSparkAiHardwareContext} from './est-ai/est-ai-hardware-context';
+import {createEstAiHardwareContext, createSparkAiHardwareContext,
+    createNewAiHardwareContext} from './est-ai/est-ai-hardware-context';
 import {HARDWARE_CHANGED_EVENT, getHardwareContext, isAiHardwareActive} from './hardware/context';
 import {
     EST_AI_OPEN_REQUEST_EVENT,
@@ -192,6 +193,7 @@ class EstAiPanel extends React.Component {
         this.epoch = 0;
         this.mounted = false;
         this.composer = React.createRef();
+        this.composerMeasure = React.createRef();
         this.history = React.createRef();
         this.panel = React.createRef();
         this.settings = React.createRef();
@@ -200,7 +202,8 @@ class EstAiPanel extends React.Component {
             'handleLocaleChanged', 'handleOpen', 'handleClose', 'handleSettings', 'handleSettingsClose',
             'handleSaveKey', 'handleSend', 'handleCancel', 'handleNewChat', 'handleKeyDown',
             'handleInputKeyDown', 'handleDragStart', 'handleDragMove', 'handleDragEnd',
-            'handleResize', 'handleLocalPreview', 'handleProviderChange', 'handleHardwareChanged'
+            'handleResize', 'handleLocalPreview', 'handleProviderChange', 'handleHardwareChanged',
+            'scheduleComposerResize', 'resizeComposer'
         ].forEach(name => {
             this[name] = this[name].bind(this);
         });
@@ -235,9 +238,17 @@ class EstAiPanel extends React.Component {
         )) {
             this.history.current.scrollTop = this.history.current.scrollHeight;
         }
-        if (this.composer.current && previousState.input !== this.state.input) {
-            this.composer.current.style.height = 'auto';
-            this.composer.current.style.height = `${Math.min(this.composer.current.scrollHeight, 112)}px`;
+        if (this.measuredComposer !== this.composer.current) {
+            if (this.composerObserver) this.composerObserver.disconnect();
+            this.measuredComposer = this.composer.current;
+            if (this.measuredComposer && typeof ResizeObserver !== 'undefined') {
+                this.composerObserver = new ResizeObserver(this.scheduleComposerResize);
+                this.composerObserver.observe(this.measuredComposer);
+            }
+            this.scheduleComposerResize();
+        }
+        if (previousState.input !== this.state.input || previousState.locale !== this.state.locale) {
+            this.scheduleComposerResize();
         }
         if (previousProps.visible && !this.props.visible) this.handleDragEnd();
         if ((!previousProps.visible && this.props.visible) ||
@@ -250,6 +261,8 @@ class EstAiPanel extends React.Component {
     componentWillUnmount () {
         this.mounted = false;
         clearTimeout(this.mascotTimer);
+        if (this.composerFrame) window.cancelAnimationFrame(this.composerFrame);
+        if (this.composerObserver) this.composerObserver.disconnect();
         this.handleCancel();
         this.handleDragEnd();
         window.removeEventListener(EST_LOCALE_CHANGED_EVENT, this.handleLocaleChanged);
@@ -261,7 +274,7 @@ class EstAiPanel extends React.Component {
 
     getCopy () {
         const copy = COPY[this.state.locale] || COPY.en;
-        if (this.hardwareId !== 'spark-ai') return copy;
+        if (!['spark-ai', 'new-ai'].includes(this.hardwareId)) return copy;
         const suggestions = {
             'zh-cn': ['显示 HELLO，一秒后清空点阵', '用 Spark AI 点阵显示 HELLO，等待一秒后清空点阵。'],
             'zh-tw': ['顯示 HELLO，一秒後清空點陣', '用 Spark AI 點陣顯示 HELLO，等待一秒後清空點陣。'],
@@ -273,7 +286,10 @@ class EstAiPanel extends React.Component {
                 'On Spark AI, show HELLO on the matrix, wait one second, then clear it.']
         };
         const [suggestion, suggestionPrompt] = suggestions[this.state.locale] || suggestions.en;
-        return {...copy, suggestion, suggestionPrompt};
+        return {...copy,
+            suggestion,
+            suggestionPrompt: suggestionPrompt.replace(/Spark AI/g,
+                this.hardwareId === 'new-ai' ? 'NEW AI' : 'Spark AI')};
     }
 
     handleHardwareChanged () {
@@ -304,6 +320,26 @@ class EstAiPanel extends React.Component {
 
     focusComposer () {
         if (this.composer.current) this.composer.current.focus();
+    }
+
+    scheduleComposerResize () {
+        if (!this.composerFrame && this.composer.current) {
+            this.composerFrame = window.requestAnimationFrame(this.resizeComposer);
+        }
+    }
+
+    resizeComposer () {
+        this.composerFrame = null;
+        const input = this.composer.current;
+        const measure = this.composerMeasure.current;
+        if (!input || !measure) return;
+        // Measure wrapping in an isolated, invisible textarea. Never collapse the live input:
+        // that used to force two layouts of the conversation/workspace on every keystroke.
+        const width = `${input.clientWidth}px`;
+        if (measure.style.width !== width) measure.style.width = width;
+        if (measure.value !== input.value) measure.value = input.value;
+        const height = `${Math.max(36, Math.min(measure.scrollHeight, 112))}px`;
+        if (input.style.height !== height) input.style.height = height;
     }
 
     handleLocaleChanged () {
@@ -480,6 +516,8 @@ class EstAiPanel extends React.Component {
             try {
                 if (hardwareId === 'spark-ai') {
                     hardwareContext = createSparkAiHardwareContext(await ipcRenderer.invoke('spark-state'));
+                } else if (hardwareId === 'new-ai') {
+                    hardwareContext = createNewAiHardwareContext(await ipcRenderer.invoke('new-ai-state'));
                 } else {
                     const connection = await ipcRenderer.invoke('est-auto-connect', {includePortInfo: true});
                     hardwareContext = createEstAiHardwareContext(connection);
@@ -672,6 +710,49 @@ class EstAiPanel extends React.Component {
                 )}
             </article>
         );
+    }
+
+    renderConversation () {
+        // Messages are immutable. Reuse the subtree while only the draft/position/settings change,
+        // so typing never reconciles all previous answers and their block-preview images.
+        const keys = [this.state.messages, this.state.busy, this.state.phase, this.state.locale, this.hardwareId];
+        if (this.conversationCache && keys.every((key, index) => key === this.conversationCache.keys[index])) {
+            return this.conversationCache.view;
+        }
+        const copy = this.getCopy();
+        const view = (
+            <div
+                ref={this.history}
+                className={styles.conversation}
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions text"
+                aria-busy={this.state.busy}
+            >
+                {this.state.messages.length === 0 && (
+                    <div className={styles.welcome}>
+                        <span className={styles.welcomeIcon}><Icon name="spark" /></span>
+                        <h3>{copy.welcome}</h3>
+                        <p>{copy.intro}</p>
+                        <button
+                            type="button"
+                            className={styles.suggestion}
+                            onClick={() => this.setState(
+                                {input: copy.suggestionPrompt}, () => this.focusComposer()
+                            )}
+                        >
+                            <span>{copy.suggestion}</span><Icon name="send" />
+                        </button>
+                    </div>
+                )}
+                {this.state.messages.map(message => this.renderMessage(message))}
+                {this.state.busy && <div className={styles.pending}>
+                    <span className={styles.pendingDots}><i /><i /><i /></span>{copy[this.state.phase]}
+                </div>}
+            </div>
+        );
+        this.conversationCache = {keys, view};
+        return view;
     }
 
     renderSettings () {
@@ -889,35 +970,7 @@ class EstAiPanel extends React.Component {
                         ><Icon name="close" /></button>
                     </div>
                 </header>
-                <div
-                    ref={this.history}
-                    className={styles.conversation}
-                    role="log"
-                    aria-live="polite"
-                    aria-relevant="additions text"
-                    aria-busy={this.state.busy}
-                >
-                    {this.state.messages.length === 0 && (
-                        <div className={styles.welcome}>
-                            <span className={styles.welcomeIcon}><Icon name="spark" /></span>
-                            <h3>{copy.welcome}</h3>
-                            <p>{copy.intro}</p>
-                            <button
-                                type="button"
-                                className={styles.suggestion}
-                                onClick={() => this.setState(
-                                    {input: copy.suggestionPrompt}, () => this.focusComposer()
-                                )}
-                            >
-                                <span>{copy.suggestion}</span><Icon name="send" />
-                            </button>
-                        </div>
-                    )}
-                    {this.state.messages.map(message => this.renderMessage(message))}
-                    {this.state.busy && <div className={styles.pending}>
-                        <span className={styles.pendingDots}><i /><i /><i /></span>{copy[this.state.phase]}
-                    </div>}
-                </div>
+                {this.renderConversation()}
                 <div className={styles.composerArea}>
                     <div className={styles.composer}>
                         <textarea
@@ -930,6 +983,13 @@ class EstAiPanel extends React.Component {
                             disabled={this.state.settingsOpen}
                             onChange={event => this.setState({input: event.target.value})}
                             onKeyDown={this.handleInputKeyDown}
+                        />
+                        <textarea
+                            ref={this.composerMeasure}
+                            className={styles.composerMeasure}
+                            aria-hidden="true"
+                            tabIndex={-1}
+                            readOnly
                         />
                         <button
                             type="button"
