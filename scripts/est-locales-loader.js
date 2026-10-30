@@ -2,7 +2,7 @@ const estEditorMessageOverrides = require('../src/renderer/est-editor-message-ov
 const portugueseEditorMessages = require('openblock-l10n/editor/interface/pt-br.json');
 
 /**
- * Override EST Studio-specific interface copy without editing openblock-l10n.
+ * Override ATC CodeStudio-specific interface copy without editing openblock-l10n.
  * @param {string} source - OpenBlock editor locale messages source.
  * @returns {string} transformed source with EST message overrides.
  */

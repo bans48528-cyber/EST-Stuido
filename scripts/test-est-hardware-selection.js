@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '..');
 const originalLoader = Module._extensions['.js'];
 const originalRequire = Module._load;
 const invoke = {handler: null};
-const confirm = {response: 1};
+const confirm = {response: 1, messages: [], responses: []};
 Module._extensions['.js'] = (module, filename) => {
     if (!filename.startsWith(path.join(root, 'src'))) return originalLoader(module, filename);
     module._compile(babel.transformSync(fs.readFileSync(filename, 'utf8'), {
@@ -18,7 +18,10 @@ Module._extensions['.js'] = (module, filename) => {
 };
 Module._load = function (name, parent, main) {
     if (name === 'electron') return {ipcRenderer: {invoke: (...args) => invoke.handler(...args)}};
-    if (name === '@electron/remote') return {dialog: {showMessageBox: async () => confirm}, getCurrentWindow: () => null};
+    if (name === '@electron/remote') return {dialog: {showMessageBox: async (parent, options) => {
+        confirm.messages.push(options);
+        return {response: confirm.responses.length ? confirm.responses.shift() : confirm.response};
+    }}, getCurrentWindow: () => null};
     return originalRequire.call(this, name, parent, main);
 };
 
@@ -217,20 +220,30 @@ const fakeService = () => ({
         assert.deepStrictEqual(Array.from(reopened.data), [3, 4]);
         await assert.rejects(store.write({hardwareId: '../escape', data: new Uint8Array([1])}), /UNKNOWN/);
         await assert.rejects(store.write({hardwareId: 'est', data: new Uint8Array()}), /INVALID/);
+        const savedFile = path.join(directory, 'user-project.sb3');
+        fs.writeFileSync(savedFile, 'saved project');
+        for (const item of HARDWARE_PROFILES) {
+            await store.write({hardwareId: item.id, data: new Uint8Array([1])});
+        }
+        await store.clear();
+        await store.clear();
+        for (const item of HARDWARE_PROFILES) assert.equal(await store.read(item.id), null);
+        assert.equal(fs.readFileSync(savedFile, 'utf8'), 'saved project', 'clearing drafts cannot remove saved projects');
     } finally { fs.rmSync(directory, {recursive: true, force: true}); }
 
-    const drafts = new Map();
-    console.log('Checking workspace switching...');
+    const drafts = new Map([['est', {title: 'old EST'}], ['spark-ai', {title: 'old Spark'}]]);
+    const requests = [];
+    console.log('Checking confirmed draft discard...');
     const rendererService = fakeService();
     let rendererPreference = 'est';
     const rendererSession = new HardwareSession({service: rendererService, stopSources: () => {}, isFirmwareBusy: () => false,
         preferences: {read: () => rendererPreference, write: id => { rendererPreference = id; }}});
     invoke.handler = async (channel, argument) => {
+        requests.push(channel);
         if (channel === 'hardware-state') return rendererSession.getState();
         if (channel === 'hardware-select') return rendererSession.select(argument);
-        if (channel === 'hardware-draft-read') return drafts.get(argument) || null;
-        if (channel === 'hardware-draft-write') { drafts.set(argument.hardwareId, argument); return; }
-        throw new Error(channel);
+        if (channel === 'hardware-drafts-clear') { drafts.clear(); return; }
+        throw new Error('Unexpected draft access: ' + channel);
     };
     setHardwareContext('est');
     let project = createEstDefaultProjectData('est');
@@ -244,17 +257,34 @@ const fakeService = () => ({
         }};
     let title = 'Original EST';
     const switchTo = hardwareId => switchHardwareWorkspace({vm, hardwareId, title, setTitle: next => { title = next; }});
+    const original = vm.toJSON();
+    confirm.response = 1;
+    const promptCount = confirm.messages.length;
+    await switchTo('est');
+    assert.equal(confirm.messages.length, promptCount, 'same hardware does not prompt');
+    await assert.rejects(switchTo('spark-ai'), /CANCELLED/);
+    assert.equal(vm.toJSON(), original);
+    assert.equal(title, 'Original EST');
+    assert.equal(drafts.size, 2, 'cancel leaves old drafts intact');
+    assert.ok(!requests.includes('hardware-drafts-clear'));
+    assert.equal(rendererPreference, 'est');
+
+    confirm.response = 0;
     await switchTo('spark-ai');
     assert.equal(vm.runtime.estStudioHardwareId, 'spark-ai');
+    assert.equal(drafts.size, 0);
+    assert.equal(project.targets[0].variables.original, undefined);
     project.targets[0].variables.spark = ['spark', 321];
     title = 'Spark draft';
     await switchTo('new-ai');
     await switchTo('spark-ai');
-    assert.equal(project.targets[0].variables.spark[1], 321);
-    assert.equal(title, 'Spark draft');
+    assert.equal(project.targets[0].variables.spark, undefined, 'switching back must open a fresh project');
+    assert.notEqual(title, 'Spark draft');
     await switchTo('est');
-    assert.equal(project.targets[0].variables.original[1], 123);
-    assert.equal(title, 'Original EST');
+    assert.equal(project.targets[0].variables.original, undefined, 'old EST content must never reappear');
+    assert.ok(!requests.includes('hardware-draft-read') && !requests.includes('hardware-draft-write'),
+        'switching never reads or creates persistent device drafts');
+
     const before = vm.toJSON();
     await assert.rejects(loadHardwareProject(vm, {meta: {estStudio: {version: 1, hardwareId: 'unknown'}}},
         () => { throw new Error('must not clear'); }), /UNKNOWN/);
@@ -263,45 +293,89 @@ const fakeService = () => ({
     invalid.deviceExtensions = ['vision'];
     await assert.rejects(loadHardwareProject(vm, invalid, () => { throw new Error('must not clear'); }), /EXTENSION/);
     rendererService.pythonProgramActive = true;
-    confirm.response = 1;
+    confirm.responses = [0, 1];
+    const clearCount = requests.filter(channel => channel === 'hardware-drafts-clear').length;
     await assert.rejects(switchTo('new-ai'), /CANCELLED/);
     assert.equal(vm.toJSON(), before);
-    assert.equal(getHardwareContext().profile.id, 'est');
-    assert.equal(rendererPreference, 'est', 'cancelled renderer switches must preserve preferences');
+    assert.equal(rendererPreference, 'est');
+    assert.equal(requests.filter(channel => channel === 'hardware-drafts-clear').length, clearCount,
+        'declining the device stop also preserves drafts');
     confirm.response = 0;
     await switchTo('new-ai');
     assert.equal(rendererService.stops, 1);
-    assert.equal(getHardwareContext().busy, false);
-    const diskGate = deferred();
-    const realInvoke = invoke.handler;
-    invoke.handler = async (channel, argument) => {
-        if (channel === 'hardware-draft-read') await diskGate.promise;
-        return realInvoke(channel, argument);
-    };
-    const diskSwitch = switchTo('spark-ai');
+
+    const snapshotGate = deferred();
+    const realSave = vm.saveProjectSb3;
+    vm.saveProjectSb3 = async () => { await snapshotGate.promise; return realSave(); };
+    const pendingSwitch = switchTo('spark-ai');
     await assert.rejects(loadHardwareProject(vm, createEstDefaultProjectData('est'),
-        () => { throw new Error('must not replace workspace during draft IO'); }), /BUSY/);
-    diskGate.resolve(); await diskSwitch;
-    invoke.handler = realInvoke;
-    const beforeDiskError = vm.toJSON();
+        () => { throw new Error('must not replace workspace during confirmation/snapshot'); }), /BUSY/);
+    snapshotGate.resolve(); await pendingSwitch;
+    vm.saveProjectSb3 = realSave;
+    const realInvoke = invoke.handler;
+    const beforeClearError = vm.toJSON();
+    const titleBeforeError = title;
     invoke.handler = async (channel, argument) => {
-        if (channel === 'hardware-draft-write') throw new Error('Disk full');
+        if (channel === 'hardware-drafts-clear') throw new Error('HARDWARE_DRAFT_CLEAR');
         return realInvoke(channel, argument);
     };
-    await assert.rejects(switchTo('est'), /Disk full/);
-    assert.equal(vm.toJSON(), beforeDiskError);
+    await assert.rejects(switchTo('est'), /HARDWARE_DRAFT_CLEAR/);
+    assert.equal(vm.toJSON(), beforeClearError, 'clear failure restores the previous workspace');
+    assert.equal(title, titleBeforeError);
+    assert.equal(rendererPreference, 'spark-ai');
     invoke.handler = realInvoke;
     await switchTo('est');
     await assert.rejects(loadHardwareProject(vm, createEstDefaultProjectData('spark-ai'),
         () => { throw new Error('Corrupt project'); }), /Corrupt project/);
     assert.equal(rendererSession.hardwareId, 'est');
-    assert.equal(rendererPreference, 'est', 'failed project imports restore the previously saved selection');
+    assert.equal(rendererPreference, 'est');
+
+    const fileProject = createEstDefaultProjectData('spark-ai');
+    fileProject.targets[0].variables.fileOnly = ['fileOnly', 777];
+    const savedFile = JSON.stringify(fileProject);
+    await vm.loadProject(savedFile);
+    assert.equal(project.targets[0].variables.fileOnly[1], 777);
     await switchTo('new-ai');
-    setHardwareContext('est');
-    assert.equal(await initializeHardwareSelection(), 'new-ai');
-    await vm.loadProject(JSON.stringify(createEstDefaultProjectData('spark-ai')));
-    assert.equal(getHardwareContext().profile.id, 'spark-ai');
-    assert.equal(rendererPreference, 'spark-ai', 'explicit project metadata takes precedence over saved selection');
-    await switchTo('est');
-    console.log('Hardware selection passed: legacy migration, target isolation, draft recovery, busy transfers, confirmed stop and stale background requests.');
+    await switchTo('spark-ai');
+    assert.equal(project.targets[0].variables.fileOnly, undefined, 'file content is not retained as a device draft');
+    await vm.loadProject(savedFile);
+    assert.equal(project.targets[0].variables.fileOnly[1], 777, 'the explicitly saved project can still be reopened');
+    assert.equal(JSON.stringify(fileProject), savedFile);
+    const beforeBusy = confirm.messages.length;
+    rendererSession.operations++;
+    await assert.rejects(switchTo('est'), /BUSY/);
+    rendererSession.operations--;
+    assert.equal(confirm.messages.length, beforeBusy, 'busy operation does not show a discard dialog');
+
+    // Manual Python drafts use the same explicit discard boundary.
+    const {attachHardwareCodeDrafts} = require('../src/renderer/hardware/code-drafts');
+    const {HARDWARE_DRAFTS_DISCARDED_EVENT} = require('../src/renderer/hardware/context');
+    const previousWindow = global.window;
+    const previousCustomEvent = global.CustomEvent;
+    global.window = new EventTarget();
+    global.CustomEvent = class extends Event { constructor (type, options = {}) { super(type); this.detail = options.detail; } };
+    try {
+        setHardwareContext('est');
+        const editor = {props: {isCodeEditorLocked: false, codeEditorValue: 'old handwritten EST'},
+            workspaceToCode: () => 'generated ' + getHardwareContext().profile.id};
+        editor.props.onToggleHardwareCodeLock = () => { editor.props.isCodeEditorLocked = !editor.props.isCodeEditorLocked; };
+        editor.props.onSetCodeEditorValue = value => { editor.props.codeEditorValue = value; };
+        const detach = attachHardwareCodeDrafts(editor);
+        setHardwareContext('est', true); setHardwareContext('spark-ai');
+        editor.props.isCodeEditorLocked = false;
+        editor.props.codeEditorValue = 'old handwritten Spark';
+        setHardwareContext('spark-ai', true); setHardwareContext('est');
+        assert.equal(editor.props.codeEditorValue, 'old handwritten EST');
+        window.dispatchEvent(new CustomEvent(HARDWARE_DRAFTS_DISCARDED_EVENT));
+        assert.equal(editor.props.isCodeEditorLocked, true);
+        assert.equal(editor.props.codeEditorValue, 'generated est');
+        setHardwareContext('est', true); setHardwareContext('spark-ai');
+        assert.equal(editor.props.isCodeEditorLocked, true);
+        assert.equal(editor.props.codeEditorValue, 'generated spark-ai', 'discard clears handwritten drafts for every device');
+        detach();
+    } finally {
+        global.window = previousWindow;
+        global.CustomEvent = previousCustomEvent;
+    }
+    console.log('Hardware selection passed: confirmation/cancel, empty target workspaces, no legacy draft restoration, draft-only cleanup, manual Python reset, rollback and saved project reopening.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

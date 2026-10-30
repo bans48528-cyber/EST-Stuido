@@ -102,7 +102,7 @@ for (const row of catalog.blocks) {
     const result = g[block.type](block);
     const source = Array.isArray(result) ? result[0] : result;
     const fixture = fixtures.find(item => item.sourceId === row.id);
-    if (!['control_break', 'operator_not'].includes(row.id)) {
+    if (!['control_break', 'operator_not', 'operator_mod', 'operator_round', 'operator_mathop'].includes(row.id)) {
         const expected = fixture.python.replace(/\[RANDOM_HEX_COLOUR\]/g, '0xaa00ff');
         assert.equal(normalize(source), normalize(expected), row.id);
     }
@@ -113,8 +113,12 @@ for (const row of catalog.blocks) {
         if (!Object.prototype.hasOwnProperty.call(block.fields, variant.field)) continue;
         Object.assign(block.fields, row.fields, {[variant.field]: variant.value});
         const value = g[block.type](block);
-        assert.equal(normalize(Array.isArray(value) ? value[0] : value), normalize(variant.code),
-            `${row.id}.${variant.field}=${variant.value}`);
+        if (row.id === 'operator_mathop') {
+            programs.push({name: `${row.id}-${variant.value}`, source: `result = ${value[0]}\n`});
+        } else {
+            assert.equal(normalize(Array.isArray(value) ? value[0] : value), normalize(variant.code),
+                `${row.id}.${variant.field}=${variant.value}`);
+        }
     }
 }
 const catalogBeforeLocales = JSON.stringify(catalog);

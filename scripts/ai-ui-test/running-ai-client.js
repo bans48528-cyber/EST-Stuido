@@ -35,7 +35,7 @@ const invoke = (channel, payload) => {
             throw new Error('Unexpected application workspace');
         }
         const windows = process.mainModule.require('electron').BrowserWindow.getAllWindows()
-            .filter(window => window.getTitle() === ${JSON.stringify(`EST Studio ${version}`)});
+            .filter(window => window.getTitle() === ${JSON.stringify(`ATC CodeStudio ${version}`)});
         if (windows.length !== 1) throw new Error('Expected exactly one current development window');
         return windows[0].webContents.executeJavaScript(${JSON.stringify(script)});
     })()`;

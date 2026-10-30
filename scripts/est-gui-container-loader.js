@@ -1,6 +1,6 @@
 /**
  * Remove Scratch's server-side project saver, cloud connection manager and
- * state mappings for GUI surfaces already removed from EST Studio. The local
+ * state mappings for GUI surfaces already removed from ATC CodeStudio. The local
  * file workflow, extension library, VM and single code tab remain intact.
  * @param {string} source - OpenBlock GUI container source.
  * @returns {string} GUI container without unused online HOCs.

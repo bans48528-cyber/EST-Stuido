@@ -1,13 +1,13 @@
 import {
     getEstAiBlockCatalog,
-    EST_AI_RULE_CATEGORY_IDS,
-    getEstAiBlockSpecsForCategories
+    EST_AI_RULE_CATEGORY_IDS
 } from './est-block-spec';
 import {compileEstBlockIrToXml} from './est-block-compiler';
 import {getEstText} from '../est-i18n';
 import {getHardwareProfile} from '../../common/hardware-profiles';
 import {SPARK_AI_SAMPLE_IR, getSparkAiBlockDescription} from '../spark-ai/ai-spec';
 import {NEW_AI_SAMPLE_IR, getNewAiBlockDescription} from '../new-ai/ai-spec';
+import {NEW_MATRIX_TEXT_CHARACTERS, NEW_MATRIX_TEXT_MAX_LENGTH} from '../new-ai/matrix-text';
 
 export const SAMPLE_IR = {
     version: 1,
@@ -26,31 +26,7 @@ export const SAMPLE_IR = {
 export const getAiSampleIr = (hardwareId = 'est') =>
     ({'spark-ai': SPARK_AI_SAMPLE_IR, 'new-ai': NEW_AI_SAMPLE_IR}[hardwareId] || SAMPLE_IR);
 
-const RULE_CATEGORY_PATTERNS = {
-    movement: /(前进|后退|倒车|小车|行驶|移动|转向|转弯|巡线|循迹|驱动|左转|右转|move|drive|steer|turn|line.?follow|wheel)/i,
-    motor: /(单(?:个|独).*电机|马达|电机.*(?:速度|功率|角度|旋转|制动|刹车|堵转)|[A-H]\s*(?:端口)?\s*(?:的)?电机|motor|stall)/i,
-    display: new RegExp('显示|屏幕|图像|图片|绘图|画|像素|文字|文本|清屏|状态灯|灯光|矩阵|点阵|' +
-        'display|screen|image|draw|bitmap|pixel|text|matrix|matriz|status.?light', 'i'),
-    sound: /(声音|播放|蜂鸣|音量|音符|音乐|sound|beep|volume|note|music)/i,
-    control: /(等待|延时|秒|重复|循环|一直|永久|如果|否则|直到|停止|wait|repeat|loop|forever|if|else|until|stop)/i,
-    sensing: new RegExp(
-        '传感器|按键|按钮|颜色|反射光|环境光|触碰|触摸|超声波|距离|红外|陀螺仪|计时器|' +
-        '手柄|sensor|button|controller|gamepad|color|touch|ultrasonic|distance|infrared|gyro|timer', 'i'
-    ),
-    operators: new RegExp(
-        '大于|小于|等于|比较|并且|或者|逻辑|加法|减法|乘法|除法|取余|随机|拼接|字符|长度|包含|四舍五入|取整|绝对值|平方根|三角|对数|' +
-        '\\b(?:greater|less|equal|compare|and|or|not|add|subtract|multiply|divide|mod|' +
-        'random|join|letter|length|contains|round|sqrt|sin|cos|tan|abs|floor|log)\\b', 'i'
-    ),
-    variables: /(变量|计数|计分|得分|列表|数组|清单|第.+项|variable|counter|score|list|array)/i,
-    procedures: /(自定义积木|函数|子程序|参数|封装|调用|custom.?block|procedure|function|parameter|argument|call)/i
-};
-
-const PROGRAM_INTENT_PATTERN = /(程序|积木|编程|生成|创建|搭一个|做一个|机器人|program|blocks?|code|create|build|robot)/i;
-const MOTOR_FEEDBACK_PATTERN = /(跟随|跟踪|同步|闭环|实时|follow|track|synchron|feedback|\bPID\b)/i;
-
-// Use the same bounded, eligible conversation for rule selection and API history.
-// A clarification answer often contains only ports or "yes", not task keywords.
+// Keep eligible conversation history bounded; capabilities do not depend on its wording.
 const requestHistory = messages => messages.filter(message => !message.localOnly && !message.error).slice(-12);
 
 // Remove only trailing commas outside strings. Never guess missing brackets or values.
@@ -107,10 +83,18 @@ const normalizeRuleCategories = categories => {
     return unique;
 };
 
-export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareContext = null, hardwareId = 'est') => {
-    const selected = normalizeRuleCategories(categories);
+// Conversation hints never restrict access to the current hardware's programming blocks.
+export const selectEstAiRuleCategories = (messages, hardwareId = 'est') => {
+    const available = new Set(Object.values(getEstAiBlockCatalog(hardwareId)).map(spec => spec.category));
+    return EST_AI_RULE_CATEGORY_IDS.filter(category => available.has(category));
+};
+
+export const buildEstAiSystemPrompt = (locale, categories = null, hardwareContext = null, hardwareId = 'est') => {
+    // Retain the category argument for existing callers, but never use it as a capability filter.
+    if (categories !== null) normalizeRuleCategories(categories);
+    const selected = selectEstAiRuleCategories([], hardwareId);
     const profile = getHardwareProfile(hardwareId);
-    const catalog = getEstAiBlockSpecsForCategories(selected, hardwareId).map(spec => ({
+    const catalog = Object.values(getEstAiBlockCatalog(hardwareId)).map(spec => ({
         ...spec,
         description: (hardwareId === 'spark-ai' && getSparkAiBlockDescription(spec.type, locale)) ||
             (hardwareId === 'new-ai' && getNewAiBlockDescription(spec.type)) ||
@@ -118,7 +102,7 @@ export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareC
     }));
     const start = getAiSampleIr(hardwareId).stacks[0].event.type;
     const lines = [
-        'You are the EST Studio programming assistant. Reply in the user\'s language. Return only JSON.',
+        'You are the ATC CodeStudio programming assistant. Reply in the user\'s language. Return only JSON.',
         'Response: {"message":"concise explanation or clarification question","ir":null or EST Block IR}.',
         'For questions or missing essential hardware details, return ir:null. Do not invent new blocks or APIs.',
         'For program generation return the complete candidate program, including unchanged stacks for follow-up edits.',
@@ -131,7 +115,12 @@ export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareC
         'Node keys: type, fields, inputs, body, elseBody. Inputs may contain literals or nested block objects.',
         'Use strict JSON: double-quoted keys and strings, balanced object/array brackets, no comments, ' +
             'trailing commas, ellipses or JavaScript expressions. Arithmetic must use operator blocks.',
-        'Use exact names and values from the supplied local catalog. It contains all rules selected for this request.',
+        'The supplied local catalog is the complete programming capability of this hardware. ' +
+            'All its blocks are enabled.',
+        'Use loops, conditions, arithmetic, logic, text, variables, lists and custom procedures whenever needed. ' +
+            'These capabilities require no extra permission, keyword or rule-loading step.',
+        'Use this catalog as the current capability source even if an older conversation claimed otherwise.',
+        'Use exact block names, input names and values from the complete local catalog.',
         'Studio supplies built-in rules automatically; do not ask the user to upload or load this catalog.',
         'Combine the original task with subsequent clarifications; do not ask again for already confirmed details.',
         'Omit fields, inputs, body, elseBody when the block has none.',
@@ -143,7 +132,7 @@ export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareC
         'Arbitrary Python, XML, JavaScript, external image URLs and raw Blockly mutations are not accepted.',
         'Programs are proposals for user review; never claim you downloaded, applied or ran them.',
         'For a conversational answer without a program, use ir:null.',
-        `Loaded local rule categories: ${JSON.stringify(selected)}.`,
+        `Available local rule categories (all enabled): ${JSON.stringify(selected)}.`,
         `Local catalog: ${JSON.stringify(catalog)}`
     ];
     if (selected.includes('variables')) {
@@ -151,7 +140,9 @@ export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareC
             'IR.variables: [{name:"count",type:""},{name:"items",type:"list"}]. Up to 64 unique symbols.',
             'VARIABLE/LIST fields use declared names, not IDs. Initialize with set/add blocks in a start stack.',
             'Names: unique ignoring case, 1-64 characters, no controls or __proto__/constructor/prototype.',
-            'List INDEX is numeric, 1-based. Insert creates independent symbols and renames workspace collisions.'
+            'List INDEX is numeric, 1-based. Insert creates independent symbols and renames workspace collisions.',
+            'Keep list item numbers 1-based in IR. The code generator handles the runtime conversion; ' +
+                'do not subtract 1 in the blocks.'
         );
     }
     if (selected.includes('procedures')) {
@@ -164,6 +155,12 @@ export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareC
             'Inside its definition use argument_reporter_number/string/boolean with fields:{VALUE:"argument name"}.',
             'Arguments are scoped to their definition. Keep declarations and definition stacks on follow-up edits.'
         );
+    }
+    if (hardwareId === 'spark-ai' || hardwareId === 'new-ai') {
+        lines.push('Trigonometric inputs and inverse-trigonometric results use degrees. ' +
+            'The legacy mathop field ln_abs is labelled log in the toolbox and means base-10 logarithm. ' +
+            'For natural logarithms, compose log(x)/log(e) using the available math blocks. ' +
+            'Use data_lengthoflist for list item counts; the text-length block is not a list-count block.');
     }
     if (hardwareId === 'spark-ai') {
         lines.push(
@@ -192,6 +189,12 @@ export const buildEstAiSystemPrompt = (locale, categories = ['event'], hardwareC
                 'Ask for installation roles when unknown. Never assign a detected sensor port as a motor.',
             'RGB matrix: 7 columns by 9 rows. lamp is exactly 63 binary digits, row-major, with COLOR=#RRGGBB.',
             'Single pixel x is row 0..8, y is column 0..6; brightness is 0..100. Not an EST 180x128 screen.',
+            `Scrolling text supports only ${NEW_MATRIX_TEXT_CHARACTERS}; ` +
+                `keep every final displayed string within ${NEW_MATRIX_TEXT_MAX_LENGTH} characters.`,
+            'Use uppercase English display labels such as SUM, AVG, MAX, PASS, OUT, COUNT, QUALIFIED and SPECIAL, ' +
+                'with = as the separator. Translate Chinese display labels and replace unsupported punctuation. ' +
+                'This applies to text passed through variables, joins and procedure arguments too. ' +
+                'Keep explanations in the user language. Repair old incompatible display labels on follow-up edits.',
             'new_control_break is valid only inside a loop. new_control_stop may have a following block only ' +
                 'with STOP_OPTION="other"; single/all/exit are terminal.',
             'Movement is configured with new_combined_motor_starting (ordered pair), direction and speed. ' +
@@ -229,79 +232,6 @@ export const parseEstAiReply = (content, hardwareId = 'est') => {
     }
     const compiled = reply.ir === null ? null : compileEstBlockIrToXml(reply.ir, {hardwareId});
     return {message: reply.message.trim(), compiled, ir: compiled ? compiled.normalized : null};
-};
-
-const categoriesFromIr = (ir, hardwareId) => {
-    const catalog = getEstAiBlockCatalog(hardwareId);
-    const categories = [];
-    const visit = node => {
-        if (!node || typeof node !== 'object' || Array.isArray(node)) return;
-        const spec = typeof node.type === 'string' ? catalog[node.type] : null;
-        if (spec && !categories.includes(spec.category)) categories.push(spec.category);
-        Object.values(node.inputs || {}).forEach(input => visit(input));
-        (node.body || []).forEach(visit);
-        (node.elseBody || []).forEach(visit);
-    };
-    if (ir && Array.isArray(ir.stacks)) {
-        ir.stacks.forEach(stack => {
-            visit(stack.event);
-            (stack.body || []).forEach(visit);
-        });
-    }
-    for (const category of ['variables', 'procedures']) {
-        if (ir && ir[category] && ir[category].length && !categories.includes(category)) categories.push(category);
-    }
-    return categories;
-};
-
-const latestProgramCategories = (messages, hardwareId) => {
-    for (let index = messages.length - 1; index >= 0; index--) {
-        if (messages[index].role === 'assistant' && messages[index].ir) {
-            return categoriesFromIr(messages[index].ir, hardwareId);
-        }
-    }
-    return [];
-};
-
-export const selectEstAiRuleCategories = (messages, hardwareId = 'est') => {
-    const history = requestHistory(messages);
-    const text = history.filter(message => message.role === 'user' && typeof message.text === 'string')
-        .map(message => message.text)
-        .join('\n');
-    const previous = latestProgramCategories(history, hardwareId);
-    const matched = Object.keys(RULE_CATEGORY_PATTERNS).filter(
-        category => RULE_CATEGORY_PATTERNS[category].test(text)
-    );
-    if (['spark-ai', 'new-ai'].includes(hardwareId)) {
-        const localized = {
-            movement: /avanç|avanc|mover|andar|virar|движ|впер|назад|повор/i,
-            motor: /motor|мотор|двигател/i,
-            display: /mostrar|limpar|matriz|экран|матриц|показ/i,
-            sound: /tocar|música|musica|nota|звук|музык/i,
-            control: /esperar|segundo|repetir|sempre|parar|ждать|секунд|повтор|цикл|останов/i,
-            sensing: /botão|botao|controle|датчик|кноп|геймпад/i
-        };
-        Object.keys(localized).forEach(category => {
-            if (localized[category].test(text) && !matched.includes(category)) matched.push(category);
-        });
-    }
-    if (hardwareId === 'new-ai') {
-        if (/摄像头|相机|人脸|手势|二维码|标签识别|视觉|camera|face|gesture|vision|câmera|camera|камера|лиц/i.test(text)) {
-            matched.push('vision');
-        }
-        if (/灰度|巡迹|循迹卡|NFC|gray|greyscale|grayscale|cinza|сер[ыо]/i.test(text)) matched.push('sensing');
-    }
-    if (!previous.length && !matched.length && !PROGRAM_INTENT_PATTERN.test(text)) return [];
-    const requested = new Set(['event', ...previous, ...matched]);
-    if (requested.has('motor') && MOTOR_FEEDBACK_PATTERN.test(text)) {
-        requested.add('control');
-        requested.add('operators');
-    }
-    if (requested.has('variables') || requested.has('procedures')) {
-        requested.add('control');
-        requested.add('operators');
-    }
-    return EST_AI_RULE_CATEGORY_IDS.filter(category => requested.has(category));
 };
 
 const invokeCompletion = async ({id, requestMessages, invoke, isCurrent}) => {

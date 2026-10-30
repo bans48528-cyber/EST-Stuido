@@ -1,7 +1,7 @@
 /**
- * Keep EST Studio project import/export while dropping compatibility code that
+ * Keep ATC CodeStudio project import/export while dropping compatibility code that
  * only serves Scratch 1.0 files and browsers without a native TextEncoder.
- * Electron 15 provides TextEncoder, and EST Studio projects use the current
+ * Electron 15 provides TextEncoder, and ATC CodeStudio projects use the current
  * OpenBlock/Scratch 3 archive format.
  * @param {string} source - OpenBlock VM virtual-machine source.
  * @returns {string} virtual-machine source without legacy-only dependencies.

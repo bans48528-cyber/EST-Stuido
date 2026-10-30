@@ -32,7 +32,7 @@ const {
 const {getEstText} = require(path.join(rendererRoot, 'est-i18n.js'));
 
 const appSource = read('src/renderer/app.jsx');
-const homeSource = read('src/renderer/EstHome.jsx');
+const homeSource = read('src/renderer/EstHome.jsx') + read('src/renderer/est-home-content.js');
 const homeStyles = read('src/renderer/EstHome.css');
 const blockPreviewSource = read('src/renderer/est-home-block-previews.js');
 const homeEvents = read('src/renderer/est-home-events.js');
@@ -70,6 +70,12 @@ for (const asset of [
     assert.ok(fs.statSync(assetPath).size > 0, `empty home asset: ${asset}`);
 }
 
+for (const asset of ['est.png', 'spark-ai.png', 'new-ai.png']) {
+    const assetPath = path.join(root, 'src', 'renderer', 'hardware', 'assets', asset);
+    assert.ok(fs.existsSync(assetPath), `missing product asset: ${asset}`);
+    assert.ok(fs.statSync(assetPath).size > 0, `empty product asset: ${asset}`);
+}
+
 assert.match(appSource, /homeVisible: true/);
 assert.match(appSource, /homeMounted: true/);
 assert.match(appSource, /canReturnToEditor: false/);
@@ -82,7 +88,7 @@ assert.match(homeSource, /home\.nav\.files/);
 assert.match(homeSource, /home\.nav\.build/);
 assert.match(homeSource, /home\.nav\.more/);
 assert.match(homeSource, /home\.recentFiles/);
-assert.match(homeSource, /home\.returnToEditor/);
+assert.match(homeSource, /home\.returnToHardwareProject/);
 assert.match(homeSource, /this\.props\.canReturnToEditor/);
 assert.match(homeSource, /styles\.homeHidden/);
 assert.match(homeSource, /onClick=\{this\.props\.onReturnToEditor\}/);
@@ -105,7 +111,7 @@ assert.match(homeSource, /styles\.armLift/);
 assert.match(homeSource, /styles\.carWheel/);
 assert.match(homeSource, /styles\.robotSmile/);
 assert.doesNotMatch(homeSource, /PRODUCT_HEROES|productHero|productIndex|productTimer/);
-assert.match(homeSource, /project\.thumbnail \|\| fileIcon/);
+assert.match(homeSource, /project\.thumbnail \|\| projectFileIcon/);
 assert.doesNotMatch(homeSource, /src=\{editorThumbnail\}/);
 assert.match(homeSource, /home\.delete/);
 assert.match(homeSource, /home\.rename/);
@@ -121,6 +127,15 @@ assert.match(homeSource, /buildLibraryInstalled/);
 assert.match(homeSource, /est-home-open-build-guide/);
 assert.match(homeSource, /const INFO_DIALOGS =/);
 assert.match(homeSource, /home\.dialog\.est\.overviewTitle/);
+assert.match(homeSource, /const EST_PRODUCTS =/);
+assert.match(homeSource, /renderEstProductGuide \(\)/);
+assert.doesNotMatch(homeSource, /selectedEstProduct|selectedGuideProduct/);
+assert.match(homeSource, /hardware\/assets\/est\.png/);
+assert.match(homeSource, /hardware\/assets\/spark-ai\.png/);
+assert.match(homeSource, /hardware\/assets\/new-ai\.png/);
+assert.match(homeSource, /home\.dialog\.est\.prototype\.sparkFirmwareTitle/);
+assert.match(homeSource, /home\.dialog\.est\.prototype\.newAiVisionTitle/);
+assert.match(homeSource, /atc-home-hardware/);
 assert.match(homeSource, /est-build-library\/thumbnails\/basic-01\.jpg/);
 assert.match(homeSource, /home\.dialog\.vision\.startTitle/);
 assert.match(homeSource, /home-guide-vision-camera\.png/);
@@ -144,9 +159,10 @@ assert.match(homeSource, /home-guide-ai-conversation\.png/);
 assert.match(homeSource, /home\.dialog\.software\.fileTitle/);
 assert.match(homeSource, /home\.dialog\.about\.supportTitle/);
 assert.match(homeSource, /const List = section\.ordered \? 'ol' : 'ul'/);
-assert.match(homeSource, /EST_HOME_BLOCK_GUIDE_CATEGORIES\.map/);
+assert.match(homeSource, /getProductBlockGuideCategories\(/);
+assert.match(homeSource, /createHardwareBlockPreviews\(/);
 assert.match(homeSource, /home\.blockGuide\.\$\{blockId\}/);
-assert.match(homeSource, /createEstBlockPreviews/);
+assert.match(homeSource, /createHardwareBlockPreviews/);
 assert.match(homeSource, /styles\.blockGuidePreview/);
 assert.match(homeSource, /<img/);
 assert.match(homeStyles, /transition: transform 420ms/);
@@ -156,6 +172,9 @@ assert.match(homeStyles, /overflow-y: auto/);
 assert.match(homeStyles, /\.guideSections/);
 assert.match(homeStyles, /\.guideNote/);
 assert.match(homeStyles, /\.guideFigure/);
+assert.match(homeStyles, /\.productSelector/);
+assert.match(homeStyles, /\.productDetailHero/);
+assert.match(homeStyles, /\.productComparison/);
 assert.match(homeStyles, /\.guideAction/);
 assert.match(homeStyles, /\.guideBackdrop/);
 assert.match(homeStyles, /\.guideScroller/);
@@ -335,6 +354,20 @@ for (const messageId of [
 for (const messageId of [
     'home.more.est',
     'home.dialog.est.lead',
+    'home.dialog.est.prototype.currentName',
+    'home.dialog.est.prototype.newAName',
+    'home.dialog.est.prototype.newBName',
+    'home.dialog.est.prototype.sparkHost1',
+    'home.dialog.est.prototype.sparkSensor4',
+    'home.dialog.est.prototype.sparkFirmware4',
+    'home.dialog.est.prototype.newAiHost1',
+    'home.dialog.est.prototype.newAiSensor4',
+    'home.dialog.est.prototype.newAiVision4',
+    'home.dialog.est.prototype.newAiFirmware4',
+    'home.dialog.est.prototype.comparisonPorts',
+    'home.dialog.est.prototype.comparisonSlots',
+    'home.dialog.est.prototype.comparisonTitle',
+    'home.dialog.est.prototype.sharedTitle',
     'home.dialog.est.overviewImageCaption',
     'home.dialog.est.controller2',
     'home.dialog.est.hardware3',
@@ -384,4 +417,4 @@ assert.doesNotMatch(i18nSource, /home\.dialog\.(interaction|hardware|blocks|abou
 
 assert.doesNotMatch(homeSource, /EstHardwareStatus|EstProgramControls|firmware\.update/);
 
-console.log('EST Studio home page structure and integration tests passed');
+console.log('ATC CodeStudio home page structure and integration tests passed');

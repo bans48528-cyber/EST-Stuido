@@ -27,7 +27,7 @@ export const runNewAiOnlineTests = async ({workspace, panel, until}) => {
     const report = {cases: [], passed: false};
     try {
         const status = await ipcRenderer.invoke('test-online-status');
-        assert.ok(status.configured, 'Configure an AI endpoint in EST Studio before online validation');
+        assert.ok(status.configured, 'Configure an AI endpoint in ATC CodeStudio before online validation');
         report.endpointOrigin = new URL(status.config.baseUrl).origin;
         report.model = status.config.model;
         console.log(`Online NEW AI endpoint: ${report.endpointOrigin}; model: ${report.model}`);

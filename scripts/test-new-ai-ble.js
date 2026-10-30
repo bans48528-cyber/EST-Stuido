@@ -226,6 +226,14 @@ const parserTests = () => {
     parserTests();
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'est-new-ble-'));
     const preferences = new NewAiConnectionPreferences(path.join(directory, 'connection.json'));
+    for (const version of [193, 214, 320, 322]) {
+        preferences.write({mode: 'ble'});
+        const otherVersion = create(preferences, {report: {...monitor(), version}});
+        await otherVersion.connect();
+        assert.equal(otherVersion.service.getState().connected, true);
+        assert.equal(otherVersion.service.getState().programSupported, false);
+        await otherVersion.close();
+    }
     preferences.write({mode: 'ble', lastDevice: {vendorId: '0483', productId: '5740', serialNumber: 'USB-KEEP'}});
     const first = create(preferences);
     await first.connect();

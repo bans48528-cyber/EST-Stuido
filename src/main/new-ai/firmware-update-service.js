@@ -150,22 +150,30 @@ export class NewAiFirmwareUpdateService {
                 if (identity !== newAiPortIdentity(this.device.previousDevice)) {
                     throw new NewAiError('NEW_FW_DEVICE_CHANGED');
                 }
-                if (!state.status.legacyProtocol) {
-                    const fresh = await this.device.waitForMonitor(() => true);
-                    if (fresh.monitor.running !== false) throw new NewAiError('NEW_FW_STOP_FIRST');
-                }
                 this.update({phase: 'resetting'}, true);
+                const transport = this.device.takeFirmwareTransport();
+                link = new NewAiFirmwareLink(transport, this.timeouts);
+                link.portPath = port.path;
+                await link.open({alreadyOpen: true});
                 touched = true;
                 // 6F formats external storage. It defines no ACK; a disappearing USB port is expected.
-                await bounded(this.device.transport.write(newAiFrame(0x6F, Buffer.from('RESET_FWLIB', 'ascii'))),
+                await bounded(transport.write(newAiFrame(0x6F, Buffer.from('RESET_FWLIB', 'ascii'))),
                     5000, 'NEW_WRITE_TIMEOUT').catch(() => {
                     this.update({resetWriteUncertain: true});
                 });
             }
-            await this.device.disconnect({pauseAuto: false, allowBusy: true});
             this.update({phase: 'waitingBoot'}, true);
-            if (!request.recovery) await delay(this.timeouts.bootDelay);
-            link = await this.openMatching(identity, Date.now() + this.timeouts.boot, true);
+            if (!request.recovery) {
+                // Match the original software: retain the USB handle and start SOURCE after 3 seconds.
+                await delay(this.timeouts.bootDelay);
+                if (link.failure) {
+                    await link.close(); link = null;
+                } else link.prepareBootTransfer();
+            }
+            if (!link) {
+                await this.device.disconnect({pauseAuto: false, allowBusy: true});
+                link = await this.openMatching(identity, Date.now() + this.timeouts.boot, true);
+            }
             this.update({phase: 'transferring'}, true);
             // Boot1 loads Boot2 after a 500ms gap, even without registryApp.txt (fallback name).
             // Send the RAM Boot2 last, after all application, music and registry/version resources.
@@ -187,9 +195,19 @@ export class NewAiFirmwareUpdateService {
             this.update({phase: 'restarting', file: null, transferComplete: true}, true);
             const deadline = Date.now() + this.timeouts.application;
             let monitor;
+            let wrongVersion = false;
+            const applicationReady = sample => {
+                // A legacy report cached while copying resources is not the restarted application.
+                if (sample.legacyProtocol) return false;
+                if (sample.version !== release.version) {
+                    wrongVersion = true; return false;
+                }
+                return true;
+            };
             while (Date.now() < deadline) {
                 try {
-                    monitor = await link.waitForMonitor(Math.min(500, Math.max(1, deadline - Date.now())));
+                    monitor = await link.waitForMonitor(Math.min(500, Math.max(1, deadline - Date.now())),
+                        applicationReady);
                     if (monitor) break;
                 } catch (error) {
                     if (error.code !== 'NEW_MONITOR_TIMEOUT') {
@@ -198,7 +216,7 @@ export class NewAiFirmwareUpdateService {
                     }
                 }
             }
-            if (!monitor) throw new NewAiError('NEW_FW_RECONNECT_TIMEOUT');
+            if (!monitor) throw new NewAiError(wrongVersion ? 'NEW_FW_VERSION_MISMATCH' : 'NEW_FW_RECONNECT_TIMEOUT');
             if (monitor.legacyProtocol || monitor.version !== release.version) {
                 throw new NewAiError('NEW_FW_VERSION_MISMATCH');
             }
@@ -241,7 +259,9 @@ export class NewAiFirmwareUpdateService {
                     await link.open();
                     if (boot) await delay(this.timeouts.quiet);
                     if (link.failure) throw link.failure;
-                    if (boot && link.monitor) throw new NewAiError('NEW_FW_BOOT_REQUIRED');
+                    if (boot && link.monitor && !link.monitor.legacyProtocol) {
+                        throw new NewAiError('NEW_FW_BOOT_REQUIRED');
+                    }
                     return link;
                 } catch (error) {
                     await link.close();

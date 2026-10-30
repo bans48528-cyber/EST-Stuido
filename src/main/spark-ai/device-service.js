@@ -378,7 +378,7 @@ export class SparkDeviceService extends EventEmitter {
             await this.waitForMonitor(() => true, this.timeouts.connect);
             if (epoch !== this.epoch || !isCurrent()) throw new SparkError('SPARK_DISCONNECTED');
             if (!ble) this.lastDevice = port;
-            if (ble && this.getBleIdentity && this.monitor.version === SPARK_VERIFIED_FIRMWARE) {
+            if (ble && this.getBleIdentity) {
                 const identity = this.getBleIdentity(portPath);
                 if (identity) this.savePreferences({bleDevice: identity});
             }
@@ -508,9 +508,10 @@ export class SparkDeviceService extends EventEmitter {
         this.changingMonitor = true;
         this.publish(true);
         try {
-            await this.writeControl(enabled ? SPARK_COMMAND.MONITOR_ON : SPARK_COMMAND.MONITOR_OFF);
-            this.monitorEnabled = enabled;
-            if (enabled) this.monitorGrace = Date.now() + this.timeouts.monitor;
+            // Monitoring stays enabled. Legacy callers asking to turn it off also reassert BA.
+            await this.writeControl(SPARK_COMMAND.MONITOR_ON);
+            this.monitorEnabled = true;
+            this.monitorGrace = Date.now() + this.timeouts.monitor;
         } finally {
             this.changingMonitor = false; this.publish(true);
         }
@@ -678,6 +679,21 @@ export class SparkDeviceService extends EventEmitter {
     }
     cancel () {
         if (this.operation) this.operation.controller.abort();
+    }
+    takeFirmwareTransport () {
+        if (!this.firmwareLease || !this.transport) throw new SparkError('SPARK_DISCONNECTED');
+        const transport = this.transport;
+        // Invalidate the APP callbacks without closing a USB channel still used by the Bootloader.
+        this.epoch++;
+        this.transport = null;
+        this.connected = false;
+        this.monitor = null;
+        this.portPath = null;
+        clearInterval(this.watchdog);
+        this.emit('lost', new SparkError('SPARK_DISCONNECTED'));
+        if (this.pendingAck) this.pendingAck.reject(new SparkError('SPARK_DISCONNECTED'));
+        this.publish(true);
+        return transport;
     }
     reserveFirmwareUpdate () {
         if (this.busy) throw new SparkError('SPARK_BUSY');

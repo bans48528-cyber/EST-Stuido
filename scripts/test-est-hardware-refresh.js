@@ -13,6 +13,7 @@ const load = (file, overrides = {}) => {
     new Function('require', 'module', 'exports', code)(name => {
         if (Object.prototype.hasOwnProperty.call(overrides, name)) return overrides[name];
         if (name.endsWith('.css')) return {};
+        if (name.endsWith('.json')) return require(path.resolve(path.dirname(filename), name));
         if (name.startsWith('.')) return load(path.resolve(path.dirname(filename), `${name}.js`), overrides);
         return require(name);
     }, module, module.exports);
@@ -138,6 +139,8 @@ const deferred = () => {
         clearTimeout: key => timers.delete(key)};
     global.document = {hidden: false, addEventListener: () => {}, removeEventListener: () => {}};
     const {EstHardwareStatusButton} = load('src/renderer/EstHardwareStatusButton.jsx', {
+        './hardware/HardwareStatusPopover.jsx': () => null,
+        './hardware/HardwareConnectionSettings.jsx': () => null,
         '@electron/remote': {},
         '@electron/remote/renderer': {},
         'react-redux': {connect: () => component => component},
@@ -191,6 +194,23 @@ const deferred = () => {
     panel.state.firmwareUpdateBusy = null;
     panel.componentWillUnmount();
     assert.equal(timers.size, 0);
+    let autoConnectCalls = 0;
+    const autoGate = deferred();
+    const {EstStatusPanel} = load('src/renderer/EstStatusPanel.jsx', {
+        '@electron/remote': {},
+        'react-redux': {connect: () => component => component},
+        './est-i18n': {getEstText: key => key},
+        electron: {ipcRenderer: {invoke: () => { autoConnectCalls++; return autoGate.promise; }}}
+    });
+    const connection = new EstStatusPanel({locale: 'zh-cn'});
+    connection.setState = () => { throw new Error('An in-flight response must not reconnect a manually disconnected UI'); };
+    const autoPending = connection.refresh();
+    connection.handleAutoConnectPause({detail: true});
+    autoGate.resolve({state: 'connected'});
+    await autoPending;
+    await connection.refresh();
+    assert.equal(autoConnectCalls, 1, 'manual disconnect pauses automatic reconnect and ignores in-flight responses');
+    connection.componentWillUnmount();
     await pause(1);
     console.log(`Hardware refresh passed: ${ticks} event-loop ticks during 120 ms HID wait; no overlapping reads, stale replies, repeated renders or hidden polling.`);
 })().catch(error => {

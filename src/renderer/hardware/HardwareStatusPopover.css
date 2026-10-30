@@ -1,0 +1,99 @@
+.panel {
+    position: fixed;
+    z-index: 1200;
+    top: 78px;
+    right: 18px;
+    width: 400px;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 96px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    border-radius: 16px;
+    background: #fff;
+    color: #29343e;
+    box-shadow: 0 6px 28px #21374626;
+    font: 13px/1.5 "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    scrollbar-color: #bac7cf #f5f7f8;
+    scrollbar-width: thin;
+}
+.panel * { box-sizing: border-box; }
+.panel button { font: inherit; color: inherit; cursor: pointer; }
+.panel button:disabled { opacity: .5; cursor: default; }
+.panel button:focus-visible, .panel select:focus-visible, .panel input:focus-visible {
+    outline: 2px solid #1687e0; outline-offset: 2px;
+}
+.panel ::selection { background: #c7e8f5; color: #163f50; }
+.header { display: flex; align-items: center; gap: 6px; min-height: 64px; flex: none;
+    padding: 0 14px 0 20px; cursor: move; }
+.header h2 { font-size: 16px; font-weight: 600; line-height: 24px; margin: 0 auto 0 0; white-space: nowrap; }
+.panel .summary { border: 0; background: none; font-size: 12px; color: #606e79; padding: 6px; white-space: nowrap; }
+.panel .iconButton { display: grid; place-items: center; width: 28px; height: 30px; padding: 4px;
+    border: 0; border-radius: 8px; background: none; color: #606e79; flex: none; }
+.panel svg:not(.wires) { width: 17px; height: 17px; fill: none; stroke: currentColor;
+    stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.panel button:hover:not(:disabled) { background-color: #f0f3f5; }
+.content { padding: 0 20px 16px; overflow: auto; min-height: 0; }
+.stage { position: relative; display: grid; grid-template-columns: 104px minmax(0, 1fr) 104px;
+    gap: 4px; align-items: center; height: 226px; }
+.column { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px; }
+.panel .port { display: flex; align-items: center; gap: 6px; min-width: 0; height: 38px; padding: 5px 7px;
+    border: 1px solid transparent; border-radius: 8px; text-align: left; background: #fff; }
+.panel .port[aria-pressed="true"] { background: #edf5f8; border-color: #bdd4de; }
+.letter { width: 12px; flex: none; color: #5d707e; font-size: 12px; font-weight: 600; }
+.portName { display: flex; align-items: center; gap: 6px; flex: none; }
+.reading { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 12px; font-variant-numeric: tabular-nums; }
+.empty .reading { color: #606e79; }
+.sensorIcon { display: flex; color: #6b8595; flex: none; }
+.panel .sensorIcon svg { width: 15px; height: 15px; }
+.colourDot { width: 11px; height: 11px; border-radius: 50%; flex: none; border: 1px solid #0002; }
+.hub { position: relative; z-index: 1; width: 134px; max-width: 100%; justify-self: center; }
+.hub img { display: block; width: 100%; height: auto; max-height: 210px; object-fit: contain; filter: none; }
+/* Supplied EST image has a measured alpha box of 1782 x 2774 inside 3300 x 3300. */
+.hub.estHub { aspect-ratio: 134 / 210; overflow: hidden; }
+.hub.estHub img { position: absolute; width: 175.4%; max-width: none; max-height: none; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.stage.estStage { grid-template-columns: minmax(0, 1fr); grid-template-rows: 44px 210px 44px; gap: 24px;
+    height: auto; padding: 6px 0; }
+.estStage .column { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; width: 100%; }
+.panel .estStage .port { height: 44px; padding: 3px 6px; flex-direction: column; justify-content: center; gap: 2px; }
+.estStage .letter { width: auto; }
+.estStage .reading { max-width: 100%; }
+.wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.wires path { fill: none; stroke: #dbe3e8; stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round;
+    vector-effect: non-scaling-stroke; }
+.wires path[data-attached="true"] { stroke: #1687e0; }
+.wires path[data-selected="true"] { stroke-width: 1.9; }
+.detail { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; border-top: 1px solid #e5eaee;
+    padding: 15px 0 3px; min-height: 62px; }
+.detailLabel { color: #606e79; font-size: 12px; margin-right: auto; }
+.swatch { width: 24px; height: 24px; border-radius: 6px; border: 1px solid #0002; flex: none; }
+.detailValues { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; max-width: 100%;
+    overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.detailValues small { color: #606e79; font-size: 12px; }
+.detailValues strong { font-size: 16px; font-weight: 500; }
+.note { font-size: 12px; color: #606e79; }
+.menu { position: absolute; z-index: 5; top: 52px; right: 14px; min-width: 148px; padding: 5px;
+    border-radius: 10px; background: #fff; box-shadow: 0 5px 22px #22344130; }
+.menu button { display: block; width: 100%; padding: 10px 12px; border: 0; border-radius: 6px;
+    text-align: left; background: none; white-space: nowrap; }
+.panel .back { display: flex; align-items: center; gap: 7px; padding: 4px 0; margin: 0 0 16px;
+    border: 0; background: none; color: #606e79; }
+.notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 10px; margin: 0 0 6px; background: #fff7e9; border-radius: 8px;
+    font-size: 12px; line-height: 1.7; color: #865c18; overflow-wrap: anywhere; }
+.notice button { padding: 0; border: 0; background: none; text-decoration: underline; }
+.legacyContent { min-width: 0; }
+.legacyContent select { min-width: 0; max-width: 100%; }
+.legacyContent > div { flex-wrap: wrap; }
+.legacyContent table { font-size: 11px; }
+@media (max-width: 430px) {
+    .panel { right: 12px; }
+    .content { padding: 0 14px 14px; }
+    .header { padding-left: 16px; padding-right: 12px; gap: 3px; }
+    .stage { grid-template-columns: minmax(70px, 92px) minmax(60px, 1fr) minmax(70px, 92px); gap: 0; height: 218px; }
+    .panel .port { padding: 5px; gap: 5px; }
+    .reading { font-size: 12px; }
+    .panel .summary { padding: 6px 4px; }
+}

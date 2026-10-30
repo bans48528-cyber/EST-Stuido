@@ -16,6 +16,8 @@ import {
 } from './est-home-events';
 import styles from './app.css';
 import HardwareGate from './hardware/HardwareGate.jsx';
+import {getHardwareContext} from './hardware/context';
+import {getHomeContent} from '../common/home-content';
 
 const appTarget = document.getElementById('app');
 appTarget.className = styles.app || 'app';
@@ -37,10 +39,15 @@ class EstDesktopApp extends React.Component {
     constructor (props) {
         super(props);
         this.state = {
+            homeHardwareId: 'est',
+            homeSelectionReady: false,
+            projectHardwareId: getHardwareContext().profile.id,
             canReturnToEditor: false,
             homeMounted: true,
             homeVisible: true
         };
+        this.homeSelectionRevision = 0;
+        this.handleHomeHardwareChange = this.handleHomeHardwareChange.bind(this);
         this.handleEnterEditor = this.handleEnterEditor.bind(this);
         this.handleReturnToEditor = this.handleReturnToEditor.bind(this);
         this.handleShowHome = this.handleShowHome.bind(this);
@@ -55,22 +62,22 @@ class EstDesktopApp extends React.Component {
         window.addEventListener(EST_LOCALE_CHANGED_EVENT, this.handleVisionLocale);
         window.addEventListener(EST_SHOW_HOME_EVENT, this.handleShowHome);
         window.addEventListener(EST_HOME_PROJECT_OPENED_EVENT, this.handleEnterEditor);
+        const revision = this.homeSelectionRevision;
         ipcRenderer.invoke('est-home-get-startup-state')
             .then(state => {
-                if (state && state.hasInitialProject) {
-                    this.hideHome(false, () => {
-                        if (state.projectPath) {
-                            window.setTimeout(() => {
-                                ipcRenderer.invoke('est-home-capture-thumbnail', state.projectPath).catch(() => {});
-                            }, 300);
-                        }
-                    });
-                }
+                if (this.unmounted || revision !== this.homeSelectionRevision) return;
+                const hardwareId = (state && state.homeHardwareId) || 'est';
+                getHomeContent(hardwareId);
+                this.setState({homeHardwareId: hardwareId, homeSelectionReady: true});
+                // A startup file changes the homepage only after the VM successfully loads it.
             })
-            .catch(() => {});
+            .catch(() => {
+                if (!this.unmounted) this.setState({homeSelectionReady: true});
+            });
     }
 
     componentWillUnmount () {
+        this.unmounted = true;
         window.removeEventListener(EST_VISION_OPEN_EVENT, this.handleOpenVision);
         window.removeEventListener(EST_LOCALE_CHANGED_EVENT, this.handleVisionLocale);
         window.clearTimeout(this.homeTransitionTimer);
@@ -79,7 +86,18 @@ class EstDesktopApp extends React.Component {
         window.removeEventListener(EST_HOME_PROJECT_OPENED_EVENT, this.handleEnterEditor);
     }
 
-    handleEnterEditor () {
+    handleHomeHardwareChange (hardwareId) {
+        getHomeContent(hardwareId);
+        this.homeSelectionRevision++;
+        this.setState({homeHardwareId: hardwareId, homeSelectionReady: true});
+        // Separate preference field; browsing does not touch the VM or hardware-select.
+        ipcRenderer.invoke('est-home-set-hardware', {hardwareId}).catch(() => {});
+    }
+
+    handleEnterEditor (event) {
+        const hardwareId = (event && event.detail && event.detail.hardwareId) || getHardwareContext().profile.id;
+        this.handleHomeHardwareChange(hardwareId);
+        this.setState({projectHardwareId: hardwareId});
         this.hideHome(true);
     }
 
@@ -142,6 +160,10 @@ class EstDesktopApp extends React.Component {
                 </div>
                 {this.state.homeMounted ? (
                     <EstHome
+                        homeHardwareId={this.state.homeHardwareId}
+                        projectHardwareId={this.state.projectHardwareId}
+                        homeSelectionReady={this.state.homeSelectionReady}
+                        onHomeHardwareChange={this.handleHomeHardwareChange}
                         canReturnToEditor={this.state.canReturnToEditor}
                         visible={this.state.homeVisible}
                         onOpenVision={this.handleOpenVision}
@@ -153,4 +175,5 @@ class EstDesktopApp extends React.Component {
     }
 }
 
+export {EstDesktopApp};
 export default <EstDesktopApp />;

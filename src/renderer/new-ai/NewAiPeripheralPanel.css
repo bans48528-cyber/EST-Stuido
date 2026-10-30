@@ -1,0 +1,4 @@
+.targets { width: 100%; border-collapse: collapse; font-size: 13px; }
+.targets th, .targets td { padding: 8px 6px; border-bottom: 1px solid #dce3ec; text-align: start; }
+.targets th { font-weight: 500; color: #66788c; }
+.targets td:not(:first-child) { font-variant-numeric: tabular-nums; }

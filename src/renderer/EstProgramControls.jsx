@@ -49,7 +49,7 @@ const formatProgramOperationError = (error, locale) => {
         return getEstText('programControls.usbDisconnected', locale);
     }
     if (/当前 EST 固件不支持这个程序使用的功能/.test(message)) {
-        const detail = message.replace(/^当前 EST 固件不支持这个程序使用的功能。请升级到支持相应 EST Studio 功能的固件后再运行。\s*/, '');
+        const detail = message.replace(/^当前 EST 固件不支持这个程序使用的功能。请升级到支持相应 ATC CodeStudio 功能的固件后再运行。\s*/, '');
         return `${getEstText('programControls.firmwareUpgradeRequired', locale)} ${detail}`.trim();
     }
     return message || getEstText('programControls.unknownError', locale);

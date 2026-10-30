@@ -1,5 +1,5 @@
 /**
- * Replace OpenBlock's media-heavy Scratch starter project with EST Studio's
+ * Replace OpenBlock's media-heavy Scratch starter project with ATC CodeStudio's
  * block-only project. The stage and program targets remain because the VM uses
  * them for global variables and the editable block workspace.
  * @param {string} source - OpenBlock default-project module source.

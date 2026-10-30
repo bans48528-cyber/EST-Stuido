@@ -11,14 +11,12 @@
     font: inherit;
     font-size: 12px;
     font-weight: 600;
-    cursor: pointer;
+    cursor: default;
 }
-.trigger:hover, .trigger[aria-expanded="true"] { background: #e1eaf4; }
-.trigger:focus-visible { outline: 2px solid #4c97ff; outline-offset: -3px; }
-.trigger img { width: 22px; height: 22px; filter: brightness(.35); }
+:global(#est-hardware-current) img { width: 28px; height: 28px; object-fit: contain; filter: none; }
 .chevron { width: 5px; height: 5px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); margin: -3px 2px 0 3px; }
 .pending { display: flex; align-items: center; padding: 0 8px; max-width: 180px; font-size: 12px; color: #69758a; }
-.backdrop { position: fixed; inset: 0; z-index: 10050; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(21, 30, 44, .28); box-sizing: border-box; }
+.backdrop { position: fixed; inset: 0; z-index: 100100; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(21, 30, 44, .28); box-sizing: border-box; }
 .dialog { width: 680px; max-width: 100%; max-height: calc(100vh - 40px); overflow: auto; background: #fff; color: #263344; border: 1px solid #d5dfeb; border-radius: 8px; box-shadow: 0 14px 48px rgba(23, 40, 64, .18); font-family: Arial, "Microsoft YaHei", sans-serif; }
 .header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid #e6ebf2; }
 .header h2 { margin: 0; font-size: 20px; }
@@ -30,7 +28,7 @@
 .product.selected { border: 2px solid #4c97ff; padding: 29px 9px 15px; background: #f0f7ff; }
 .product input { position: absolute; top: 12px; right: 12px; width: 17px; height: 17px; accent-color: #3185ef; }
 .product strong { font-size: 18px; overflow-wrap: anywhere; }
-.productIcon { width: 58px; height: 58px; filter: brightness(.35); opacity: .8; }
+.productIcon { width: 100%; max-width: 164px; height: 128px; object-fit: contain; }
 .productStatus { font-size: 12px; line-height: 1.5; color: #69758a; overflow-wrap: anywhere; }
 .current { font-size: 11px; color: #2777d8; }
 .footer { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 16px 22px; border-top: 1px solid #e6ebf2; }

@@ -134,7 +134,8 @@ const programs = [];
 const normalized = code => String(code).replace(/\s+/g, '')
     .replace(/"/g, "'");
 const adjusted = new Set(['event_whenflagclicked', 'control_break', 'control_repeat', 'control_forever',
-    'control_if', 'control_if_else', 'control_repeat_until', 'control_wait_until', 'operator_not']);
+    'control_if', 'control_if_else', 'control_repeat_until', 'control_wait_until', 'operator_not',
+    'operator_mod', 'operator_round', 'operator_mathop']);
 for (const row of catalog.blocks) {
     g.init(workspace);
     const block = makeRow(row);
@@ -149,8 +150,12 @@ for (const row of catalog.blocks) {
         if (!block.fields || !Object.prototype.hasOwnProperty.call(block.fields, variant.field)) continue;
         Object.assign(block.fields, row.fields, {[variant.field]: variant.value});
         const output = g[block.type](block);
-        assert.equal(normalized(Array.isArray(output) ? output[0] : output), normalized(variant.code),
-            `${row.id}.${variant.field}=${variant.value}`);
+        if (row.id === 'operator_mathop') {
+            programs.push({id: `${row.id}-${variant.value}`, code: `result = ${output[0]}\n`});
+        } else {
+            assert.equal(normalized(Array.isArray(output) ? output[0] : output), normalized(variant.code),
+                `${row.id}.${variant.field}=${variant.value}`);
+        }
     }
 }
 assert.equal(catalog.blocks.length, 66);

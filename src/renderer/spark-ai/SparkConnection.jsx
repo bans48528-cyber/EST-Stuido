@@ -1,7 +1,9 @@
 /* eslint-disable react/jsx-no-bind, max-len */
 import React from 'react';
 import PropTypes from 'prop-types';
-import {createPortal} from 'react-dom';
+import HardwareStatusPopover from '../hardware/HardwareStatusPopover.jsx';
+import HardwareConnectionSettings from '../hardware/HardwareConnectionSettings.jsx';
+import {hardwareStatusText} from '../hardware/status-messages';
 import {ipcRenderer, clipboard} from 'electron';
 import {dialog, getCurrentWindow} from '@electron/remote';
 import {getEstText} from '../est-i18n';
@@ -23,6 +25,7 @@ export default class SparkConnection extends React.Component {
             bleScan: {scanning: false, devices: []}};
         this.latest = EMPTY_SPARK_STATE;
         this.trigger = React.createRef();
+        this.firmware = React.createRef();
         this.panel = React.createRef();
         this.keydown = event => {
             event.stopPropagation();
@@ -47,7 +50,10 @@ export default class SparkConnection extends React.Component {
             this.latest = device;
             const discoveryChanged = (previous.discovery && previous.discovery.revision) !==
                 (device.discovery && device.discovery.revision);
-            if (this.state.open || discoveryChanged ||
+            const firmwareChanged = ['active', 'phase', 'bytes', 'error', 'recoveryRequired'].some(key =>
+                (previous.firmware && previous.firmware[key]) !== (device.firmware && device.firmware[key]));
+            const versionChanged = (previous.status && previous.status.version) !== (device.status && device.status.version);
+            if (this.state.open || discoveryChanged || firmwareChanged || versionChanged || previous.port !== device.port ||
                 ['connected', 'compatible', 'state', 'busy', 'stale', 'error', 'warning', 'connectionMode'].some(key => previous[key] !== device[key])) {
                 const ports = device.discovery ? device.discovery.ports : this.state.ports;
                 const selected = device.connected && device.port ? device.port :
@@ -79,17 +85,19 @@ export default class SparkConnection extends React.Component {
         }
     }
     open () {
+        if (this.state.open) {
+            this.close(); return;
+        }
         this.setState({open: true, device: this.latest, error: ''}, () => {
-            document.addEventListener('keydown', this.keydown, true);
-            this.panel.current.querySelector('button').focus();
+            // The non-modal popover manages its own focus and Escape key.
         });
         if (this.latest.connectionMode !== 'ble') this.scan();
     }
-    close () {
+    close (restoreFocus = true) {
         ipcRenderer.invoke('spark-ble-cancel-scan').catch(() => {});
         document.removeEventListener('keydown', this.keydown, true);
         this.setState({open: false}, () => {
-            if (this.trigger.current) this.trigger.current.focus();
+            if (restoreFocus && this.trigger.current) this.trigger.current.focus();
         });
     }
     async command (channel, request) {
@@ -118,14 +126,14 @@ export default class SparkConnection extends React.Component {
         const t = (id, values) => sparkRuntimeText(id, locale, values);
         const {device, open, ports, selected, loading, error, bleScan} = this.state;
         const ble = device.connectionMode === 'ble';
-        const status = device.status;
+        const status = device.connected && !device.stale ? device.status : null;
         const connected = device.connected;
         const healthy = connected && device.compatible && !device.stale;
         const discovery = device.discovery;
         const label = device.firmware && device.firmware.active ? t('firmwareUpdate') :
-            t(['opening', 'disconnecting'].includes(device.state) ? device.state : (connected ? 'connected' :
-                (device.reconnecting ? 'bleReconnecting' :
-                    (!ble && discovery && discovery.status === 'waiting' ? 'autoWaiting' : 'disconnected'))));
+            hardwareStatusText(connected ? 'connected' :
+                (['opening', 'disconnecting'].includes(device.state) || device.reconnecting ?
+                    'connecting' : 'disconnected'), locale);
         const unknown = t('unknown');
         const busy = loading || device.busy;
         const log = (device.logs || []).map(line => `${new Date(line.time).toLocaleTimeString(locale)}  ${line.text}`).join('\n');
@@ -143,177 +151,57 @@ export default class SparkConnection extends React.Component {
                 <span className={styles.connectionLabel}>{label}</span>
                 <span className={`${styles.dot} ${healthy ? styles.connected : (connected ? styles.warning : '')}`} />
             </button>
-            {open ? createPortal(<div
-                className={styles.backdrop}
-                onMouseDown={event => {
-                    if (event.target === event.currentTarget) this.close();
-                }}
-            >
-                <section
-                    id="spark-hardware-panel"
-                    className={styles.panel}
-                    ref={this.panel}
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="spark-hardware-title"
-                >
-                    <header className={styles.header}>
-                        <h2 id="spark-hardware-title">Spark AI · {ble ? t('bluetooth') : 'USB'}</h2>
-                        <button
-                            type="button"
-                            className={styles.iconButton}
-                            onClick={() => this.close()}
-                            aria-label={getEstText('hardwareChoice.close', locale)}
-                            title={getEstText('hardwareChoice.close', locale)}
-                        >&times;</button>
-                    </header>
-                    <div
-                        className={styles.transportModes}
-                        role="group"
-                        aria-label={t('connectionMode')}
-                    >
-                        {['usb', 'ble'].map(mode => (<button
-                            key={mode}
-                            id={`spark-mode-${mode}`}
-                            type="button"
-                            className={styles.command}
-                            aria-pressed={(ble ? 'ble' : 'usb') === mode}
-                            disabled={busy || bleScan.scanning || Boolean(status && status.running)}
-                            onClick={() => this.command('spark-connection-mode', mode)}
-                        >{mode === 'usb' ? 'USB' : t('bluetooth')}</button>))}
-                    </div>
-                    {ble ? <div className={styles.bleSection}>
-                        <div className={styles.serialRow}>
-                            <button
-                                id="spark-ble-search"
-                                type="button"
-                                className={styles.command}
-                                disabled={(device.busy && !device.reconnecting) || (loading && !bleScan.scanning)}
-                                onClick={() => {
-                                    if (device.reconnecting) this.command('spark-set-auto-connect', false);
-                                    else if (bleScan.scanning) ipcRenderer.invoke('spark-ble-cancel-scan').catch(() => {});
-                                    else this.command(connected ? 'spark-disconnect' : 'choose-ble');
-                                }}
-                            >{t(device.reconnecting ? 'pauseReconnect' :
-                                    (connected ? 'disconnect' : (bleScan.scanning ? 'cancelSearch' : 'searchBluetooth')))}</button>
-                            <span role="status">{t(device.reconnecting ? 'bleReconnecting' :
-                                (['opening', 'disconnecting'].includes(device.state) ? device.state :
-                                    (bleScan.scanning ? 'searchingBluetooth' :
-                                        (connected ? 'connected' : 'bleManualReconnect'))))}</span>
-                        </div>
-                        {device.bleDevice ? <div className={styles.rememberedDevice}>
-                            <span>{t('rememberedDevice')}: {device.bleDevice.name}<small>{device.bleDevice.id}</small></span>
-                            <button
-                                id="spark-ble-forget"
-                                type="button"
-                                className={styles.command}
-                                disabled={busy || connected}
-                                onClick={() => this.command('spark-ble-forget')}
-                            >{t('forgetDevice')}</button>
-                        </div> : null}
-                        {bleScan.scanning && !device.reconnecting ? <ul className={styles.bleDevices}>
-                            {bleScan.devices.length ? bleScan.devices.map(item => (<li key={item.id}>
-                                <span>{item.name}<small>{item.id}</small></span>
-                                <button
-                                    type="button"
-                                    className={styles.command}
-                                    onClick={() => ipcRenderer.invoke('spark-ble-select', item.id).catch(caught =>
-                                        this.setState({error: sparkRuntimeError(caught, locale)}))}
-                                >{t('connect')}</button>
-                            </li>)) : <li>{t('noBluetoothDevices')}</li>}
-                        </ul> : null}
-                    </div> : <div className={styles.serialRow}>
-                        <label htmlFor="spark-serial-port">{t('serial')}</label>
-                        <select
-                            id="spark-serial-port"
-                            value={selected}
-                            disabled={busy || connected}
-                            onChange={event => this.setState({selected: event.target.value})}
-                        >
-                            {ports.length ? null : <option value="">{t('noPorts')}</option>}
-                            {ports.map(port => (<option
-                                key={port.path}
-                                value={port.path}
-                            >
-                                {port.path}{port.friendlyName || port.manufacturer ? ` · ${port.friendlyName || port.manufacturer}` : ''}
-                            </option>))}
-                        </select>
-                        <button
-                            type="button"
-                            className={styles.iconButton}
-                            disabled={busy || connected}
-                            onClick={() => this.scan()}
-                            title={t('refresh')}
-                            aria-label={t('refresh')}
-                        >↻</button>
-                        <button
-                            type="button"
-                            className={styles.command}
-                            disabled={busy || (!connected && !selected)}
-                            id="spark-usb-connect"
-                            onClick={() => (connected ? this.command('spark-disconnect') :
-                                this.command('spark-connect', {path: selected}))}
-                        >
-                            {t(connected ? 'disconnect' : (busy ? 'opening' : 'connect'))}
-                        </button>
-                    </div>}
-                    {discovery ? <div className={styles.autoRow}>
-                        <label htmlFor="spark-auto-connect">
-                            <input
-                                id="spark-auto-connect"
-                                type="checkbox"
-                                checked={discovery.enabled}
-                                disabled={loading || (device.busy && !device.reconnecting)}
-                                onChange={event => this.command('spark-set-auto-connect', event.target.checked)}
-                            />{t(ble ? 'bleAutoConnect' : 'autoConnect')}
-                        </label>
-                        <span role="status">{t(device.firmware && device.firmware.recoveryRequired ?
-                            'SPARK_FW_RECOVERY' : (ble && !device.bleDevice ? 'bleChooseFirst' :
-                                `auto.${discovery.status}`))}</span>
-                    </div> : null}
-                    {error || device.error ? <div
-                        className={styles.error}
-                        role="alert"
-                    >
-                        {error || t(device.error)}
-                    </div> : null}
-                    {device.warning ? <div
-                        className={styles.notice}
-                        role="status"
-                    >{t(device.warning)}</div> : null}
+            {open ? <HardwareStatusPopover
+                hardwareId="spark-ai"
+                device={device}
+                locale={this.props.locale}
+                triggerRef={this.trigger}
+                onClose={() => this.close()}
+                disabled={busy}
+                notice={error || (device.error && sparkRuntimeError(device.error, locale)) || (device.warning && t(device.warning))}
+                onDisconnect={() => this.command('spark-disconnect')}
+                connectionContent={<HardwareConnectionSettings
+                    hardwareId="spark-ai"
+                    locale={locale}
+                    device={device}
+                    busy={Boolean(busy)}
+                    connecting={['opening', 'disconnecting'].includes(device.state)}
+                    ports={ports}
+                    selected={selected}
+                    scanning={bleScan.scanning}
+                    bluetoothDevices={bleScan.devices}
+                    onMode={mode => this.command('spark-connection-mode', mode)}
+                    onSelectPort={value => this.setState({selected: value})}
+                    onRefresh={() => this.scan()}
+                    onConnect={() => this.command('spark-connect', {path: selected})}
+                    onDisconnect={() => this.command('spark-disconnect')}
+                    onSearch={() => this.command('choose-ble')}
+                    onCancelSearch={() => ipcRenderer.invoke('spark-ble-cancel-scan').catch(() => {})}
+                    onSelectBluetooth={id => ipcRenderer.invoke('spark-ble-select', id).catch(caught =>
+                        this.setState({error: sparkRuntimeError(caught, locale)}))}
+                    onForget={() => this.command('spark-ble-forget')}
+                    onPauseReconnect={() => this.command('spark-set-auto-connect', false)}
+                    onAutoChange={value => this.command('spark-set-auto-connect', value)}
+                    autoStatus={discovery && !device.error ? t(ble && !device.bleDevice ?
+                        'bleChooseFirst' : `auto.${discovery.status}`) : ''}
+                />}
+                infoContent={<React.Fragment>
                     <dl className={styles.summary}>
                         <div><dt>{t('firmware')}</dt><dd>{status ? status.version : unknown}</dd></div>
-                        <div><dt>{t('battery')}</dt><dd>{status && status.battery !== null ? `${status.battery}%` : unknown}</dd></div>
+                        <div><dt>{t('battery')}</dt><dd>{status && Number.isFinite(status.battery) ? `${status.battery}%` : unknown}</dd></div>
                         <div><dt>{t('flash')}</dt><dd>{status ? `${status.flash.free || unknown} / ${status.flash.total || unknown}` : unknown}</dd></div>
-                        <div><dt>{t('heap')}</dt><dd>{status && status.heap !== null ? status.heap : unknown}</dd></div>
+                        <div><dt>{t('heap')}</dt><dd>{status && Number.isFinite(status.heap) ? status.heap : unknown}</dd></div>
                         <div><dt>{t('programState')}</dt><dd>{status ? t(status.running ? 'running' : 'idle') : unknown}</dd></div>
                     </dl>
-                    <SparkFirmwarePanel
-                        locale={locale}
-                        device={device}
-                    />
-                    <div className={styles.monitorRow}>
-                        <label><input
-                            type="checkbox"
-                            checked={device.monitoring !== false}
-                            disabled={!connected || busy || Boolean(status && status.running)}
-                            onChange={event => this.command('spark-set-monitoring', event.target.checked)}
-                        />{t('monitoring')}</label>
-                        {device.stale || !device.monitoring ? <span>{t(device.monitoring ? 'stale' : 'paused')}</span> : null}
-                    </div>
-                    <div className={styles.ports}>
-                        {Array.from({length: 4}, (unused, index) => {
-                            const port = status && status.ports.find(item => item.port === index);
-                            return (<div
-                                className={styles.port}
-                                key={index}
-                            >
-                                <strong>{'ABCD'[index]}</strong><span>{port ? t(port.type) : unknown}</span>
-                                <div className={styles.portValues}>{port ? Object.entries(port.values).map(([key, value]) =>
-                                    <span key={key}>{t(key)}: {value === null ? unknown : value}</span>) : null}</div>
-                            </div>);
-                        })}
-                    </div>
+                    <section className={styles.firmwareSection}>
+                        <button
+                            id="spark-firmware-toggle"
+                            type="button"
+                            className={styles.command}
+                            disabled={busy}
+                            onClick={() => this.firmware.current.open()}
+                        >{t('firmwareUpdate')}</button>
+                    </section>
                     <div className={styles.logHeader}><h3>{t('logs')}</h3>
                         <button
                             type="button"
@@ -338,8 +226,14 @@ export default class SparkConnection extends React.Component {
                         value={log}
                         aria-label={t('logs')}
                     />
-                </section>
-            </div>, document.body) : null}
+                </React.Fragment>}
+            /> : null}
+            <SparkFirmwarePanel
+                ref={this.firmware}
+                locale={locale}
+                device={device}
+                onOpen={() => this.close(false)}
+            />
         </React.Fragment>);
     }
 }

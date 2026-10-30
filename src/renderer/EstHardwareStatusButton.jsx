@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-no-bind */
 import {dialog} from '@electron/remote';
 import * as remote from '@electron/remote/renderer';
 import classNames from 'classnames';
@@ -8,7 +9,11 @@ import {connect} from 'react-redux';
 
 import {EST_CONNECTION_STATUS_EVENT} from './est-connection-status';
 import {getEstText} from './est-i18n';
+import HardwareStatusPopover from './hardware/HardwareStatusPopover.jsx';
+import HardwareConnectionSettings from './hardware/HardwareConnectionSettings.jsx';
+import {hardwareStatusText} from './hardware/status-messages';
 import styles from './EstHardwareStatusButton.css';
+import connectionStyles from './spark-ai/SparkRuntime.css';
 import {getHardwareProfile} from '../common/hardware-profiles';
 
 const REFRESH_INTERVAL_MS = 250;
@@ -141,6 +146,8 @@ class EstHardwareStatusButton extends React.Component {
         super(props);
         this.state = {
             connection: null,
+            connectionOnline: false,
+            connectionHealthy: false,
             errorMessage: null,
             firmwareUpdateBusy: null,
             firmwareUpdateMenuOpen: false,
@@ -199,6 +206,11 @@ class EstHardwareStatusButton extends React.Component {
     handleConnectionStatus (event) {
         const detail = event && event.detail;
         if (!detail) return;
+        this.setState(state => (
+            state.connectionOnline === Boolean(detail.isConnected) &&
+            state.connectionHealthy === Boolean(detail.isCompatible) ? null :
+                {connectionOnline: Boolean(detail.isConnected), connectionHealthy: Boolean(detail.isCompatible)}
+        ));
         if (detail.isConnected) {
             if (this.state.isOpen && (!this.state.connection || this.state.connection.state !== 'connected')) {
                 this.refreshStatus({silent: true});
@@ -469,8 +481,13 @@ class EstHardwareStatusButton extends React.Component {
             if (this.unmounted || generation !== this.refreshGeneration || !this.state.isOpen) return;
             if (connection && connection.state === 'busy') return;
             const isConnected = connection && connection.state === 'connected';
+            const compatibility = connection && connection.status && connection.status.compatibility;
             const next = {
                 connection,
+                connectionOnline: Boolean(isConnected),
+                connectionHealthy: Boolean(isConnected && (typeof connection.compatible === 'boolean' ?
+                    connection.compatible : (compatibility ?
+                        compatibility.programCompatible : this.state.connectionHealthy))),
                 errorMessage: isConnected || !(connection && connection.message) ?
                     null :
                     formatStatusError(connection.message, this.props.locale),
@@ -483,6 +500,8 @@ class EstHardwareStatusButton extends React.Component {
             if (this.unmounted || generation !== this.refreshGeneration || !this.state.isOpen) return;
             this.setState({
                 connection: {state: 'error'},
+                connectionOnline: false,
+                connectionHealthy: false,
                 errorMessage: formatStatusError(error, this.props.locale),
                 status: null
             });
@@ -612,152 +631,157 @@ class EstHardwareStatusButton extends React.Component {
         );
     }
 
+    async connectHardware () {
+        if (this.connectionPending) return;
+        this.connectionPending = true;
+        this.setState({isLoading: true, errorMessage: null});
+        try {
+            window.dispatchEvent(new CustomEvent('est-auto-connect-paused', {detail: false}));
+            await ipcRenderer.invoke('est-auto-connect', {reuseConnection: true});
+            await this.refreshStatus();
+        } catch (error) {
+            if (!this.unmounted) this.setState({errorMessage: formatStatusError(error, this.props.locale)});
+        } finally {
+            this.connectionPending = false;
+            if (!this.unmounted) this.setState({isLoading: false});
+        }
+    }
+
+    async disconnectHardware () {
+        if (this.connectionPending) return;
+        const t = key => hardwareStatusText(key, this.props.locale);
+        if (isProgramRunning(this.state.status)) {
+            const confirmation = await dialog.showMessageBox(remote.getCurrentWindow(), {
+                type: 'warning',
+                message: t('disconnectRunning'),
+                buttons: [t('disconnect'), t('back')],
+                defaultId: 1,
+                cancelId: 1
+            });
+            if (confirmation.response !== 0) return;
+        }
+        this.connectionPending = true;
+        this.setState({isLoading: true, errorMessage: null});
+        try {
+            window.dispatchEvent(new CustomEvent('est-auto-connect-paused', {detail: true}));
+            await ipcRenderer.invoke('est-disconnect');
+            window.dispatchEvent(new CustomEvent(EST_CONNECTION_STATUS_EVENT,
+                {detail: {isConnected: false, isCompatible: false}}));
+        } catch (error) {
+            window.dispatchEvent(new CustomEvent('est-auto-connect-paused', {detail: false}));
+            if (!this.unmounted) this.setState({errorMessage: formatStatusError(error, this.props.locale)});
+        } finally {
+            this.connectionPending = false;
+            if (!this.unmounted) this.setState({isLoading: false});
+        }
+    }
+
     renderPanel () {
         const {locale} = this.props;
-        const {
-            errorMessage,
-            firmwareUpdateBusy,
-            firmwareUpdateMenuOpen,
-            firmwareUpdateMessage,
-            isLoading,
-            status
-        } = this.state;
-        const programRunning = isProgramRunning(status);
-        const pollingError = status && status.statusPollingError ?
-            formatStatusError(status.statusPollingError, this.props.locale) : null;
-        const panelStyle = this.state.panelPosition ? {
-            left: `${this.state.panelPosition.left}px`,
-            top: `${this.state.panelPosition.top}px`
-        } : null;
-        return (
-            <div className={styles.overlay}>
-                <aside
-                    aria-label={getEstText('hardware.title', locale)}
-                    className={styles.panel}
-                    ref={this.panelRef}
-                    role="dialog"
-                    style={panelStyle}
-                >
-                    <div
-                        className={styles.panelHeader}
-                        onMouseDown={this.handlePanelDragStart}
+        const {connection, status, errorMessage, firmwareUpdateBusy, firmwareUpdateMenuOpen,
+            firmwareUpdateMessage, isLoading} = this.state;
+        const device = {connected: Boolean(connection && connection.state === 'connected'),
+            busy: Boolean(firmwareUpdateBusy),
+            status,
+            connectionMode: 'usb',
+            stale: Boolean(status && (status.statusPollingError || status.statusPollingDeferred))};
+        return (<HardwareStatusPopover
+            hardwareId="est"
+            device={device}
+            locale={locale}
+            triggerRef={this.buttonRef}
+            onClose={this.handleClose}
+            disabled={Boolean(firmwareUpdateBusy)}
+            notice={errorMessage || firmwareUpdateMessage}
+            onDisconnect={() => this.disconnectHardware()}
+            connectionContent={<HardwareConnectionSettings
+                hardwareId="est"
+                locale={locale}
+                device={device}
+                busy={isLoading || Boolean(firmwareUpdateBusy)}
+                connecting={isLoading && !device.connected}
+                onRefresh={this.handleManualRefresh}
+                onConnect={() => this.connectHardware()}
+                onDisconnect={() => this.disconnectHardware()}
+            />}
+            infoContent={<React.Fragment>
+                {this.renderConnectionAndBattery()}
+                <div className={styles.firmwareUpdateWrap}>
+                    <button
+                        aria-expanded={firmwareUpdateMenuOpen}
+                        aria-haspopup="menu"
+                        className={styles.firmwareUpdateButton}
+                        disabled={Boolean(firmwareUpdateBusy)}
+                        type="button"
+                        onClick={this.handleFirmwareUpdateToggle}
                     >
-                        <div>
-                            <h2>{getEstText('hardware.title', locale)}</h2>
-                            <p>{isLoading ?
-                                getEstText('hardware.refreshing', locale) :
-                                getEstText('hardware.subtitle', locale)}</p>
-                        </div>
-                        <div className={styles.panelActions}>
-                            <div className={styles.firmwareUpdateWrap}>
-                                <button
-                                    aria-expanded={firmwareUpdateMenuOpen}
-                                    aria-haspopup="menu"
-                                    className={styles.firmwareUpdateButton}
-                                    disabled={Boolean(firmwareUpdateBusy)}
-                                    type="button"
-                                    onClick={this.handleFirmwareUpdateToggle}
-                                >
-                                    {firmwareUpdateBusy ?
-                                        getEstText('firmware.busy', locale) :
-                                        getEstText('firmware.updateButton', locale)}
-                                </button>
-                                {firmwareUpdateMenuOpen && (
-                                    <div
-                                        aria-label={getEstText('firmware.menuAria', locale)}
-                                        className={styles.firmwareUpdateMenu}
-                                        role="menu"
-                                    >
-                                        <button
-                                            className={styles.firmwareUpdateOption}
-                                            data-firmware-target={FIRMWARE_UPDATE_ACTIONS.upgrade}
-                                            role="menuitem"
-                                            type="button"
-                                            onClick={this.handleFirmwareUpdateOption}
-                                        >
-                                            {getEstText('firmware.upgradeEstOs', locale)}
-                                        </button>
-                                        <button
-                                            className={styles.firmwareUpdateOption}
-                                            data-firmware-target={FIRMWARE_UPDATE_ACTIONS.downgrade}
-                                            role="menuitem"
-                                            type="button"
-                                            onClick={this.handleFirmwareUpdateOption}
-                                        >
-                                            {getEstText('firmware.downgradeLegacyEst', locale)}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                        {firmwareUpdateBusy ?
+                            getEstText('firmware.busy', locale) :
+                            getEstText('firmware.updateButton', locale)}
+                    </button>
+                    {firmwareUpdateMenuOpen && (
+                        <div
+                            aria-label={getEstText('firmware.menuAria', locale)}
+                            className={styles.firmwareUpdateMenu}
+                            role="menu"
+                        >
                             <button
-                                className={styles.refreshButton}
-                                disabled={isLoading || Boolean(firmwareUpdateBusy)}
+                                className={styles.firmwareUpdateOption}
+                                data-firmware-target={FIRMWARE_UPDATE_ACTIONS.upgrade}
+                                role="menuitem"
                                 type="button"
-                                onClick={this.handleManualRefresh}
+                                onClick={this.handleFirmwareUpdateOption}
                             >
-                                {getEstText('hardware.manualRefresh', locale)}
+                                {getEstText('firmware.upgradeEstOs', locale)}
                             </button>
                             <button
-                                aria-label={getEstText('hardware.close', locale)}
-                                className={styles.closeButton}
+                                className={styles.firmwareUpdateOption}
+                                data-firmware-target={FIRMWARE_UPDATE_ACTIONS.downgrade}
+                                role="menuitem"
                                 type="button"
-                                onClick={this.handleClose}
+                                onClick={this.handleFirmwareUpdateOption}
                             >
-                                ×
+                                {getEstText('firmware.downgradeLegacyEst', locale)}
                             </button>
                         </div>
-                    </div>
-                    {programRunning && status.statusPollingDeferred && (
-                        <div className={styles.notice}>
-                            {getEstText('hardware.runningNotice', locale)}
-                        </div>
                     )}
-                    {firmwareUpdateMessage && (
-                        <div className={styles.notice}>
-                            {firmwareUpdateMessage}
-                        </div>
-                    )}
-                    {errorMessage && (
-                        <div className={styles.errorBox}>
-                            {errorMessage}
-                        </div>
-                    )}
-                    {pollingError && (
-                        <div className={styles.errorBox}>
-                            {pollingError}
-                        </div>
-                    )}
-                    {status ? (
-                        <React.Fragment>
-                            {this.renderPortsOverview()}
-                            {this.renderConnectionAndBattery()}
-                        </React.Fragment>
-                    ) : (
-                        <p className={styles.emptyState}>{getEstText('hardware.notConnected', locale)}</p>
-                    )}
-                </aside>
-            </div>
-        );
+                </div>
+
+                <button
+                    type="button"
+                    className={styles.refreshButton}
+                    disabled={isLoading || Boolean(firmwareUpdateBusy)}
+                    onClick={this.handleManualRefresh}
+                >
+                    {getEstText('hardware.manualRefresh', locale)}</button>
+                {this.renderPortsOverview()}
+            </React.Fragment>}
+        />);
     }
 
     render () {
         const {locale} = this.props;
-        const {isOpen} = this.state;
+        const {isOpen, connectionOnline, connectionHealthy, firmwareUpdateBusy} = this.state;
         return (
             <div className={styles.container}>
                 <button
+                    id="est-connection"
                     aria-expanded={isOpen}
+                    aria-haspopup="dialog"
                     aria-label={getEstText('hardware.title', locale)}
-                    className={classNames(
-                        styles.menuButton,
-                        isOpen && styles.menuButtonOpen
-                    )}
+                    className={connectionStyles.connection}
                     ref={this.buttonRef}
                     title={getEstText('hardware.title', locale)}
                     type="button"
                     onClick={this.handleToggle}
                 >
-                    <span className={styles.menuText}>{getEstText('menu.hardwareStatus', locale)}</span>
+                    <span className={connectionStyles.connectionLabel}>{firmwareUpdateBusy ?
+                        getEstText('firmware.updateButton', locale) : hardwareStatusText(
+                            connectionOnline ? 'connected' : 'disconnected', locale)}</span>
+                    <span
+                        className={`${connectionStyles.dot} ${connectionOnline ?
+                            (connectionHealthy ? connectionStyles.connected : connectionStyles.warning) : ''}`}
+                    />
                 </button>
                 {isOpen ? this.renderPanel() : null}
             </div>

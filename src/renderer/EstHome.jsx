@@ -19,35 +19,18 @@ import {
     dispatchEstHomeEvent
 } from './est-home-events';
 import {
-    EST_HOME_BUILD_CATEGORIES,
     EST_HOME_BUILD_ITEMS
 } from './est-home-build-library';
-import EST_HOME_BLOCK_GUIDE_CATEGORIES from './est-home-block-guide';
-import createEstBlockPreviews from './est-home-block-previews';
+import {createHardwareBlockPreviews} from './est-home-block-previews';
+import getProductBlockGuideCategories from './est-home-product-block-guide';
+import HostMenuGuide from './est-home-host-menu-guide.jsx';
+import {getHomeContent} from '../common/home-content';
+import {getHardwareProfile} from '../common/hardware-profiles';
+import {EST_PRODUCTS, INFO_ITEMS, PRODUCT_GUIDE_ITEMS, getProductGuide} from './est-home-content';
 
-import aiConversationGuide from './est-home-assets/home-guide-ai-conversation.png';
-import aiSettingsGuide from './est-home-assets/home-guide-ai-settings.png';
-import aiWelcomeGuide from './est-home-assets/home-guide-ai-welcome.png';
-import hostHomeGuide from './est-home-assets/home-guide-est-host-home.png';
-import hostHomeGuideEN from './est-home-assets/home-guide-est-host-home-en.png';
-import hostHomeGuidePT from './est-home-assets/home-guide-est-host-home-pt-br.png';
-import hostPortsGuide from './est-home-assets/home-guide-est-host-ports.png';
-import hostPortsGuideEN from './est-home-assets/home-guide-est-host-ports-en.png';
-import hostPortsGuidePT from './est-home-assets/home-guide-est-host-ports-pt-br.png';
-import hostProgramsGuide from './est-home-assets/home-guide-est-host-programs.png';
-import hostProgramsGuideEN from './est-home-assets/home-guide-est-host-programs-en.png';
-import hostProgramsGuidePT from './est-home-assets/home-guide-est-host-programs-pt-br.png';
-import hostSettingsGuide from './est-home-assets/home-guide-est-host-settings.png';
-import hostSettingsGuideEN from './est-home-assets/home-guide-est-host-settings-en.png';
-import hostSettingsGuidePT from './est-home-assets/home-guide-est-host-settings-pt-br.png';
-import visionCameraGuide from './est-home-assets/home-guide-vision-camera.png';
-import visionCameraGuideEN from './est-home-assets/home-guide-vision-camera-en.png';
-import visionCameraGuidePT from './est-home-assets/home-guide-vision-camera-pt-br.png';
-import visionCameraGuideRU from './est-home-assets/home-guide-vision-camera-ru.png';
-import visionCameraGuideTW from './est-home-assets/home-guide-vision-camera-zh-tw.png';
-import estProductGuide from '../../resources/est-build-library/thumbnails/basic-01.jpg';
 import buildIcon from './est-home-assets/home-icon-build.png';
 import fileIcon from './est-home-assets/home-icon-file.png';
+import projectFileIcon from '../icon/ATCProject.png';
 import moreIcon from './est-home-assets/home-icon-more.png';
 import startIcon from './est-home-assets/home-icon-start.png';
 import styles from './EstHome.css';
@@ -84,486 +67,6 @@ const STACK_BLOCK_PATH = [
     'a 4,4 0 0,1 -4,-4 z'
 ].join(' ');
 
-const INFO_ITEMS = [
-    {id: 'est', title: 'home.more.est', subtitle: 'home.more.estSummary'},
-    {id: 'vision', title: 'home.more.vision', subtitle: 'home.more.visionSummary'},
-    {id: 'interaction', title: 'home.more.interaction', subtitle: 'home.more.interactionSummary'},
-    {id: 'hardware', title: 'home.more.hardware', subtitle: 'home.more.hardwareSummary'},
-    {id: 'blocks', title: 'home.more.blocks', subtitle: 'home.more.blocksSummary'},
-    {id: 'ai', title: 'home.more.ai', subtitle: 'home.more.aiSummary'},
-    {id: 'software', title: 'home.more.software', subtitle: 'home.more.softwareSummary'},
-    {id: 'about', title: 'home.more.about', subtitle: 'home.more.aboutSummary'}
-];
-
-const INFO_DIALOGS = {
-    est: {
-        lead: 'home.dialog.est.lead',
-        sections: [
-            {
-                title: 'home.dialog.est.overviewTitle',
-                image: estProductGuide,
-                imageAlt: 'home.dialog.est.overviewImageAlt',
-                caption: 'home.dialog.est.overviewImageCaption',
-                items: [
-                    'home.dialog.est.overview1',
-                    'home.dialog.est.overview2',
-                    'home.dialog.est.overview3'
-                ]
-            },
-            {
-                title: 'home.dialog.est.controllerTitle',
-                items: [
-                    'home.dialog.est.controller1',
-                    'home.dialog.est.controller2',
-                    'home.dialog.est.controller3',
-                    'home.dialog.est.controller4'
-                ]
-            },
-            {
-                title: 'home.dialog.est.hardwareTitle',
-                items: [
-                    'home.dialog.est.hardware1',
-                    'home.dialog.est.hardware2',
-                    'home.dialog.est.hardware3',
-                    'home.dialog.est.hardware4'
-                ]
-            },
-            {
-                title: 'home.dialog.est.programmingTitle',
-                items: [
-                    'home.dialog.est.programming1',
-                    'home.dialog.est.programming2',
-                    'home.dialog.est.programming3',
-                    'home.dialog.est.programming4'
-                ]
-            },
-            {
-                title: 'home.dialog.est.smartTitle',
-                items: [
-                    'home.dialog.est.smart1',
-                    'home.dialog.est.smart2',
-                    'home.dialog.est.smart3'
-                ]
-            },
-            {
-                title: 'home.dialog.est.useTitle',
-                items: [
-                    'home.dialog.est.use1',
-                    'home.dialog.est.use2',
-                    'home.dialog.est.use3'
-                ],
-                note: 'home.dialog.est.useNote'
-            }
-        ]
-    },
-    vision: {
-        lead: 'home.dialog.vision.lead',
-        action: 'vision',
-        actionLabel: 'home.dialog.vision.openAction',
-        sections: [
-            {
-                title: 'home.dialog.vision.startTitle',
-                image: visionCameraGuide,
-                localizedImages: {
-                    en: visionCameraGuideEN, ru: visionCameraGuideRU,
-                    'pt-br': visionCameraGuidePT, 'zh-tw': visionCameraGuideTW
-                },
-                imageAlt: 'home.dialog.vision.startImageAlt',
-                caption: 'home.dialog.vision.startImageCaption',
-                ordered: true,
-                items: [
-                    'home.dialog.vision.start1',
-                    'home.dialog.vision.start2',
-                    'home.dialog.vision.start3',
-                    'home.dialog.vision.start4'
-                ]
-            },
-            {
-                title: 'home.dialog.vision.modeTitle',
-                items: [
-                    'home.dialog.vision.mode1',
-                    'home.dialog.vision.mode2',
-                    'home.dialog.vision.mode3',
-                    'home.dialog.vision.mode4'
-                ]
-            },
-            {
-                title: 'home.dialog.vision.programTitle',
-                ordered: true,
-                items: [
-                    'home.dialog.vision.program1',
-                    'home.dialog.vision.program2',
-                    'home.dialog.vision.program3',
-                    'home.dialog.vision.program4'
-                ],
-                note: 'home.dialog.vision.programNote'
-            },
-            {
-                title: 'home.dialog.vision.firmwareTitle',
-                items: [
-                    'home.dialog.vision.firmware1',
-                    'home.dialog.vision.firmware2',
-                    'home.dialog.vision.firmware3',
-                    'home.dialog.vision.firmware4'
-                ]
-            },
-            {
-                title: 'home.dialog.vision.privacyTitle',
-                items: [
-                    'home.dialog.vision.privacy1',
-                    'home.dialog.vision.privacy2',
-                    'home.dialog.vision.privacy3'
-                ]
-            },
-            {
-                title: 'home.dialog.vision.troubleshootTitle',
-                items: [
-                    'home.dialog.vision.troubleshoot1',
-                    'home.dialog.vision.troubleshoot2',
-                    'home.dialog.vision.troubleshoot3',
-                    'home.dialog.vision.troubleshoot4'
-                ]
-            }
-        ]
-    },
-    interaction: {
-        lead: 'home.dialog.interaction.lead',
-        sections: [
-            {
-                title: 'home.dialog.interaction.connectTitle',
-                ordered: true,
-                items: [
-                    'home.dialog.interaction.connect1',
-                    'home.dialog.interaction.connect2',
-                    'home.dialog.interaction.connect3',
-                    'home.dialog.interaction.connect4'
-                ]
-            },
-            {
-                title: 'home.dialog.interaction.programTitle',
-                items: [
-                    'home.dialog.interaction.program1',
-                    'home.dialog.interaction.program2',
-                    'home.dialog.interaction.program3',
-                    'home.dialog.interaction.program4'
-                ]
-            },
-            {
-                title: 'home.dialog.interaction.hostTitle',
-                items: [
-                    'home.dialog.interaction.host1',
-                    'home.dialog.interaction.host2'
-                ]
-            },
-            {
-                title: 'home.dialog.interaction.feedbackTitle',
-                items: [
-                    'home.dialog.interaction.feedback1',
-                    'home.dialog.interaction.feedback2',
-                    'home.dialog.interaction.feedback3'
-                ],
-                note: 'home.dialog.interaction.feedbackNote'
-            },
-            {
-                title: 'home.dialog.interaction.visionTitle',
-                items: [
-                    'home.dialog.interaction.vision1',
-                    'home.dialog.interaction.vision2',
-                    'home.dialog.interaction.vision3'
-                ]
-            },
-            {
-                title: 'home.dialog.interaction.troubleshootTitle',
-                items: [
-                    'home.dialog.interaction.troubleshoot1',
-                    'home.dialog.interaction.troubleshoot2',
-                    'home.dialog.interaction.troubleshoot3'
-                ]
-            }
-        ]
-    },
-    hardware: {
-        lead: 'home.dialog.hardware.lead',
-        sections: [
-            {
-                title: 'home.dialog.hardware.controllerTitle',
-                items: [
-                    'home.dialog.hardware.controller1',
-                    'home.dialog.hardware.controller2',
-                    'home.dialog.hardware.controller3'
-                ]
-            },
-            {
-                title: 'home.dialog.hardware.hostHomeTitle',
-                image: hostHomeGuide,
-                localizedImages: {
-                    'en': hostHomeGuideEN,
-                    'pt-br': hostHomeGuidePT
-                },
-                imageAlt: 'home.dialog.hardware.hostHomeImageAlt',
-                caption: 'home.dialog.hardware.hostImageCaption',
-                items: [
-                    'home.dialog.hardware.hostHome1',
-                    'home.dialog.hardware.hostHome2',
-                    'home.dialog.hardware.hostHome3',
-                    'home.dialog.hardware.hostHome4'
-                ]
-            },
-            {
-                title: 'home.dialog.hardware.hostProgramsTitle',
-                image: hostProgramsGuide,
-                localizedImages: {
-                    'en': hostProgramsGuideEN,
-                    'pt-br': hostProgramsGuidePT
-                },
-                imageAlt: 'home.dialog.hardware.hostProgramsImageAlt',
-                caption: 'home.dialog.hardware.hostImageCaption',
-                items: [
-                    'home.dialog.hardware.hostPrograms1',
-                    'home.dialog.hardware.hostPrograms2',
-                    'home.dialog.hardware.hostPrograms3',
-                    'home.dialog.hardware.hostPrograms4'
-                ]
-            },
-            {
-                title: 'home.dialog.hardware.hostPortsTitle',
-                image: hostPortsGuide,
-                localizedImages: {
-                    'en': hostPortsGuideEN,
-                    'pt-br': hostPortsGuidePT
-                },
-                imageAlt: 'home.dialog.hardware.hostPortsImageAlt',
-                caption: 'home.dialog.hardware.hostImageCaption',
-                items: [
-                    'home.dialog.hardware.hostPorts1',
-                    'home.dialog.hardware.hostPorts2',
-                    'home.dialog.hardware.hostPorts3'
-                ]
-            },
-            {
-                title: 'home.dialog.hardware.hostRemoteTitle',
-                items: [
-                    'home.dialog.hardware.hostRemote1',
-                    'home.dialog.hardware.hostRemote2',
-                    'home.dialog.hardware.hostRemote3'
-                ]
-            },
-            {
-                title: 'home.dialog.hardware.hostMotorTitle',
-                items: [
-                    'home.dialog.hardware.hostMotor1',
-                    'home.dialog.hardware.hostMotor2',
-                    'home.dialog.hardware.hostMotor3',
-                    'home.dialog.hardware.hostMotor4'
-                ],
-                note: 'home.dialog.hardware.hostMotorNote'
-            },
-            {
-                title: 'home.dialog.hardware.hostSettingsTitle',
-                image: hostSettingsGuide,
-                localizedImages: {
-                    'en': hostSettingsGuideEN,
-                    'pt-br': hostSettingsGuidePT
-                },
-                imageAlt: 'home.dialog.hardware.hostSettingsImageAlt',
-                caption: 'home.dialog.hardware.hostImageCaption',
-                items: [
-                    'home.dialog.hardware.hostSettings1',
-                    'home.dialog.hardware.hostSettings2',
-                    'home.dialog.hardware.hostSettings3'
-                ]
-            },
-            {
-                title: 'home.dialog.hardware.outputTitle',
-                items: [
-                    'home.dialog.hardware.output1',
-                    'home.dialog.hardware.output2',
-                    'home.dialog.hardware.output3'
-                ]
-            },
-            {
-                title: 'home.dialog.hardware.sensorTitle',
-                items: [
-                    'home.dialog.hardware.sensor1',
-                    'home.dialog.hardware.sensor2',
-                    'home.dialog.hardware.sensor3',
-                    'home.dialog.hardware.sensor4',
-                    'home.dialog.hardware.sensor5'
-                ]
-            },
-            {
-                title: 'home.dialog.hardware.firmwareTitle',
-                ordered: true,
-                items: [
-                    'home.dialog.hardware.firmware1',
-                    'home.dialog.hardware.firmware2',
-                    'home.dialog.hardware.firmware3',
-                    'home.dialog.hardware.firmware4',
-                    'home.dialog.hardware.firmware5',
-                    'home.dialog.hardware.firmware6',
-                    'home.dialog.hardware.firmware7'
-                ],
-                note: 'home.dialog.hardware.firmwareNote'
-            },
-            {
-                title: 'home.dialog.hardware.careTitle',
-                items: [
-                    'home.dialog.hardware.care1',
-                    'home.dialog.hardware.care2',
-                    'home.dialog.hardware.care3'
-                ],
-                note: 'home.dialog.hardware.careNote'
-            }
-        ]
-    },
-    blocks: {
-        lead: 'home.dialog.blocks.lead'
-    },
-    ai: {
-        lead: 'home.dialog.ai.lead',
-        sections: [
-            {
-                title: 'home.dialog.ai.openTitle',
-                image: aiWelcomeGuide,
-                imageAlt: 'home.dialog.ai.openImageAlt',
-                caption: 'home.dialog.ai.openImageCaption',
-                items: [
-                    'home.dialog.ai.open1',
-                    'home.dialog.ai.open2',
-                    'home.dialog.ai.open3'
-                ]
-            },
-            {
-                title: 'home.dialog.ai.setupTitle',
-                image: aiSettingsGuide,
-                imageAlt: 'home.dialog.ai.setupImageAlt',
-                caption: 'home.dialog.ai.setupImageCaption',
-                ordered: true,
-                items: [
-                    'home.dialog.ai.setup1',
-                    'home.dialog.ai.setup2',
-                    'home.dialog.ai.setup3',
-                    'home.dialog.ai.setup4',
-                    'home.dialog.ai.setup5'
-                ],
-                note: 'home.dialog.ai.setupNote'
-            },
-            {
-                title: 'home.dialog.ai.promptTitle',
-                items: [
-                    'home.dialog.ai.prompt1',
-                    'home.dialog.ai.prompt2',
-                    'home.dialog.ai.prompt3',
-                    'home.dialog.ai.prompt4'
-                ]
-            },
-            {
-                title: 'home.dialog.ai.applyTitle',
-                image: aiConversationGuide,
-                imageAlt: 'home.dialog.ai.applyImageAlt',
-                caption: 'home.dialog.ai.applyImageCaption',
-                ordered: true,
-                items: [
-                    'home.dialog.ai.apply1',
-                    'home.dialog.ai.apply2',
-                    'home.dialog.ai.apply3',
-                    'home.dialog.ai.apply4',
-                    'home.dialog.ai.apply5'
-                ],
-                note: 'home.dialog.ai.applyNote'
-            },
-            {
-                title: 'home.dialog.ai.scopeTitle',
-                items: [
-                    'home.dialog.ai.scope1',
-                    'home.dialog.ai.scope2',
-                    'home.dialog.ai.scope3',
-                    'home.dialog.ai.scope4',
-                    'home.dialog.ai.scope5'
-                ]
-            },
-            {
-                title: 'home.dialog.ai.privacyTitle',
-                items: [
-                    'home.dialog.ai.privacy1',
-                    'home.dialog.ai.privacy2',
-                    'home.dialog.ai.privacy3'
-                ],
-                note: 'home.dialog.ai.privacyNote'
-            },
-            {
-                title: 'home.dialog.ai.troubleshootTitle',
-                items: [
-                    'home.dialog.ai.troubleshoot1',
-                    'home.dialog.ai.troubleshoot2',
-                    'home.dialog.ai.troubleshoot3',
-                    'home.dialog.ai.troubleshoot4'
-                ]
-            }
-        ]
-    },
-    software: {
-        lead: 'home.dialog.software.lead',
-        sections: [
-            {
-                title: 'home.dialog.software.fileTitle',
-                items: [
-                    'home.dialog.software.file1',
-                    'home.dialog.software.file2',
-                    'home.dialog.software.file3'
-                ]
-            },
-            {
-                title: 'home.dialog.software.workspaceTitle',
-                items: [
-                    'home.dialog.software.workspace1',
-                    'home.dialog.software.workspace2',
-                    'home.dialog.software.workspace3',
-                    'home.dialog.software.workspace4'
-                ]
-            },
-            {
-                title: 'home.dialog.software.updateTitle',
-                items: [
-                    'home.dialog.software.update1',
-                    'home.dialog.software.update2',
-                    'home.dialog.software.update3'
-                ],
-                note: 'home.dialog.software.updateNote'
-            }
-        ]
-    },
-    about: {
-        lead: 'home.dialog.about.lead',
-        sections: [
-            {
-                title: 'home.dialog.about.purposeTitle',
-                items: [
-                    'home.dialog.about.purpose1',
-                    'home.dialog.about.purpose2',
-                    'home.dialog.about.purpose3'
-                ]
-            },
-            {
-                title: 'home.dialog.about.foundationTitle',
-                items: [
-                    'home.dialog.about.foundation2',
-                    'home.dialog.about.foundation3'
-                ]
-            },
-            {
-                title: 'home.dialog.about.supportTitle',
-                items: [
-                    'home.dialog.about.support1',
-                    'home.dialog.about.support2',
-                    'home.dialog.about.support3'
-                ],
-                note: 'home.dialog.about.supportNote'
-            }
-        ]
-    }
-};
-
 const FILE_ACCENTS = ['blue', 'green', 'orange', 'cyan'];
 
 class EstHome extends React.Component {
@@ -571,7 +74,9 @@ class EstHome extends React.Component {
         super(props);
         this.state = {
             activeView: 'files',
+            hardwarePickerOpen: false,
             blockPreviewLocale: null,
+            blockPreviewHardwareId: null,
             blockPreviews: {},
             blockPreviewsLoading: false,
             buildCategory: 'basic',
@@ -579,7 +84,7 @@ class EstHome extends React.Component {
             buildDownloadCancelling: false,
             buildDownloadPaused: false,
             buildDownloadProgress: null,
-            buildItems: EST_HOME_BUILD_ITEMS,
+            buildItems: props.homeHardwareId === 'est' ? EST_HOME_BUILD_ITEMS : [],
             buildLibraryInstalled: false,
             buildThumbnails: {},
             buildTotalItems: 42,
@@ -589,8 +94,11 @@ class EstHome extends React.Component {
             notice: '',
             recentFiles: [],
             renameTarget: null,
-            renameValue: ''
+            renameValue: '',
+            showUnknownFiles: false
         };
+        this.hardwarePickerRef = React.createRef();
+        this.handleHardwarePickerOutside = this.handleHardwarePickerOutside.bind(this);
         this.handleLocaleChanged = this.handleLocaleChanged.bind(this);
         this.handleBuildDownloadProgress = this.handleBuildDownloadProgress.bind(this);
         this.handleProjectFailed = this.handleProjectFailed.bind(this);
@@ -601,16 +109,46 @@ class EstHome extends React.Component {
         window.addEventListener(EST_LOCALE_CHANGED_EVENT, this.handleLocaleChanged);
         window.addEventListener(EST_HOME_PROJECT_FAILED_EVENT, this.handleProjectFailed);
         window.addEventListener('keydown', this.handleWindowKeyDown);
+        window.addEventListener('mousedown', this.handleHardwarePickerOutside);
         ipcRenderer.on('est-home-build-download-progress', this.handleBuildDownloadProgress);
         this.loadRecentFiles();
         this.loadBuildLibrary();
     }
 
+    componentDidUpdate (previous) {
+        if (previous.homeHardwareId === this.props.homeHardwareId) return;
+        this.blockPreviewRequest = (this.blockPreviewRequest || 0) + 1;
+        window.clearTimeout(this.noticeTimer);
+        // eslint-disable-next-line react/no-did-update-set-state -- Clear details when the controlled device changes.
+        this.setState({dialogId: null,
+            hardwarePickerOpen: false,
+            menuPath: null,
+            renameTarget: null,
+            notice: '',
+            showUnknownFiles: false,
+            buildCategory: 'basic',
+            buildItems: [],
+            buildThumbnails: {},
+            buildLibraryInstalled: false,
+            buildDownloadActive: false,
+            buildDownloadPaused: false,
+            buildDownloadCancelling: false,
+            buildDownloadProgress: null,
+            blockPreviews: {},
+            blockPreviewHardwareId: null});
+        this.loadRecentFiles();
+        this.loadBuildLibrary();
+    }
+
     componentWillUnmount () {
+        this.unmounted = true;
+        this.recentRequest = (this.recentRequest || 0) + 1;
+        this.libraryRequest = (this.libraryRequest || 0) + 1;
         this.blockPreviewRequest = (this.blockPreviewRequest || 0) + 1;
         window.removeEventListener(EST_LOCALE_CHANGED_EVENT, this.handleLocaleChanged);
         window.removeEventListener(EST_HOME_PROJECT_FAILED_EVENT, this.handleProjectFailed);
         window.removeEventListener('keydown', this.handleWindowKeyDown);
+        window.removeEventListener('mousedown', this.handleHardwarePickerOutside);
         ipcRenderer.removeListener('est-home-build-download-progress', this.handleBuildDownloadProgress);
         window.clearTimeout(this.noticeTimer);
     }
@@ -622,11 +160,12 @@ class EstHome extends React.Component {
     handleLocaleChanged (event) {
         const locale = event.detail && event.detail.locale ? event.detail.locale : getCurrentEstLocale();
         this.setState({
+            blockPreviewHardwareId: null,
             blockPreviewLocale: null,
             blockPreviews: {},
             locale
         }, () => {
-            if (this.state.dialogId === 'blocks') this.loadBlockPreviews();
+            if (this.state.dialogId === 'blocks') this.loadBlockPreviews(this.props.homeHardwareId);
         });
     }
 
@@ -636,64 +175,205 @@ class EstHome extends React.Component {
     }
 
     handleBuildDownloadProgress (event, progress) {
+        if (!progress || progress.hardwareId !== this.props.homeHardwareId || this.unmounted) return;
         this.setState({
             buildDownloadActive: progress && progress.phase !== 'complete',
             buildDownloadCancelling: Boolean(progress && progress.cancelled),
             buildDownloadPaused: Boolean(progress && progress.paused),
             buildDownloadProgress: progress || null
         });
+        if (progress.phase === 'complete') this.loadBuildLibrary();
     }
 
     handleWindowKeyDown (event) {
         if (event.key === 'Escape') {
+            this.closeHardwarePicker(this.state.hardwarePickerOpen);
             this.setState({dialogId: null, menuPath: null, renameTarget: null});
         }
     }
 
+    closeHardwarePicker (restoreFocus = false) {
+        this.setState({hardwarePickerOpen: false}, () => {
+            const root = this.hardwarePickerRef.current;
+            if (restoreFocus && root) root.querySelector('#atc-home-hardware').focus();
+        });
+    }
+
+    handleHardwarePickerOutside (event) {
+        const root = this.hardwarePickerRef.current;
+        if (this.state.hardwarePickerOpen && root && !root.contains(event.target)) this.closeHardwarePicker();
+    }
+
+    openHardwarePicker () {
+        if (!this.props.homeSelectionReady) return;
+        this.setState({hardwarePickerOpen: true}, () => {
+            const root = this.hardwarePickerRef.current;
+            if (root) root.querySelector('[role="option"][aria-selected="true"]').focus();
+        });
+    }
+
+    handleHardwarePickerKeyDown (event) {
+        const key = event.key;
+        if (key === 'Escape' && this.state.hardwarePickerOpen) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.closeHardwarePicker(true);
+            return;
+        }
+        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(key)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const wasOpen = this.state.hardwarePickerOpen;
+        this.setState({hardwarePickerOpen: true}, () => {
+            const root = this.hardwarePickerRef.current;
+            if (!root) return;
+            const options = Array.from(root.querySelectorAll('[role="option"]'));
+            const current = options.indexOf(document.activeElement);
+            const selected = options.findIndex(option => option.getAttribute('aria-selected') === 'true');
+            let next = wasOpen ? (current + (key === 'ArrowUp' ? -1 : 1) + options.length) % options.length : selected;
+            if (key === 'Home') next = 0;
+            if (key === 'End') next = options.length - 1;
+            options[next].focus();
+        });
+    }
+
+    renderHardwarePicker () {
+        const selected = EST_PRODUCTS.find(product => product.id === this.props.homeHardwareId);
+        const open = this.state.hardwarePickerOpen;
+        return (
+            <div
+                className={styles.hardwareSelector}
+                ref={this.hardwarePickerRef}
+                onKeyDown={event => this.handleHardwarePickerKeyDown(event)}
+                onBlur={event => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) this.closeHardwarePicker();
+                }}
+            >
+                <button
+                    id="atc-home-hardware"
+                    className={styles.hardwarePickerTrigger}
+                    type="button"
+                    aria-label={`${this.text('home.selectHardware')}: ${this.text(selected.name)}`}
+                    aria-haspopup="listbox"
+                    aria-controls="atc-home-hardware-options"
+                    aria-expanded={open}
+                    disabled={!this.props.homeSelectionReady}
+                    onClick={() => (open ? this.closeHardwarePicker(true) : this.openHardwarePicker())}
+                >
+                    <img
+                        className={styles.hardwarePickerImage}
+                        alt=""
+                        src={selected.image}
+                        draggable={false}
+                    />
+                    <span className={styles.hardwarePickerCaption}>
+                        <strong>{this.text(selected.name)}</strong>
+                        <svg
+                            viewBox="0 0 16 16"
+                            aria-hidden="true"
+                        ><path d="m4 6 4 4 4-4" /></svg>
+                    </span>
+                </button>
+                {open ? <section className={styles.hardwarePickerMenu}>
+                    <h2>{this.text('home.selectHardware')}</h2>
+                    <div
+                        id="atc-home-hardware-options"
+                        role="listbox"
+                        aria-label={this.text('home.selectHardware')}
+                    >
+                        {EST_PRODUCTS.map(product => {
+                            const active = product.id === this.props.homeHardwareId;
+                            return (<button
+                                key={product.id}
+                                type="button"
+                                role="option"
+                                tabIndex={-1}
+                                data-home-hardware={product.id}
+                                aria-selected={active}
+                                className={styles.hardwarePickerOption}
+                                onClick={() => {
+                                    this.props.onHomeHardwareChange(product.id);
+                                    this.closeHardwarePicker(true);
+                                }}
+                            >
+                                <img
+                                    alt=""
+                                    src={product.image}
+                                    draggable={false}
+                                />
+                                <strong>{this.text(product.name)}</strong>
+                                {active ? <svg
+                                    viewBox="0 0 20 20"
+                                    aria-hidden="true"
+                                ><path d="m4 10 4 4 8-8" /></svg> : null}
+                            </button>);
+                        })}
+                    </div>
+                </section> : null}
+            </div>
+        );
+    }
+
     async loadRecentFiles () {
+        const request = this.recentRequest = (this.recentRequest || 0) + 1;
+        const hardwareId = this.props.homeHardwareId;
         try {
+            // Keep the complete index. Filtering never writes to the stored recent list.
             const recentFiles = await ipcRenderer.invoke('est-home-list-recent-projects');
+            if (this.unmounted || request !== this.recentRequest || hardwareId !== this.props.homeHardwareId) return;
             this.setState({recentFiles: Array.isArray(recentFiles) ? recentFiles : []});
         } catch (error) {
-            this.setState({recentFiles: []});
+            if (!this.unmounted && request === this.recentRequest) this.setState({recentFiles: []});
         }
     }
 
     async loadBuildLibrary () {
+        const request = this.libraryRequest = (this.libraryRequest || 0) + 1;
+        const hardwareId = this.props.homeHardwareId;
         try {
-            const library = await ipcRenderer.invoke('est-home-get-build-library-state');
+            const library = await ipcRenderer.invoke('est-home-get-build-library-state', {hardwareId});
+            if (this.unmounted || request !== this.libraryRequest || hardwareId !== this.props.homeHardwareId ||
+                library.hardwareId !== hardwareId) return;
             this.setState({
-                buildItems: Array.isArray(library.items) ? library.items : EST_HOME_BUILD_ITEMS,
+                buildItems: Array.isArray(library.items) ? library.items :
+                    (hardwareId === 'est' ? EST_HOME_BUILD_ITEMS : []),
                 buildLibraryInstalled: Boolean(library.installed),
                 buildThumbnails: library.thumbnails || {},
-                buildTotalItems: library.totalItemCount || 42
+                buildTotalItems: library.totalItemCount || 0,
+                buildDownloadActive: Boolean(library.downloadActive),
+                buildDownloadProgress: library.downloadProgress,
+                buildDownloadPaused: Boolean(library.downloadProgress && library.downloadProgress.paused),
+                buildDownloadCancelling: Boolean(library.downloadProgress && library.downloadProgress.cancelled)
             });
         } catch (error) {
-            this.setState({
-                buildItems: EST_HOME_BUILD_ITEMS,
+            if (this.unmounted || request !== this.libraryRequest || hardwareId !== this.props.homeHardwareId) return;
+            this.setState({buildItems: hardwareId === 'est' ? EST_HOME_BUILD_ITEMS : [],
                 buildLibraryInstalled: false,
-                buildThumbnails: {}
-            });
+                buildThumbnails: {}});
         }
     }
 
-    loadBlockPreviews () {
+    loadBlockPreviews (hardwareId = this.props.homeHardwareId) {
         const locale = this.state.locale;
-        if (this.state.blockPreviewLocale === locale && Object.keys(this.state.blockPreviews).length) return;
+        if (this.state.blockPreviewHardwareId === hardwareId && this.state.blockPreviewLocale === locale &&
+            Object.keys(this.state.blockPreviews).length) return;
         const requestId = (this.blockPreviewRequest || 0) + 1;
         this.blockPreviewRequest = requestId;
         this.setState({
+            blockPreviewHardwareId: hardwareId,
             blockPreviewLocale: locale,
             blockPreviews: {},
             blockPreviewsLoading: true
         });
-        createEstBlockPreviews(locale, previewBatch => {
-            if (this.blockPreviewRequest !== requestId || this.state.locale !== locale) return;
+        createHardwareBlockPreviews(hardwareId, locale, previewBatch => {
+            if (this.blockPreviewRequest !== requestId || this.state.locale !== locale ||
+                this.state.blockPreviewHardwareId !== hardwareId) return;
             this.setState(state => ({
                 blockPreviews: Object.assign({}, state.blockPreviews, previewBatch)
             }));
         }).then(blockPreviews => {
-            if (this.blockPreviewRequest !== requestId || this.state.locale !== locale) return;
+            if (this.blockPreviewRequest !== requestId || this.state.locale !== locale ||
+                this.state.blockPreviewHardwareId !== hardwareId) return;
             this.setState({
                 blockPreviews,
                 blockPreviewsLoading: false
@@ -707,105 +387,95 @@ class EstHome extends React.Component {
 
     openInfoDialog (dialogId) {
         this.setState({dialogId}, () => {
-            if (dialogId === 'blocks') this.loadBlockPreviews();
+            if (dialogId === 'blocks') this.loadBlockPreviews(this.props.homeHardwareId);
         });
     }
 
     async downloadBuildLibrary () {
-        if (this.state.buildDownloadActive) return;
-        this.buildDownloadWasCancelled = false;
-        this.setState({
-            buildDownloadActive: true,
+        const hardwareId = this.props.homeHardwareId;
+        if (!getHomeContent(hardwareId).downloadableBuildLibrary || this.state.buildDownloadActive) return;
+        const scope = this.libraryRequest;
+        const current = () => !this.unmounted && this.props.homeHardwareId === hardwareId &&
+            scope === this.libraryRequest;
+        this.setState({buildDownloadActive: true,
             buildDownloadCancelling: false,
             buildDownloadPaused: false,
-            buildDownloadProgress: {phase: 'checking', percent: 0}
-        });
+            buildDownloadProgress: {hardwareId, phase: 'checking', percent: 0}});
         try {
-            const library = await ipcRenderer.invoke('est-home-download-build-library');
-            if (library && library.cancelled) {
-                this.setState({
-                    buildDownloadActive: false,
-                    buildDownloadCancelling: false,
-                    buildDownloadPaused: false,
-                    buildDownloadProgress: null
-                });
-                this.showNotice(this.text('home.build.downloadCancelled'));
-                return;
-            }
-            this.setState({
-                buildDownloadActive: false,
-                buildDownloadCancelling: false,
-                buildDownloadPaused: false,
-                buildDownloadProgress: {phase: 'complete', percent: 100},
-                buildItems: Array.isArray(library.items) ? library.items : EST_HOME_BUILD_ITEMS,
-                buildLibraryInstalled: Boolean(library.installed),
-                buildThumbnails: library.thumbnails || {},
-                buildTotalItems: library.totalItemCount || 42
-            });
-            this.showNotice(this.text('home.build.downloadComplete'));
+            const library = await ipcRenderer.invoke('est-home-download-build-library', {hardwareId});
+            if (!current()) return;
+            this.showNotice(this.text(library.cancelled ?
+                'home.build.downloadCancelled' : 'home.build.downloadComplete'));
         } catch (error) {
-            this.setState({
-                buildDownloadActive: false,
-                buildDownloadCancelling: false,
-                buildDownloadPaused: false,
-                buildDownloadProgress: null
-            });
-            this.showNotice(this.text(this.buildDownloadWasCancelled ?
-                'home.build.downloadCancelled' :
-                'home.build.downloadFailed'));
+            if (current()) this.showNotice(this.text('home.build.downloadFailed'));
         } finally {
-            this.buildDownloadWasCancelled = false;
+            if (!this.unmounted && this.props.homeHardwareId === hardwareId) this.loadBuildLibrary();
         }
     }
 
     async toggleBuildLibraryDownloadPause () {
         if (!this.state.buildDownloadActive || this.state.buildDownloadCancelling) return;
+        const hardwareId = this.props.homeHardwareId;
         const channel = this.state.buildDownloadPaused ?
-            'est-home-resume-build-library-download' :
-            'est-home-pause-build-library-download';
-        const state = await ipcRenderer.invoke(channel);
-        if (state && state.active) this.setState({buildDownloadPaused: Boolean(state.paused)});
+            'est-home-resume-build-library-download' : 'est-home-pause-build-library-download';
+        try {
+            const state = await ipcRenderer.invoke(channel, {hardwareId});
+            if (!this.unmounted && hardwareId === this.props.homeHardwareId && state && state.active) {
+                this.setState({buildDownloadPaused: Boolean(state.paused)});
+            }
+        } catch (error) {
+            if (hardwareId === this.props.homeHardwareId) this.showNotice(this.text('home.build.downloadFailed'));
+        }
     }
 
     async cancelBuildLibraryDownload () {
         if (!this.state.buildDownloadActive || this.state.buildDownloadCancelling) return;
-        this.buildDownloadWasCancelled = true;
+        const hardwareId = this.props.homeHardwareId;
         this.setState({buildDownloadCancelling: true, buildDownloadPaused: false});
-        const state = await ipcRenderer.invoke('est-home-cancel-build-library-download');
-        if (!state || !state.active) {
-            this.buildDownloadWasCancelled = false;
-            this.setState({buildDownloadActive: false, buildDownloadCancelling: false});
+        try {
+            await ipcRenderer.invoke('est-home-cancel-build-library-download', {hardwareId});
+            if (!this.unmounted && hardwareId === this.props.homeHardwareId) this.loadBuildLibrary();
+        } catch (error) {
+            if (hardwareId === this.props.homeHardwareId) this.showNotice(this.text('home.build.downloadFailed'));
         }
     }
 
     async openBuildGuide (item) {
+        const hardwareId = this.props.homeHardwareId;
         try {
-            await ipcRenderer.invoke('est-home-open-build-guide', item.id);
+            await ipcRenderer.invoke('est-home-open-build-guide', {hardwareId, itemId: item.id});
         } catch (error) {
-            this.showNotice(this.text('home.build.openFailed'));
+            if (hardwareId === this.props.homeHardwareId) this.showNotice(this.text('home.build.openFailed'));
         }
     }
 
     showNotice (notice) {
+        if (this.unmounted) return;
         window.clearTimeout(this.noticeTimer);
         this.setState({notice});
         this.noticeTimer = window.setTimeout(() => this.setState({notice: ''}), 2400);
     }
 
     startNewProject () {
-        dispatchEstHomeEvent(EST_HOME_NEW_PROJECT_EVENT);
+        if (this.projectOpenPending) return;
+        dispatchEstHomeEvent(EST_HOME_NEW_PROJECT_EVENT, {hardwareId: this.props.homeHardwareId});
     }
 
     async openRecentProject (projectPath) {
+        if (this.projectOpenPending) return;
+        this.projectOpenPending = true;
         this.setState({menuPath: null});
         try {
-            const project = await ipcRenderer.invoke('est-home-open-project', projectPath);
+            const project = projectPath ? await ipcRenderer.invoke('est-home-open-project', projectPath) :
+                await ipcRenderer.invoke('est-home-choose-project');
             if (project) {
                 dispatchEstHomeEvent(EST_HOME_OPEN_PROJECT_EVENT, project);
             }
         } catch (error) {
             this.showNotice(this.text('home.openFailed'));
             this.loadRecentFiles();
+        } finally {
+            this.projectOpenPending = false;
         }
     }
 
@@ -886,7 +556,7 @@ class EstHome extends React.Component {
                         <img
                             alt=""
                             className={project.thumbnail ? styles.fileScreenshot : styles.filePlaceholderIcon}
-                            src={project.thumbnail || fileIcon}
+                            src={project.thumbnail || projectFileIcon}
                         />
                     </button>
                     <button
@@ -933,6 +603,12 @@ class EstHome extends React.Component {
                     ) : null}
                 </div>
                 <strong title={project.name}>{project.name}</strong>
+                <span
+                    className={styles.fileHardware}
+                    data-hardware-id={project.hardwareId || 'unknown'}
+                >
+                    {project.hardwareName || this.text('home.unknownHardware')}
+                </span>
                 <small>{this.formatModifiedTime(project.modifiedAt)}</small>
             </article>
         );
@@ -1471,6 +1147,9 @@ class EstHome extends React.Component {
     }
 
     renderFiles () {
+        const unknownFiles = this.state.recentFiles.filter(project => !project.hardwareId);
+        const recentFiles = this.state.showUnknownFiles ? unknownFiles :
+            this.state.recentFiles.filter(project => project.hardwareId === this.props.homeHardwareId);
         return (
             <section
                 className={styles.viewPanel}
@@ -1507,7 +1186,9 @@ class EstHome extends React.Component {
                                         src={fileIcon}
                                     />
                                     <span className={styles.startButtonText}>
-                                        {this.text('home.returnToEditor')}
+                                        {this.text('home.returnToHardwareProject', {
+                                            name: getHardwareProfile(this.props.projectHardwareId).name
+                                        })}
                                     </span>
                                 </button>
                             ) : null}
@@ -1515,13 +1196,29 @@ class EstHome extends React.Component {
                     </div>
                     {this.renderProgrammingAnimation()}
                 </div>
-                <h2 className={styles.sectionTitle}>{this.text('home.recentFiles')}</h2>
-                {this.state.recentFiles.length ? (
+                <div className={styles.fileListHeader}>
+                    <h2 className={styles.sectionTitle}>{this.text(this.state.showUnknownFiles ?
+                        'home.unknownFiles' : 'home.recentFiles')}</h2>
+                    <button
+                        type="button"
+                        onClick={() => this.openRecentProject()}
+                    >{this.text('home.openFile')}</button>
+                    {unknownFiles.length ? <button
+                        type="button"
+                        aria-pressed={this.state.showUnknownFiles}
+                        onClick={() => this.setState({showUnknownFiles: !this.state.showUnknownFiles, menuPath: null})}
+                    >
+                        {this.text(this.state.showUnknownFiles ? 'home.deviceFiles' : 'home.unknownFiles',
+                            {count: unknownFiles.length})}
+                    </button> : null}
+                </div>
+                {this.state.showUnknownFiles ? <p>{this.text('home.unknownFilesHint')}</p> : null}
+                {recentFiles.length ? (
                     <div
                         className={styles.fileGrid}
                         aria-label={this.text('home.recentFiles')}
                     >
-                        {this.state.recentFiles.map((project, index) => this.renderFileCard(project, index))}
+                        {recentFiles.map((project, index) => this.renderFileCard(project, index))}
                     </div>
                 ) : (
                     <div className={styles.emptyRecent}>
@@ -1534,6 +1231,19 @@ class EstHome extends React.Component {
     }
 
     renderBuild () {
+        const content = getHomeContent(this.props.homeHardwareId);
+        if (!content.buildCategories.length) {
+            return (
+                <section className={styles.viewPanel}>
+                    <h1>{this.text('home.build.title')}</h1>
+                    <div className={styles.emptyRecent}><strong>{this.text('home.build.none')}</strong>
+                        <span>{this.text('home.build.noneHint', {
+                            name: getHardwareProfile(this.props.homeHardwareId).name
+                        })}</span>
+                    </div>
+                </section>
+            );
+        }
         const buildItems = this.state.buildItems.filter(item => item.category === this.state.buildCategory);
         const progress = this.state.buildDownloadProgress;
         const addedItemCount = Math.max(0, this.state.buildTotalItems - EST_HOME_BUILD_ITEMS.length);
@@ -1572,7 +1282,7 @@ class EstHome extends React.Component {
                         role="tablist"
                         aria-label={this.text('home.build.categories')}
                     >
-                        {EST_HOME_BUILD_CATEGORIES.map(category => (
+                        {content.buildCategories.map(category => (
                             <button
                                 className={category === this.state.buildCategory ? styles.activeBuildCategory : ''}
                                 type="button"
@@ -1665,6 +1375,9 @@ class EstHome extends React.Component {
     }
 
     renderMore () {
+        const activeProduct = EST_PRODUCTS.find(product => product.id === this.props.homeHardwareId);
+        const entries = getHomeContent(this.props.homeHardwareId).guides.map(id =>
+            PRODUCT_GUIDE_ITEMS.find(item => item.id === id) || INFO_ITEMS.find(item => item.id === id));
         return (
             <section
                 className={styles.viewPanel}
@@ -1673,46 +1386,157 @@ class EstHome extends React.Component {
                 <div className={styles.morePage}>
                     <header className={styles.moreHeader}>
                         <h1>{this.text('home.more.title')}</h1>
-                        <p>{this.text('home.more.intro')}</p>
+                        <p>{this.text(activeProduct.summary)}</p>
                     </header>
-                    <div className={styles.settingRow}>
-                        <label htmlFor="est-home-language">{this.text('home.language')}</label>
-                        <select
-                            id="est-home-language"
-                            value={this.state.locale}
-                            onChange={event => this.changeLocale(event)}
+                    <section
+                        className={styles.moreGuides}
+                        id="est-home-product-guides"
+                        aria-labelledby="est-home-product-guides-title"
+                    >
+                        <h2
+                            className={styles.moreSectionTitle}
+                            id="est-home-product-guides-title"
+                            aria-live="polite"
                         >
-                            {Object.keys(EST_LOCALE_NAMES).map(locale => (
-                                <option
-                                    key={locale}
-                                    value={locale}
-                                >{EST_LOCALE_NAMES[locale]}</option>
-                            ))}
-                        </select>
-                    </div>
-                    {INFO_ITEMS.map(item => (
-                        <button
-                            className={styles.moreLink}
-                            type="button"
-                            key={item.id}
-                            onClick={() => this.openInfoDialog(item.id)}
-                        >
-                            <span>{this.text(item.title)}</span>
-                            <small>{this.text(item.subtitle)}</small>
-                            <b aria-hidden="true">›</b>
-                        </button>
-                    ))}
+                            {activeProduct ? this.text('home.more.productGuides', {
+                                product: this.text(activeProduct.name)
+                            }) : this.text('home.more.selectPrompt')}
+                        </h2>
+                        {activeProduct ? entries.map(item => (
+                            <button
+                                className={styles.moreLink}
+                                type="button"
+                                key={item.id}
+                                onClick={() => this.openInfoDialog(item.id)}
+                            >
+                                <span>{this.text(item.title)}</span>
+                                <small>{this.text(item.subtitle)}</small>
+                                <b aria-hidden="true">›</b>
+                            </button>
+                        )) : null}
+                    </section>
+                    <section
+                        className={styles.moreCommon}
+                        aria-labelledby="est-home-common-title"
+                    >
+                        <h2
+                            className={styles.moreSectionTitle}
+                            id="est-home-common-title"
+                        >{this.text('home.more.common')}</h2>
+                        {this.renderCommonInfoLink('software')}
+                        <div className={styles.settingRow}>
+                            <label htmlFor="est-home-language">{this.text('home.language')}</label>
+                            <select
+                                id="est-home-language"
+                                value={this.state.locale}
+                                onChange={event => this.changeLocale(event)}
+                            >
+                                {Object.keys(EST_LOCALE_NAMES).map(locale => (
+                                    <option
+                                        key={locale}
+                                        value={locale}
+                                    >{EST_LOCALE_NAMES[locale]}</option>
+                                ))}
+                            </select>
+                        </div>
+                        {this.renderCommonInfoLink('about')}
+                    </section>
                 </div>
             </section>
         );
     }
 
+    renderCommonInfoLink (id) {
+        const item = INFO_ITEMS.find(info => info.id === id);
+        return (
+            <button
+                className={styles.moreLink}
+                type="button"
+                onClick={() => this.openInfoDialog(item.id)}
+            >
+                <span>{this.text(item.title)}</span>
+                <small>{this.text(item.subtitle)}</small>
+                <b aria-hidden="true">›</b>
+            </button>
+        );
+    }
+
+    renderGuideSections (sections, className = styles.guideSections) {
+        return (
+            <div className={className}>
+                {sections.map(section => {
+                    const List = section.ordered ? 'ol' : 'ul';
+                    return (
+                        <section
+                            className={styles.guideSection}
+                            key={section.title}
+                        >
+                            <h3>{this.text(section.title)}</h3>
+                            {section.menuProduct ? (
+                                <HostMenuGuide
+                                    locale={this.state.locale}
+                                    productId={section.menuProduct}
+                                />
+                            ) : null}
+                            {section.image ? (
+                                <figure className={styles.guideFigure}>
+                                    <img
+                                        alt={this.text(section.imageAlt)}
+                                        src={(section.localizedImages &&
+                                            section.localizedImages[this.state.locale]) ||
+                                            section.image}
+                                    />
+                                    {section.caption ? (
+                                        <figcaption>{this.text(section.caption)}</figcaption>
+                                    ) : null}
+                                </figure>
+                            ) : null}
+                            <List
+                                className={section.ordered ? styles.guideSteps : styles.guideList}
+                            >
+                                {section.items.map(item => (
+                                    <li key={item}>{this.text(item, {version})}</li>
+                                ))}
+                            </List>
+                            {section.note ? (
+                                <p className={styles.guideNote}>
+                                    {this.text(section.note, {version})}
+                                </p>
+                            ) : null}
+                        </section>
+                    );
+                })}
+            </div>
+        );
+    }
+
+    renderEstProductGuide () {
+        const product = EST_PRODUCTS.find(item => item.id === this.props.homeHardwareId);
+        return (<article className={styles.productDetailPanel}>
+            <div className={styles.productDetailHero}>
+                <figure className={styles.productDetailVisual}><img
+                    alt={this.text(product.imageAlt)}
+                    src={product.image}
+                /></figure>
+                <div className={styles.productDetailCopy}>
+                    <h3>{this.text(product.name)}</h3><p>{this.text(product.intro)}</p>
+                </div>
+            </div>
+            {this.renderGuideSections(product.sections, styles.productDetailSections)}
+        </article>);
+    }
+
     renderDialog () {
         const {dialogId, renameTarget} = this.state;
+        const dialogProductId = getHomeContent(this.props.homeHardwareId).guides.includes(dialogId) ?
+            this.props.homeHardwareId : null;
         if (!dialogId && !renameTarget) return null;
         const isRename = Boolean(renameTarget);
-        const title = isRename ? this.text('home.rename') : this.text(`home.dialog.${dialogId}.title`);
-        const guide = isRename ? null : INFO_DIALOGS[dialogId];
+        const product = EST_PRODUCTS.find(item => item.id === dialogProductId);
+        const guideItem = PRODUCT_GUIDE_ITEMS.find(item => item.id === dialogId);
+        const title = isRename ? this.text('home.rename') : product && guideItem ?
+            `${this.text(product.name)} · ${this.text(guideItem.title)}` : this.text(`home.dialog.${dialogId}.title`);
+        const guide = isRename ? null : getProductGuide(dialogProductId, dialogId);
         return (
             <div
                 className={`${styles.dialogBackdrop} ${isRename ? '' : styles.guideBackdrop}`}
@@ -1775,6 +1599,25 @@ class EstHome extends React.Component {
                         ) : guide ? (
                             <div className={styles.guideContent}>
                                 <p className={styles.guideLead}>{this.text(guide.lead, {version})}</p>
+                                {dialogId === 'hardware' && product ? (
+                                    <figure className={styles.hardwareGuideVisual}>
+                                        <img
+                                            alt={this.text(product.imageAlt)}
+                                            src={product.image}
+                                        />
+                                        <figcaption>
+                                            <strong>{this.text(product.name)}</strong>
+                                            <span>{this.text('home.dialog.est.prototype.imageNote')}</span>
+                                        </figcaption>
+                                    </figure>
+                                ) : null}
+                                {dialogId === 'ai' && dialogProductId === 'est' ? (
+                                    <button
+                                        className={styles.guideAction}
+                                        type="button"
+                                        onClick={() => this.openInfoDialog('vision', 'est')}
+                                    >{this.text('home.more.vision')}</button>
+                                ) : null}
                                 {guide.action === 'vision' ? (
                                     <button
                                         className={styles.guideAction}
@@ -1789,7 +1632,10 @@ class EstHome extends React.Component {
                                 ) : null}
                                 {dialogId === 'blocks' ? (
                                     <div className={styles.blockGuide}>
-                                        {EST_HOME_BLOCK_GUIDE_CATEGORIES.map(category => (
+                                        {getProductBlockGuideCategories(
+                                            dialogProductId || 'est',
+                                            this.state.locale
+                                        ).map(category => (
                                             <section
                                                 className={styles.blockGuideCategory}
                                                 key={category.id}
@@ -1813,9 +1659,11 @@ class EstHome extends React.Component {
                                                     </div>
                                                 ) : null}
                                                 <div className={styles.blockGuideEntries}>
-                                                    {category.items.map(blockId => {
-                                                        const entry = this.text(`home.blockGuide.${blockId}`)
-                                                            .split('｜');
+                                                    {category.items.map(item => {
+                                                        const blockId = typeof item === 'string' ? item : item.id;
+                                                        const entry = typeof item === 'string' ?
+                                                            this.text(`home.blockGuide.${blockId}`).split('｜') :
+                                                            [item.name, item.description];
                                                         const blockName = entry.shift();
                                                         const blockPreview = this.state.blockPreviews[blockId];
                                                         return (
@@ -1851,47 +1699,10 @@ class EstHome extends React.Component {
                                             </section>
                                         ))}
                                     </div>
+                                ) : dialogId === 'est' ? (
+                                    this.renderEstProductGuide()
                                 ) : (
-                                    <div className={styles.guideSections}>
-                                        {guide.sections.map(section => {
-                                            const List = section.ordered ? 'ol' : 'ul';
-                                            return (
-                                                <section
-                                                    className={styles.guideSection}
-                                                    key={section.title}
-                                                >
-                                                    <h3>{this.text(section.title)}</h3>
-                                                    {section.image ? (
-                                                        <figure className={styles.guideFigure}>
-                                                            <img
-                                                                alt={this.text(section.imageAlt)}
-                                                                src={(section.localizedImages &&
-                                                                    section.localizedImages[this.state.locale]) ||
-                                                                    section.image}
-                                                            />
-                                                            {section.caption ? (
-                                                                <figcaption>{this.text(section.caption)}</figcaption>
-                                                            ) : null}
-                                                        </figure>
-                                                    ) : null}
-                                                    <List
-                                                        className={
-                                                            section.ordered ? styles.guideSteps : styles.guideList
-                                                        }
-                                                    >
-                                                        {section.items.map(item => (
-                                                            <li key={item}>{this.text(item, {version})}</li>
-                                                        ))}
-                                                    </List>
-                                                    {section.note ? (
-                                                        <p className={styles.guideNote}>
-                                                            {this.text(section.note, {version})}
-                                                        </p>
-                                                    ) : null}
-                                                </section>
-                                            );
-                                        })}
-                                    </div>
+                                    this.renderGuideSections(guide.sections)
                                 )}
                             </div>
                         ) : null}
@@ -1915,6 +1726,7 @@ class EstHome extends React.Component {
                     aria-label={this.text('home.navigation')}
                     style={{'--est-home-nav-index': activeIndex}}
                 >
+                    {this.renderHardwarePicker()}
                     <span
                         className={styles.navIndicator}
                         aria-hidden="true"
@@ -1956,10 +1768,15 @@ class EstHome extends React.Component {
 }
 
 EstHome.propTypes = {
+    homeHardwareId: PropTypes.oneOf(['est', 'spark-ai', 'new-ai']).isRequired,
+    projectHardwareId: PropTypes.oneOf(['est', 'spark-ai', 'new-ai']).isRequired,
+    homeSelectionReady: PropTypes.bool,
+    onHomeHardwareChange: PropTypes.func.isRequired,
     onOpenVision: PropTypes.func.isRequired,
     canReturnToEditor: PropTypes.bool,
     onReturnToEditor: PropTypes.func,
     visible: PropTypes.bool
 };
 
+export {EstHome};
 export default EstHome;

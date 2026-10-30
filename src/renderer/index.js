@@ -48,7 +48,7 @@ routeModulePromise.then(routeModule => {
     if (appTarget) {
         appTarget.innerHTML = `
             <div style="padding: 32px; color: #fff; background: #1f2430; font-family: sans-serif;">
-                EST Studio 启动失败<br />
+                ATC CodeStudio 启动失败<br />
                 <small>${String(error && error.message ? error.message : error)}</small>
             </div>
         `;

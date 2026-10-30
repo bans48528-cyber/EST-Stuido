@@ -1,12 +1,15 @@
 /* eslint-disable react/jsx-no-bind */
 import React from 'react';
 import PropTypes from 'prop-types';
-import {createPortal} from 'react-dom';
+import HardwareStatusPopover from '../hardware/HardwareStatusPopover.jsx';
+import HardwareConnectionSettings from '../hardware/HardwareConnectionSettings.jsx';
+import {hardwareStatusText} from '../hardware/status-messages';
 import {ipcRenderer} from 'electron';
 import {dialog, getCurrentWindow} from '@electron/remote';
 import {EMPTY_NEW_AI_STATE, subscribeNewAiState} from './runtime-client';
 import {newAiText, newAiErrorText} from './runtime-messages';
 import NewAiFirmwarePanel from './NewAiFirmwarePanel.jsx';
+import NewAiPeripheralPanel from './NewAiPeripheralPanel.jsx';
 import NewAiTelemetry from './NewAiTelemetry.jsx';
 import {newAiConnectionChanged} from './telemetry';
 import {chooseNewAiBluetooth} from './ble-client';
@@ -22,6 +25,8 @@ export default class NewAiConnection extends React.Component {
             error: '',
             bleScan: {scanning: false, devices: []}};
         this.latest = EMPTY_NEW_AI_STATE;
+        this.firmwarePanel = React.createRef();
+        this.peripheralPanel = React.createRef();
         this.trigger = React.createRef();
         this.panel = React.createRef();
         this.keydown = event => {
@@ -65,9 +70,11 @@ export default class NewAiConnection extends React.Component {
         document.removeEventListener('keydown', this.keydown, true);
     }
     open () {
+        if (this.state.open) {
+            this.close(); return;
+        }
         this.setState({open: true, device: this.latest, error: ''}, () => {
-            document.addEventListener('keydown', this.keydown, true);
-            this.panel.current.querySelector('button').focus();
+            // The non-modal popover manages its own focus and Escape key.
         });
         if (this.latest.connectionMode !== 'ble') this.command('new-ai-list-devices');
     }
@@ -102,15 +109,26 @@ export default class NewAiConnection extends React.Component {
     render () {
         const t = key => newAiText(key, this.props.locale);
         const {device, open, selected, loading, error, bleScan} = this.state;
-        const ble = device.connectionMode === 'ble';
-        const {discovery, status} = device;
+        const {discovery} = device;
         const busy = loading || device.busy;
         const healthy = device.connected && !device.stale;
         const updating = Boolean(device.firmware && device.firmware.active);
-        const label = updating ? 'firmwareUpdate' : (device.connected ? 'connected' :
-            (device.state === 'verifying' ? 'verifying' :
-                (discovery.enabled ? (ble ? 'waitingBle' : 'waiting') : 'disconnected')));
+        const label = updating ? t('firmwareUpdate') : hardwareStatusText(device.connected ? 'connected' :
+            (device.state === 'verifying' || device.reconnecting ? 'connecting' : 'disconnected'), this.props.locale);
         return (<React.Fragment>
+            <NewAiFirmwarePanel
+                ref={this.firmwarePanel}
+                device={device}
+                locale={this.props.locale}
+                onOpen={() => this.close()}
+                onClose={() => this.peripheralPanel.current.maybePrompt()}
+            />
+            <NewAiPeripheralPanel
+                ref={this.peripheralPanel}
+                device={device}
+                locale={this.props.locale}
+                onOpen={() => this.close()}
+            />
             <button
                 id="new-ai-connection"
                 type="button"
@@ -122,167 +140,67 @@ export default class NewAiConnection extends React.Component {
                 aria-expanded={open}
                 onClick={() => this.open()}
             >
-                <span className={styles.connectionLabel}>{t(label)}</span>
+                <span className={styles.connectionLabel}>{label}</span>
                 <span
                     className={`${styles.dot} ${healthy ? styles.connected :
                         (device.connected ? styles.warning : '')}`}
                 />
             </button>
-            {open ? createPortal(<div
-                className={styles.backdrop}
-                onMouseDown={event => {
-                    if (event.target === event.currentTarget) this.close();
-                }}
-            >
-                <section
-                    id="new-ai-hardware-panel"
-                    className={styles.panel}
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="new-ai-panel-title"
-                    ref={this.panel}
-                >
-                    <header className={styles.header}>
-                        <h2 id="new-ai-panel-title">{t('title')}</h2>
-                        <button
-                            type="button"
-                            className={styles.iconButton}
-                            aria-label={t('close')}
-                            onClick={() => this.close()}
-                        >×</button>
-                    </header>
-                    <div
-                        className={styles.transportModes}
-                        role="group"
-                        aria-label={t('connectionMode')}
-                    >
-                        {['usb', 'ble'].map(mode => (<button
-                            key={mode}
-                            id={`new-ai-mode-${mode}`}
-                            type="button"
-                            className={styles.command}
-                            aria-pressed={(ble ? 'ble' : 'usb') === mode}
-                            disabled={busy || bleScan.scanning || Boolean(status && status.running)}
-                            onClick={() => this.command('new-ai-connection-mode', mode)}
-                        >{mode === 'usb' ? 'USB' : t('bluetooth')}</button>))}
-                    </div>
-                    {ble ? <div className={styles.bleSection}>
-                        <div className={styles.serialRow}>
-                            <button
-                                id="new-ai-ble-search"
-                                type="button"
-                                className={styles.command}
-                                disabled={(device.busy && !device.reconnecting) || (loading && !bleScan.scanning)}
-                                onClick={() => {
-                                    if (device.reconnecting) this.command('new-ai-set-auto-connect', false);
-                                    else if (bleScan.scanning) {
-                                        ipcRenderer.invoke('new-ai-ble-cancel-scan').catch(() => {});
-                                    } else this.command(device.connected ? 'new-ai-disconnect' : 'choose-ble');
-                                }}
-                            >{t(device.reconnecting ? 'pauseReconnect' :
-                                    (device.connected ? 'disconnect' :
-                                        (bleScan.scanning ? 'cancelSearch' : 'searchBluetooth')))}</button>
-                            <span role="status">{t(device.reconnecting ? 'bleReconnecting' :
-                                (device.state === 'verifying' ? 'verifying' :
-                                    (device.connected ? 'connected' :
-                                        (bleScan.scanning ? 'searchingBluetooth' : 'bleHint'))))}</span>
-                        </div>
-                        {device.bleDevice ? <div className={styles.rememberedDevice}>
-                            <span>{t('rememberedDevice')}: {device.bleDevice.name}
-                                <small>{device.bleDevice.id}</small></span>
-                            <button
-                                id="new-ai-ble-forget"
-                                type="button"
-                                className={styles.command}
-                                disabled={busy || device.connected}
-                                onClick={() => this.command('new-ai-ble-forget')}
-                            >{t('forgetDevice')}</button>
-                        </div> : null}
-                        {bleScan.scanning && !device.reconnecting ? <ul className={styles.bleDevices}>
-                            {bleScan.devices.length ? bleScan.devices.map(item => (<li key={item.id}>
-                                <span>{item.name}<small>{item.id}</small></span>
-                                <button
-                                    type="button"
-                                    className={styles.command}
-                                    onClick={() => this.command('new-ai-ble-select', item.id)}
-                                >{t('connect')}</button>
-                            </li>)) : <li>{t('noBluetoothDevices')}</li>}
-                        </ul> : null}
-                    </div> : <div className={styles.serialRow}>
-                        <select
-                            aria-label={t('select')}
-                            value={selected}
-                            disabled={busy || device.connected}
-                            onChange={event => this.setState({selected: event.target.value})}
-                        >
-                            {discovery.ports.length ? null : <option value="">{t('noPorts')}</option>}
-                            {discovery.ports.map(port => (<option
-                                key={port.path}
-                                value={port.path}
-                            >
-                                {port.friendlyName || port.path}</option>))}
-                        </select>
-                        <button
-                            type="button"
-                            className={styles.command}
-                            data-action="refresh"
-                            disabled={busy}
-                            onClick={() => this.command('new-ai-list-devices')}
-                        >{t('refresh')}</button>
-                        <button
-                            type="button"
-                            className={styles.command}
-                            data-action="connect"
-                            disabled={busy || !selected || device.connected}
-                            onClick={() => this.command('new-ai-connect', {path: selected})}
-                        >{t('connect')}</button>
-                        <button
-                            type="button"
-                            className={styles.command}
-                            data-action="disconnect"
-                            disabled={busy || !device.connected}
-                            onClick={() => this.command('new-ai-disconnect')}
-                        >{t('disconnect')}</button>
-                    </div>}
-                    <div className={styles.autoRow}>
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={discovery.enabled}
-                                disabled={busy}
-                                onChange={event => this.command('new-ai-set-auto-connect', event.target.checked)}
-                            />
-                            {t('automatic')}
-                        </label>
-                        {discovery.status === 'choose' ? <span>{t('choose')}</span> : null}
-                    </div>
-                    <p
-                        id="new-ai-connection-memory"
-                        className={styles.notice}
-                        role={device.memoryError ? 'status' : null}
-                    >{device.memoryError ? newAiErrorText(device.memoryError, this.props.locale) :
-                            t('connectionMemoryHint')}</p>
-                    {error || device.error ? <div
-                        role="alert"
-                        className={styles.error}
-                    >
-                        {error || newAiErrorText(device.error, this.props.locale)}</div> : null}
-                    {device.stale ? <p
-                        role="status"
-                        className={styles.notice}
-                    >{t('stale')}</p> : null}
-                    {status && status.legacyProtocol ? <p className={styles.notice}>{t('legacyProtocol')}</p> : null}
-                    {ble ? <p className={styles.notice}>{t('NEW_FW_USB_ONLY')}</p> : <NewAiFirmwarePanel
-                        device={device}
-                        locale={this.props.locale}
-                    />}
+            {open ? <HardwareStatusPopover
+                hardwareId="new-ai"
+                device={device}
+                locale={this.props.locale}
+                triggerRef={this.trigger}
+                onClose={() => this.close()}
+                disabled={busy}
+                notice={error || (device.error && newAiErrorText(device.error, this.props.locale))}
+                onDisconnect={() => this.command('new-ai-disconnect')}
+                connectionContent={<HardwareConnectionSettings
+                    hardwareId="new-ai"
+                    locale={this.props.locale}
+                    device={device}
+                    busy={Boolean(busy)}
+                    connecting={device.state === 'verifying'}
+                    ports={discovery.ports}
+                    selected={selected}
+                    scanning={bleScan.scanning}
+                    bluetoothDevices={bleScan.devices}
+                    onMode={mode => this.command('new-ai-connection-mode', mode)}
+                    onSelectPort={value => this.setState({selected: value})}
+                    onRefresh={() => this.command('new-ai-list-devices')}
+                    onConnect={() => this.command('new-ai-connect', {path: selected})}
+                    onDisconnect={() => this.command('new-ai-disconnect')}
+                    onSearch={() => this.command('choose-ble')}
+                    onCancelSearch={() => ipcRenderer.invoke('new-ai-ble-cancel-scan').catch(() => {})}
+                    onSelectBluetooth={id => this.command('new-ai-ble-select', id)}
+                    onForget={() => this.command('new-ai-ble-forget')}
+                    onPauseReconnect={() => this.command('new-ai-set-auto-connect', false)}
+                    onAutoChange={value => this.command('new-ai-set-auto-connect', value)}
+                    autoStatus={discovery.status === 'choose' ? t('choose') : ''}
+                    memoryError={device.memoryError ? newAiErrorText(device.memoryError, this.props.locale) : ''}
+                />}
+                infoContent={<React.Fragment>
+                    <button
+                        type="button"
+                        id="new-ai-firmware-toggle"
+                        className={styles.command}
+                        disabled={busy}
+                        onClick={() => this.firmwarePanel.current.open()}
+                    >{t('firmwareUpdate')}</button>
+                    <button
+                        type="button"
+                        id="new-ai-peripheral-toggle"
+                        className={styles.command}
+                        disabled={busy || !healthy}
+                        onClick={() => this.peripheralPanel.current.open()}
+                    >{t('peripheralUpdate')}</button>
                     <NewAiTelemetry
                         device={device}
                         locale={this.props.locale}
                     />
                     <p className={styles.notice}>{t('pending')}</p>
-                </section>
-            </div>, document.body) : null}
+                </React.Fragment>}
+            /> : null}
         </React.Fragment>);
     }
 }

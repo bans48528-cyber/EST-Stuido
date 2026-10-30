@@ -55,7 +55,7 @@ export const readProjectHardware = project => {
         if (hardware.version !== HARDWARE_PROJECT_VERSION) throw new Error('HARDWARE_PROJECT_VERSION');
         return getHardwareProfile(hardware.hardwareId);
     }
-    // Older EST Studio files have no target metadata. Do not reinterpret files
+    // Older ATC CodeStudio files have no target metadata. Do not reinterpret files
     // declaring a foreign OpenBlock board as EST projects.
     return getHardwareProfile(DEFAULT_HARDWARE_ID);
 };

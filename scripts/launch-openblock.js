@@ -23,7 +23,7 @@ const getRunningPid = () => {
 
 const runningPid = getRunningPid();
 if (runningPid) {
-    console.log(`EST Studio is already running (PID ${runningPid}).`);
+    console.log(`ATC CodeStudio is already running (PID ${runningPid}).`);
     process.exit(0);
 }
 
@@ -50,7 +50,7 @@ const child = spawn(process.execPath, [path.join(__dirname, 'start-openblock.js'
 
 child.once('error', error => {
     fs.closeSync(logDescriptor);
-    console.error('Failed to launch EST Studio:', error);
+    console.error('Failed to launch ATC CodeStudio:', error);
     process.exitCode = 1;
 });
 
@@ -58,6 +58,6 @@ child.once('spawn', () => {
     fs.writeFileSync(pidFile, `${child.pid}\n`, 'utf8');
     fs.closeSync(logDescriptor);
     child.unref();
-    console.log(`EST Studio started in background (PID ${child.pid}).`);
+    console.log(`ATC CodeStudio started in background (PID ${child.pid}).`);
     console.log(`Development log: ${logFile}`);
 });

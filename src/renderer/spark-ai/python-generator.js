@@ -2,6 +2,8 @@
 // Traversal, precedence and value/statement connections use Blockly.Generator.
 import installSourceGenerators from './source-generators';
 import {installEstPythonNameSanitizer} from '../est-blocks/python-names';
+import {installPikaOperators} from '../est-blocks/pika-operators';
+import {installSparkListGenerator} from './list-generator';
 import catalog from './catalog.json';
 import {parseSparkMotorPair, SPARK_MOTOR_PAIR_INCOMPLETE} from './combined-motor-field';
 
@@ -58,6 +60,8 @@ export const registerSparkPythonGenerator = ScratchBlocks => {
     const Blockly = Object.create(ScratchBlocks);
     Blockly.Python = g;
     installSourceGenerators(Blockly);
+    installPikaOperators(g, 'spark_', 'spark');
+    installSparkListGenerator(g, ScratchBlocks);
     // Blockly treats numeric 0 as an empty value unless literal code is a string.
     catalog.shadows.forEach(row => {
         const id = `spark_${row.id}`;

@@ -1,0 +1,50 @@
+.hostMenuGuide {
+    margin: 24px 0 28px;
+}
+
+.hostMenuStrip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 24px 30px;
+}
+
+.hostMenuFrame {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    margin: 0;
+}
+
+.hostMenuFrame svg {
+    display: block;
+    width: auto;
+    height: 156px;
+}
+
+.hostMenuFrame figcaption {
+    max-width: 150px;
+    color: #20242a;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.hostMenuCaption {
+    max-width: 75ch;
+    margin: 18px 0 0;
+    color: #596474;
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+@media (max-width: 640px) {
+    .hostMenuStrip {
+        gap: 24px;
+    }
+
+    .hostMenuFrame svg {
+        height: 132px;
+    }
+}

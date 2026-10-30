@@ -36,7 +36,7 @@ const expression = `(async () => {
         throw new Error('Unexpected workspace');
     }
     const windows=process.mainModule.require('electron').BrowserWindow.getAllWindows()
-        .filter(w=>w.getTitle()===${JSON.stringify(`EST Studio ${version}`)});
+        .filter(w=>w.getTitle()===${JSON.stringify(`ATC CodeStudio ${version}`)});
     if(windows.length!==1)throw new Error('Expected one current development window');
     const window=windows[0], started=Date.now(), samples=[];
     while(Date.now()-started<${seconds * 1000}) {

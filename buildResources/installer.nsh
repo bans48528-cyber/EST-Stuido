@@ -23,8 +23,8 @@ ${StrRep}
     StrCmp $R0 "" 0 done
     StrCmp $R1 "" 0 done
 
-    WriteRegExpandStr HKLM "${INSTALL_REGISTRY_KEY}" InstallLocation "C:\EST Studio"
-    WriteRegExpandStr HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation "C:\EST Studio"
+    WriteRegExpandStr HKLM "${INSTALL_REGISTRY_KEY}" InstallLocation "C:\ATC CodeStudio"
+    WriteRegExpandStr HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation "C:\ATC CodeStudio"
 
 done:
     ${If} ${RunningX64}
@@ -36,16 +36,16 @@ done:
 !macro customInstall
 
     SetOutPath "$INSTDIR\resources"
-    File "/oname=ESTStudio-${VERSION}.ico" "${BUILD_RESOURCES_DIR}\OpenBlockDesktop.ico"
-    File "/oname=ESTStudioProject-${VERSION}.ico" "${BUILD_RESOURCES_DIR}\OpenBlockFile.ico"
+    File "/oname=ATCCodeStudio-${VERSION}.ico" "${BUILD_RESOURCES_DIR}\OpenBlockDesktop.ico"
+    File "/oname=ATCCodeStudioProject-${VERSION}.ico" "${BUILD_RESOURCES_DIR}\OpenBlockFile.ico"
     SetOutPath "$INSTDIR"
 
-    StrCpy $R2 "$INSTDIR\resources\ESTStudio-${VERSION}.ico"
-    StrCpy $R3 "$INSTDIR\resources\ESTStudioProject-${VERSION}.ico"
+    StrCpy $R2 "$INSTDIR\resources\ATCCodeStudio-${VERSION}.ico"
+    StrCpy $R3 "$INSTDIR\resources\ATCCodeStudioProject-${VERSION}.ico"
 
-    WriteRegStr SHELL_CONTEXT "Software\Classes\.ests" "" "EST Studio project file"
-    WriteRegStr SHELL_CONTEXT "Software\Classes\EST Studio project file" "" "EST Studio project file"
-    WriteRegStr SHELL_CONTEXT "Software\Classes\EST Studio project file\DefaultIcon" "" "$R3"
+    WriteRegStr SHELL_CONTEXT "Software\Classes\.atc" "" "ATC CodeStudio project file"
+    WriteRegStr SHELL_CONTEXT "Software\Classes\ATC CodeStudio project file" "" "ATC CodeStudio project file"
+    WriteRegStr SHELL_CONTEXT "Software\Classes\ATC CodeStudio project file\DefaultIcon" "" "$R3"
 
     ${IfNot} ${isNoDesktopShortcut}
         Delete "$newDesktopLink"
@@ -73,8 +73,8 @@ done:
 
     DeleteRegKey HKLM "${INSTALL_REGISTRY_KEY}"
     DeleteRegKey HKCU "${INSTALL_REGISTRY_KEY}"
-    Delete "$INSTDIR\resources\ESTStudio-*.ico"
-    Delete "$INSTDIR\resources\ESTStudioProject-*.ico"
+    Delete "$INSTDIR\resources\ATCCodeStudio-*.ico"
+    Delete "$INSTDIR\resources\ATCCodeStudioProject-*.ico"
 
     ${If} ${RunningX64}
         SetRegView LastUsed

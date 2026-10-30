@@ -1,229 +1,207 @@
 /* eslint-disable react/jsx-no-bind */
 import React from 'react';
 import PropTypes from 'prop-types';
+import {createPortal} from 'react-dom';
 import {ipcRenderer} from 'electron';
-import {newAiFirmwareBlockers} from '../../common/new-ai-firmware';
+import {NEW_FIRMWARE_VERSION, newAiFirmwareMismatchKey, newAiFirmwareRecoveryPort,
+    newAiFirmwareBlockers} from '../../common/new-ai-firmware';
 import {newAiText, newAiErrorText} from './runtime-messages';
 import styles from '../spark-ai/SparkRuntime.css';
-import layout from './NewAiFirmwarePanel.css';
 
+// Mounted beside the connection button so version prompts also work with the inspector closed.
 export default class NewAiFirmwarePanel extends React.Component {
     constructor (props) {
         super(props);
         this.state = {open: Boolean(props.device.firmware && props.device.firmware.active),
-            checking: false,
             starting: false,
-            report: null,
-            error: null,
-            confirmedErase: false,
-            confirmedLegacyIdle: false,
-            recovery: false,
-            confirmedRecoveryDevice: false,
-            path: ''};
+            attempted: Boolean(props.device.firmware && props.device.firmware.active),
+            error: '',
+            mismatch: false};
+        this.panel = React.createRef();
+        this.connectionEpoch = 0;
+        this.keydown = event => {
+            if (!this.state.open) return;
+            event.stopPropagation();
+            if (event.key === 'Escape') {
+                event.preventDefault(); this.close();
+            }
+            if (event.key !== 'Tab' || !this.panel.current) return;
+            const items = [...this.panel.current.querySelectorAll('button:not(:disabled)')];
+            if (!items.length) {
+                event.preventDefault(); return;
+            }
+            const index = items.indexOf(document.activeElement);
+            if (event.shiftKey && index <= 0) {
+                event.preventDefault(); items[items.length - 1].focus();
+            } else if (!event.shiftKey && (index < 0 || index === items.length - 1)) {
+                event.preventDefault(); items[0].focus();
+            }
+        };
     }
     componentDidMount () {
-        if (this.state.open) this.inspect();
+        document.addEventListener('keydown', this.keydown, true);
+        this.maybePrompt();
     }
-    componentDidUpdate (previous) {
-        if (!this.props.device.busy && previous.device.port !== this.props.device.port) {
-            // Consent must not carry over to a different USB connection.
-            // eslint-disable-next-line react/no-did-update-set-state
-            this.setState({confirmedErase: false, confirmedLegacyIdle: false, confirmedRecoveryDevice: false});
+    componentDidUpdate (previous, state) {
+        const before = previous.device;
+        const after = this.props.device;
+        if (before.connected !== after.connected || before.port !== after.port ||
+            before.connectionMode !== after.connectionMode) {
+            this.connectionEpoch++;
+            if (!after.connected && !this.active()) this.prompted = null;
+        }
+        this.maybePrompt();
+        if (!state.open && this.state.open && this.panel.current) {
+            const button = this.panel.current.querySelector('button:not(:disabled)');
+            (button || this.panel.current).focus({preventScroll: true});
         }
     }
     componentWillUnmount () {
         this.unmounted = true;
+        document.removeEventListener('keydown', this.keydown, true);
     }
-    async inspect () {
-        if (this.checking) return;
-        this.checking = true;
-        this.setState({checking: true, error: null});
-        try {
-            const report = await ipcRenderer.invoke('new-ai-firmware-inspect');
-            if (!this.unmounted) this.setState({report});
-        } catch (error) {
-            if (!this.unmounted) this.setState({error, report: null});
-        } finally {
-            this.checking = false;
-            if (!this.unmounted) this.setState({checking: false});
-        }
+    active () {
+        return this.state.starting || Boolean(this.props.device.firmware && this.props.device.firmware.active);
     }
-    request () {
-        const {report, confirmedErase, recovery, path, confirmedRecoveryDevice, confirmedLegacyIdle} = this.state;
-        return {releaseId: report && report.releaseId,
-            confirmedErase,
-            path,
-            confirmedRecoveryDevice,
-            confirmedLegacyIdle,
-            recovery: recovery && !this.props.device.connected};
+    waitingForRestart () {
+        const firmware = this.props.device.firmware;
+        return Boolean(firmware && firmware.active && firmware.transferComplete &&
+            ['restarting', 'reconnecting'].includes(firmware.phase));
+    }
+    maybePrompt () {
+        const key = newAiFirmwareMismatchKey(this.props.device);
+        if (!key || this.prompted === key || this.state.open) return;
+        this.prompted = key;
+        this.open(true);
+    }
+    open (mismatch = false) {
+        if (this.state.open) return;
+        this.previousFocus = document.activeElement;
+        this.prompted = newAiFirmwareMismatchKey(this.props.device) || this.prompted;
+        this.setState({open: true, error: '', attempted: this.active(), mismatch});
+        if (this.props.onOpen) this.props.onOpen();
+    }
+    close () {
+        if (this.active() && !this.waitingForRestart()) return;
+        this.setState({open: false}, () => {
+            if (this.previousFocus && this.previousFocus.isConnected) this.previousFocus.focus({preventScroll: true});
+            if (this.props.onClose) this.props.onClose();
+        });
     }
     async start () {
-        if (this.starting) return;
-        this.starting = true;
-        this.setState({starting: true, error: null});
+        if (this.startPending || this.active() || this.props.device.busy) return;
+        this.startPending = true;
+        const epoch = this.connectionEpoch;
+        this.setState({starting: true, attempted: true, error: ''});
         try {
-            await ipcRenderer.invoke('new-ai-firmware-update', this.request());
+            // File validation is automatic. The dialog's Update button is the sole user confirmation.
+            const report = await ipcRenderer.invoke('new-ai-firmware-inspect');
+            if (this.unmounted) return;
+            if (epoch !== this.connectionEpoch) throw new Error('NEW_FW_DEVICE_CHANGED');
+            const device = this.props.device;
+            const recovery = !device.connected && Boolean((device.firmware && device.firmware.recoveryRequired) ||
+                device.error === 'NEW_FW_RECOVERY' || (device.discovery && device.discovery.status === 'recovery'));
+            const ports = ((device.discovery && device.discovery.ports) || []).filter(newAiFirmwareRecoveryPort);
+            const path = recovery && ports.length === 1 ? ports[0].path : null;
+            const blockers = newAiFirmwareBlockers(device, report, {recovery, path});
+            if (blockers.length) throw new Error(blockers[0]);
+            await ipcRenderer.invoke('new-ai-firmware-update', {releaseId: report.releaseId,
+                confirmedErase: true,
+                recovery,
+                path});
         } catch (error) {
             if (!this.unmounted) this.setState({error});
         } finally {
-            this.starting = false;
-            if (!this.unmounted) this.setState({starting: false, confirmedErase: false, confirmedLegacyIdle: false});
+            this.startPending = false;
+            if (!this.unmounted) this.setState({starting: false});
         }
     }
     render () {
-        const {device, locale} = this.props;
-        const {open, checking, starting, report, error, confirmedErase, confirmedLegacyIdle,
-            confirmedRecoveryDevice, path} = this.state;
-        const t = key => newAiText(key, locale);
-        const firmware = device.firmware;
-        const active = starting || Boolean(firmware && firmware.active);
-        const request = this.request();
-        const blockers = newAiFirmwareBlockers(device, report, request);
-        const ports = (device.discovery && device.discovery.ports) || [];
-        return (<section className={styles.firmwareSection}>
-            <button
-                type="button"
-                id="new-ai-firmware-toggle"
-                className={styles.command}
-                aria-expanded={open}
-                aria-controls="new-ai-firmware-panel"
-                onClick={() => this.setState({open: !open}, () => {
-                    if (!open) this.inspect();
-                })}
-            >{t('firmwareUpdate')}</button>
-            {open ? <div
+        if (!this.state.open) return null;
+        const {locale, device} = this.props;
+        const {starting, attempted, error, mismatch} = this.state;
+        const t = (id, values) => newAiText(id, locale, values);
+        const firmware = attempted ? device.firmware : null;
+        const active = this.active();
+        const dismissible = this.waitingForRestart();
+        const complete = !error && !active && firmware && firmware.phase === 'complete';
+        const failure = error || (!active && firmware && firmware.phase === 'error' && firmware.error);
+        const phase = starting && (!firmware || !firmware.active) ? 'checking' : (firmware && firmware.phase);
+        return createPortal(<div className={styles.backdrop}>
+            <section
                 id="new-ai-firmware-panel"
-                aria-busy={checking}
+                className={styles.firmwareDialog}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="new-ai-firmware-title"
+                aria-describedby="new-ai-firmware-notice"
+                aria-busy={active}
+                tabIndex={-1}
+                ref={this.panel}
             >
-                <p className={styles.firmwareNotice}>{t('firmwareErase')}</p>
-                {report ? <React.Fragment>
-                    <dl className={styles.summary}>
-                        <div><dt>{t('firmwareVersion')}</dt><dd>{report.version}</dd></div>
-                        <div><dt>{t('firmwareSource')}</dt><dd>{report.source}</dd></div>
-                    </dl>
-                    <p role="status">{t(report.valid ? 'firmwarePassed' : 'NEW_FW_RESOURCE_INVALID')}</p>
-                    <details>
-                        <summary>{t('firmwareResources')} ({report.files.length})</summary>
-                        <div className={layout.files}>
-                            <table className={styles.firmwareFiles}>
-                                <tbody>{report.files.map(file => (<tr key={file.path}>
-                                    <th scope="row">{file.path}</th>
-                                    <td>{file.bytes.toLocaleString(locale)} B</td>
-                                    <td>{t(file.valid ? 'firmwarePassed' : file.error)}</td>
-                                </tr>))}</tbody>
-                            </table>
-                        </div>
-                    </details>
-                </React.Fragment> : null}
-                {error ? <p
-                    className={styles.error}
-                    role="alert"
-                >{newAiErrorText(error, locale)}</p> : null}
-                {firmware && firmware.phase !== 'idle' ? <div
+                <h2 id="new-ai-firmware-title">{t(complete ? 'firmwareDone' : 'firmwareUpdate')}</h2>
+                {attempted ? null : <p>{mismatch ? t('firmwareMismatch',
+                    {current: device.status && device.status.version, version: NEW_FIRMWARE_VERSION}) :
+                    t('firmwareQuestion', {version: NEW_FIRMWARE_VERSION})}</p>}
+                <p id="new-ai-firmware-notice">{t('firmwareEraseNotice')}</p>
+                {dismissible ? <p>{t('firmwareBackgroundHint')}</p> : null}
+                {active || complete ? <div
                     className={styles.firmwareProgress}
                     role="status"
                 >
-                    <strong>{t(`fw.${firmware.phase}`)}</strong>
-                    {firmware.active && firmware.total > 0 ? <progress
-                        max={firmware.total}
-                        value={firmware.bytes}
-                    /> : null}
-                    {firmware.file ? <span>
-                        {firmware.file} · {Math.floor(100 * firmware.bytes / firmware.total)}%
-                    </span> : null}
-                    {firmware.result ? <span>{firmware.result.version}</span> : null}
-                    {firmware.error && !error ? <span>{newAiErrorText(firmware.error, locale)}</span> : null}
-                </div> : null}
-                {!device.connected && !active ? <div className={styles.firmwareRecovery}>
-                    <label><input
-                        id="new-ai-firmware-recovery"
-                        type="checkbox"
-                        checked={request.recovery}
-                        onChange={event => this.setState({recovery: event.target.checked,
-                            confirmedErase: false,
-                            confirmedRecoveryDevice: false,
-                            path: ports.length === 1 ? ports[0].path : path})}
-                    />{t('firmwareRecovery')}</label>
-                    {request.recovery ? <React.Fragment>
-                        <p>{t('firmwareRecoveryHelp')}</p>
-                        <select
-                            id="new-ai-firmware-recovery-port"
-                            value={path}
-                            aria-label={t('usb')}
-                            onChange={event => this.setState({path: event.target.value,
-                                confirmedErase: false,
-                                confirmedRecoveryDevice: false})}
-                        >
-                            <option value="">{t('NEW_FW_SELECT_PORT')}</option>
-                            {ports.map(port => (<option
-                                key={port.path}
-                                value={port.path}
-                            >{port.path}</option>))}
-                        </select>
-                        <label className={styles.firmwareConfirm}><input
-                            id="new-ai-firmware-confirm-device"
-                            type="checkbox"
-                            checked={confirmedRecoveryDevice}
-                            onChange={event => this.setState({confirmedRecoveryDevice: event.target.checked})}
-                        />{t('firmwareConfirmDevice')}</label>
+                    <strong>{t(`fw.${complete ? 'complete' : phase || 'checking'}`,
+                        {version: firmware && firmware.result && firmware.result.version})}</strong>
+                    {active && phase === 'transferring' && firmware ? <React.Fragment>
+                        <progress
+                            max={firmware.total}
+                            value={firmware.bytes}
+                        />
+                        <span>{Math.floor(firmware.bytes * 100 / firmware.total)}%</span>
                     </React.Fragment> : null}
                 </div> : null}
-                {device.connected && device.status && device.status.legacyProtocol ?
-                    <label className={styles.firmwareConfirm}>
-                        <input
-                            id="new-ai-firmware-legacy-idle"
-                            type="checkbox"
-                            disabled={active}
-                            checked={confirmedLegacyIdle}
-                            onChange={event => this.setState({confirmedLegacyIdle: event.target.checked})}
-                        />{t('legacyIdleConfirm')}
-                    </label> : null}
-                <ul
-                    id="new-ai-firmware-blockers"
-                    className={styles.firmwareBlockers}
-                >
-                    {active ? null : blockers.map(code => <li key={code}>{t(code)}</li>)}
-                </ul>
-                <label className={styles.firmwareConfirm}><input
-                    id="new-ai-firmware-confirm"
-                    type="checkbox"
-                    checked={confirmedErase}
-                    disabled={active}
-                    onChange={event => this.setState({confirmedErase: event.target.checked})}
-                />{t('firmwareEraseConfirm')}</label>
+                {failure ? <p
+                    className={styles.error}
+                    role="alert"
+                >{newAiErrorText(failure, locale)}</p> : null}
                 <div className={styles.firmwareActions}>
                     <button
+                        id="new-ai-firmware-cancel"
                         type="button"
-                        id="new-ai-firmware-check"
                         className={styles.command}
-                        disabled={checking || active}
-                        onClick={() => this.inspect()}
-                    >{t(checking ? 'firmwareChecking' : 'firmwareCheck')}</button>
-                    <button
-                        type="button"
+                        disabled={active && !dismissible}
+                        onClick={() => this.close()}
+                    >{t(dismissible || complete || failure ? 'firmwareClose' : 'firmwareCancel')}</button>
+                    {complete ? null : <button
                         id="new-ai-firmware-start"
-                        className={styles.command}
-                        disabled={checking || active || !confirmedErase || blockers.length > 0}
-                        aria-describedby="new-ai-firmware-blockers"
+                        type="button"
+                        className={`${styles.command} ${styles.firmwarePrimary}`}
+                        disabled={active || device.busy}
                         onClick={() => this.start()}
-                    >{t('firmwareStart')}</button>
+                    >{t(active ? 'firmwareUpdating' : (failure ? 'firmwareRetry' : 'firmwareStart'))}</button>}
                 </div>
-            </div> : null}
-        </section>);
+            </section>
+        </div>, document.body);
     }
 }
-NewAiFirmwarePanel.propTypes = {locale: PropTypes.string.isRequired,
+NewAiFirmwarePanel.propTypes = {
+    locale: PropTypes.string.isRequired,
+    onOpen: PropTypes.func,
+    onClose: PropTypes.func,
     device: PropTypes.shape({
-        busy: PropTypes.bool,
         connected: PropTypes.bool,
         port: PropTypes.string,
+        connectionMode: PropTypes.string,
+        busy: PropTypes.bool,
+        error: PropTypes.string,
         firmware: PropTypes.shape({active: PropTypes.bool,
+            transferComplete: PropTypes.bool,
+            recoveryRequired: PropTypes.bool,
             phase: PropTypes.string,
             total: PropTypes.number,
             bytes: PropTypes.number,
-            file: PropTypes.string,
             error: PropTypes.string,
             result: PropTypes.shape({version: PropTypes.number})}),
-        status: PropTypes.shape({legacyProtocol: PropTypes.bool}),
-        discovery: PropTypes.shape({ports: PropTypes.arrayOf(PropTypes.shape({path: PropTypes.string}))})
-    }).isRequired};
+        discovery: PropTypes.shape({status: PropTypes.string, ports: PropTypes.arrayOf(PropTypes.shape({}))}),
+        status: PropTypes.shape({version: PropTypes.number})
+    }).isRequired
+};

@@ -11,25 +11,9 @@ const saveFilters = {
         name: 'PNG Image',
         extensions: ['png']
     },
-    SB: {
-        name: 'Scratch 1 Project',
-        extensions: ['sb']
-    },
-    SB2: {
-        name: 'Scratch 2 Project',
-        extensions: ['sb2']
-    },
-    SB3: {
-        name: 'Scratch 3 Project',
-        extensions: ['sb3']
-    },
-    ESTS: {
-        name: 'EST Studio Project',
-        extensions: ['ests']
-    },
-    OB: {
-        name: 'OpenBlock Project',
-        extensions: ['ob']
+    ATC: {
+        name: 'ATC CodeStudio Project',
+        extensions: ['atc']
     },
     Sprite2: {
         name: 'Scratch 2 Sprite',
@@ -67,9 +51,9 @@ const loadFilters = {
         ]
     },
     AllProjects: {
-        name: 'EST Studio Projects',
+        name: 'ATC CodeStudio Projects',
         extensions: [
-            ...saveFilters.ESTS.extensions
+            ...saveFilters.ATC.extensions
         ]
     },
     AllSounds: {

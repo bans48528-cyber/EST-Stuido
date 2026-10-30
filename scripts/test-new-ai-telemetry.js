@@ -98,5 +98,10 @@ assert.equal(newAiConnectionChanged(before, {...before, stale: true}, false), tr
 assert.equal(newAiConnectionChanged(before, {...before, memoryError: 'NEW_CONNECTION_MEMORY_FAILED'}, true), true);
 assert.equal(newAiConnectionChanged(before, {...before, connected: false}, false), true);
 assert.equal(newAiConnectionChanged(before, {...before, firmware: {active: true}}, true), true);
+const updating = {...before, firmware: {active: true, phase: 'resetting', bytes: 0}};
+assert.equal(newAiConnectionChanged(updating, {...updating,
+    firmware: {active: true, phase: 'waitingBoot', bytes: 0}}, false), true);
+assert.equal(newAiConnectionChanged(updating, {...updating,
+    firmware: {active: true, phase: 'restarting', transferComplete: true}}, false), true);
 console.log('NEW AI telemetry passed: all sensor types, zero/negative/invalid values, 7 line channels, ' +
     'bounded camera targets, report splits, five locales and dialog/telemetry update isolation.');

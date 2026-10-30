@@ -13,9 +13,10 @@ if (!process.versions.electron) {
 } else {
     const {app, BrowserWindow, ipcMain, dialog} = require('electron');
     const nativeMessages = [];
+    const nativeMessageResponses = [];
     dialog.showMessageBox = (parent, options) => {
         nativeMessages.push(options || parent);
-        return Promise.resolve({response: 0});
+        return Promise.resolve({response: nativeMessageResponses.length ? nativeMessageResponses.shift() : 0});
     };
     const remote = require('@electron/remote/main');
     const output = fs.mkdtempSync(path.join(os.tmpdir(), 'est-locale-test-'));
@@ -28,6 +29,8 @@ if (!process.versions.electron) {
     let hardwareActive = 0;
     let hardwareMaxActive = 0;
     let hardwareMockEnabled = false;
+    let estConnected = true;
+    const estConnectionRequests = [];
     let selectedHardware = 'est';
     let startupProjectData = null;
     const sparkPorts = [{path: 'COM_TEST', friendlyName: 'Spark AI USB (mock)',
@@ -74,6 +77,8 @@ if (!process.versions.electron) {
     };
     let interruptSparkDownload = false;
     let firmwareChecks = 0;
+    let firmwareResourceValid = true;
+    let firmwareInspectDelay = 0;
     const firmwareRelease = require('../src/main/spark-ai/firmware-release.json');
     const sparkStatus = {version: 110, battery: 85, heap: 12, running: false,
         flash: {total: '1024 kb', free: '512 kb'}, ports: [
@@ -117,6 +122,7 @@ if (!process.versions.electron) {
         },
         'hardware-draft-write': (event, draft) => { hardwareDrafts.set(draft.hardwareId, draft); },
         'hardware-draft-read': (event, hardwareId) => hardwareDrafts.get(hardwareId) || null,
+        'hardware-drafts-clear': () => { hardwareDrafts.clear(); },
         'spark-state': () => sparkState,
         'new-ai-state': () => newAiState,
         'new-ai-list-devices': () => newAiPorts,
@@ -219,9 +225,10 @@ if (!process.versions.electron) {
             event.sender.send('new-ai-state-change', newAiState);
             return result;
         },
-        'spark-firmware-inspect': () => {
+        'spark-firmware-inspect': async () => {
             firmwareChecks++;
-            return {...firmwareRelease, releaseId: firmwareRelease.id, valid: true, canUpdate: true,
+            if (firmwareInspectDelay) await new Promise(resolve => setTimeout(resolve, firmwareInspectDelay));
+            return {...firmwareRelease, releaseId: firmwareRelease.id, valid: firmwareResourceValid, canUpdate: true,
                 files: firmwareRelease.files.map(file => ({...file, valid: true, error: null}))};
         },
         'spark-firmware-update': async (event, request) => {
@@ -268,16 +275,21 @@ if (!process.versions.electron) {
         'spark-download-program': (event, request) => mockSparkProgram(event, request, 'download'),
         'spark-run-program': (event, request) => mockSparkProgram(event, request, 'run'),
         'spark-stop-program': event => mockSparkProgram(event, {}, 'stop'),
-        'spark-set-monitoring': (event, enabled) => {
-            sparkState = {...sparkState, monitoring: enabled}; sendSpark(event); return sparkState;
+        'spark-set-monitoring': event => {
+            sparkState = {...sparkState, monitoring: true}; sendSpark(event); return sparkState;
         },
         'spark-cancel': event => {
             sparkRequests.push({action: 'cancel'});
             sparkState = {...sparkState, busy: false, operation: null}; sendSpark(event);
         },
         'spark-clear-logs': event => { sparkState = {...sparkState, logs: []}; sendSpark(event); },
-        'est-auto-connect': () => (hardwareMockEnabled ?
-            {state: 'connected', compatible: true, status: {programStatus: {state: 0}}} : {state: 'not-found'}),
+        'est-auto-connect': () => {
+            if (!hardwareMockEnabled) return {state: 'not-found'};
+            estConnected = true;
+            estConnectionRequests.push('connect');
+            return {state: 'connected', compatible: true, status: {programStatus: {state: 0}}};
+        },
+        'est-disconnect': () => {estConnected = false; estConnectionRequests.push('disconnect');},
         'est-vision-window-open': (event, locale) => { cameraOpenRequests++; openedCameraLocale = locale; },
         'est-vision-window-locale': (event, locale) => { cameraLocale = locale; },
         'est-hardware-status': async () => {
@@ -286,6 +298,7 @@ if (!process.versions.electron) {
             hardwareMaxActive = Math.max(hardwareMaxActive, hardwareActive);
             await new Promise(resolve => setTimeout(resolve, 200));
             hardwareActive--;
+            if (!estConnected) return {state: 'not-found'};
             return {state: 'connected', status: {firmwareVersion: 'M1.28H', protocolMajor: 1, protocolMinor: 31,
                 batteryPercent: 85, batterySampleMv: 2000, batteryAdcRaw: 3200,
                 motors: [{outputState: 0, powerPercent: 0, tachoCount: hardwareRequests}], sensors: [],
@@ -1166,7 +1179,7 @@ if (!process.versions.electron) {
                         text: panel.textContent, rows: panel.querySelectorAll('[class*=SparkRuntime_port_]').length};
                 })()`);
                 assert.ok(geometry.fits && !geometry.overflow, locale + ': Spark panel must fit');
-                assert.equal(geometry.rows, 4);
+                assert.equal(geometry.rows, 0, 'duplicate Spark port list was removed');
                 assert.ok(!/SPARK_|threadValue|ultrasion/.test(geometry.text), geometry.text);
             }
             for (const width of [800, 1000, 1280]) {
@@ -1178,74 +1191,12 @@ if (!process.versions.electron) {
                     (await window.webContents.capturePage()).toPNG());
             }
             window.setSize(1280, 860);
-            for (const locale of ['zh-cn', 'zh-tw', 'pt-br', 'ru', 'en']) {
-                await evaluate(`window.dispatchEvent(new CustomEvent('est-home-set-locale',
-                    {detail:{locale:${JSON.stringify(locale)}}}))`);
-                await pause(350);
-                if (!await evaluate('Boolean(document.querySelector("#spark-hardware-panel"))')) {
-                    await evaluate('document.querySelector("#spark-connection").click()');
-                }
-                if (!await evaluate('Boolean(document.querySelector("#spark-firmware-panel"))')) {
-                    await evaluate('document.querySelector("#spark-firmware-toggle").click()');
-                }
-                await pause(150);
-                assert.equal(await evaluate('document.querySelectorAll("#spark-firmware-panel tbody tr").length'), 5);
-                assert.equal(await evaluate('document.querySelector("#spark-firmware-start").disabled'), true);
-                const text = await evaluate('document.querySelector("#spark-firmware-panel").textContent');
-                assert.ok(!/SPARK_|firmware[A-Z]/.test(text), text);
-                assert.ok(!text.includes('SPARK_FW_BOOT_UNVERIFIED'), text);
-                await evaluate('document.querySelector("#spark-firmware-confirm").click()');
-                await pause(60);
-                assert.equal(await evaluate('document.querySelector("#spark-firmware-start").disabled'), false);
-                await evaluate('document.querySelector("#spark-firmware-start").click()');
-                await pause(80);
-                assert.equal(await evaluate('document.querySelector("#spark-program-controls [data-action=run]").disabled'), true);
-                assert.equal(await evaluate('document.querySelector("#spark-firmware-check").disabled'), true);
-                assert.ok(await evaluate('Boolean(document.querySelector("#spark-firmware-panel progress"))'));
-                if (locale === 'zh-cn') {
-                    await evaluate('document.querySelector("#spark-hardware-panel header button").click()');
-                    await evaluate('document.querySelector("#spark-connection").click()');
-                    await pause(50);
-                    assert.ok(await evaluate('Boolean(document.querySelector("#spark-firmware-panel progress"))'),
-                        'reopening the panel must show the active update');
-                }
-                await pause(350);
-                assert.equal(sparkState.firmware.phase, 'complete');
-                assert.equal(sparkRequests[sparkRequests.length - 1].action, 'firmware');
-                assert.equal(sparkRequests[sparkRequests.length - 1].confirmedErase, true);
-                const before = firmwareChecks;
-                await evaluate('document.querySelector("#spark-firmware-check").click()');
-                await pause(150);
-                assert.equal(firmwareChecks, before + 1);
-                for (const width of [800, 1280]) {
-                    window.setSize(width, 760); await pause(150);
-                    assert.ok(await evaluate(`(() => { const p = document.querySelector('#spark-hardware-panel');
-                        const r = p.getBoundingClientRect(); return p.scrollWidth <= p.clientWidth &&
-                        r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight; })()`));
-                    await evaluate('document.querySelector("#spark-firmware-toggle").scrollIntoView({block:"start"})');
-                    assert.ok(await evaluate(`(() => {
-                        const close = document.querySelector('#spark-hardware-panel header button');
-                        const r = close.getBoundingClientRect();
-                        return r.top >= 0 && r.bottom <= innerHeight &&
-                            close.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
-                    })()`), 'close button remains visible and clickable after scrolling');
-                    fs.writeFileSync(path.join(output, `spark-firmware-${locale}-${width}.png`),
-                        (await window.webContents.capturePage()).toPNG());
-                }
-            }
-            await evaluate('document.querySelector("#spark-usb-connect").click()');
-            await pause(100);
-            await evaluate('document.querySelector("#spark-firmware-recovery").click()');
-            await evaluate('document.querySelector("#spark-firmware-confirm").click()');
-            await pause(50);
-            assert.equal(await evaluate('document.querySelector("#spark-firmware-start").disabled'), false);
-            await evaluate('document.querySelector("#spark-firmware-start").click()');
-            await pause(450);
-            assert.equal(sparkRequests[sparkRequests.length - 1].recovery, true);
-            assert.equal(sparkRequests[sparkRequests.length - 1].path, 'COM_TEST');
-            await evaluate('document.querySelector("#spark-firmware-toggle").click()');
-            window.setSize(1280, 860);
-            console.log('Spark firmware UI: erase confirmation, progress, busy controls, reopen, recovery, recheck and five locales at 800/1280 passed.');
+            await require('./spark-firmware-ui/check')({evaluate, pause, window, output,
+                defaultStatus: sparkStatus, requests: () => sparkRequests,
+                setSpark: patch => {sparkState = {...sparkState, ...patch};
+                    window.webContents.send('spark-state-change', sparkState);},
+                resource: (valid, delay = 0) => {firmwareResourceValid = valid; firmwareInspectDelay = delay;}
+            });
             await evaluate('document.querySelector("#spark-mode-ble").click()');
             await pause(150);
             assert.equal(sparkState.connectionMode, 'ble');
@@ -1356,17 +1307,17 @@ if (!process.versions.electron) {
             await chooseHardware('new-ai');
             assert.ok(!await evaluate('Boolean(window.findLocaleTestBlocks().props.vm.runtime.getTargetForStage().variables["spark-value"])'));
             await chooseHardware('spark-ai');
-            assert.equal(await evaluate('window.findLocaleTestBlocks().props.vm.runtime.getTargetForStage().variables["spark-value"].value'), 123);
-            assert.equal(await evaluate('window.findLocaleTestBlocks().workspaceToCode()'), savedSparkProgram);
-            assert.equal(await evaluate('window.findLocaleTestBlocks().props.isCodeEditorLocked'), false);
-            assert.equal(await evaluate('window.findLocaleTestBlocks().props.codeEditorValue'), 'print("spark manual draft")');
+            assert.ok(!await evaluate('Boolean(window.findLocaleTestBlocks().props.vm.runtime.getTargetForStage().variables["spark-value"])'));
+            assert.equal(await evaluate('window.findLocaleTestBlocks().props.isCodeEditorLocked'), true);
+            assert.ok(!await evaluate('window.findLocaleTestBlocks().props.codeEditorValue.includes("spark manual draft")'));
             await chooseHardware('est');
-            assert.ok(await evaluate('Boolean(window.findLocaleTestBlocks().workspace.getBlockById("locale-est"))'),
-                'returning to EST must restore its original blocks');
+            assert.ok(!await evaluate('Boolean(window.findLocaleTestBlocks().workspace.getBlockById("locale-est"))'),
+                'returning to EST must open a blank project');
             await evaluate('(async () => { await window.findLocaleTestBlocks().props.vm.loadProject(await savedSparkHardwareProject.arrayBuffer()); })()');
             await pause(500);
             assert.ok((await evaluate(`document.querySelector('${hardwareButton}').textContent`)).includes('Spark AI'));
             assert.equal(await evaluate('window.findLocaleTestBlocks().props.vm.runtime.getTargetForStage().variables["spark-value"].value'), 123);
+            assert.equal(await evaluate('window.findLocaleTestBlocks().workspaceToCode()'), savedSparkProgram);
             const beforeUnknown = await evaluate('window.findLocaleTestBlocks().props.vm.toJSON()');
             const unknownError = await evaluate(`(async () => { const vm = window.findLocaleTestBlocks().props.vm;
                 const project = JSON.parse(vm.toJSON()); project.meta.estStudio.hardwareId = 'unknown';

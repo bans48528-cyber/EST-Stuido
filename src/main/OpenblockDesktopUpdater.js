@@ -49,7 +49,7 @@ class OpenblockDesktopUpdater {
 
     checkUpdateAtStartup () {
         // Preserve the previous behavior for regions where automatic application
-        // update checks were intentionally skipped. EST Studio no longer falls
+        // update checks were intentionally skipped. ATC CodeStudio no longer falls
         // back to the OpenBlock external-resource updater.
         if ((app.getLocaleCountryCode() === 'CN') || (process.platform === 'darwin')) {
             return;
@@ -144,7 +144,7 @@ class OpenblockDesktopUpdater {
             });
 
         }
-        return Promise.reject(new Error('No EST Studio application update is available.'));
+        return Promise.reject(new Error('No ATC CodeStudio application update is available.'));
     }
 
     abortUpdate () {

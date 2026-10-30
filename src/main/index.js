@@ -33,6 +33,9 @@ import {VisionWindowManager} from './est/vision-window';
 import {HardwareSession} from './hardware/session';
 import {HardwareDraftStore} from './hardware/drafts';
 import {HardwareSelectionPreferences} from './hardware/selection-preferences';
+import {readProjectFileHardware} from './hardware/project-info';
+import {HomeRecentProjects} from './home/recent-projects';
+import {getHomeContent, requireHomeBuildLibrary} from '../common/home-content';
 import {SparkDeviceService} from './spark-ai/device-service';
 import {SparkBleBridge} from './spark-ai/ble-bridge';
 import {SparkConnectionPreferences} from './spark-ai/connection-preferences';
@@ -41,11 +44,15 @@ import {NewAiDeviceService} from './new-ai/device-service';
 import {NewAiBleBridge} from './new-ai/ble-bridge';
 import {NewAiConnectionPreferences} from './new-ai/connection-preferences';
 import {NewAiFirmwareUpdateService} from './new-ai/firmware-update-service';
+import {NewAiPeripheralUpdateService} from './new-ai/peripheral-update-service';
 
 import formatMessage from 'format-message';
 import openBlockDesktopLocales from 'openblock-l10n/locales/desktop-msgs';
 import estDesktopMessageOverrides from './est-desktop-message-overrides.json';
 
+app.setName(productName);
+
+// Keep existing connection preferences and the Windows input compatibility fix after the rename.
 const inputCompatibility = new InputCompatibility({
     filename: path.join(app.getPath('appData'), 'EST Studio', 'input-compatibility.json'),
     commandLine: app.commandLine
@@ -76,10 +83,11 @@ const newAiDeviceService = new NewAiDeviceService({
         'hardware', 'new-connection.json'))
 });
 const newAiFirmwareUpdateService = new NewAiFirmwareUpdateService({device: newAiDeviceService});
+const newAiPeripheralUpdateService = new NewAiPeripheralUpdateService({device: newAiDeviceService});
 sparkDeviceService.on('cancel-ble-scan', () => sparkBleBridge.cancelScan());
 newAiDeviceService.on('cancel-ble-scan', () => newAiBleBridge.cancelScan());
 const estVisionCamera = new VisionCameraSource(estDeviceService, estVisionSimulator);
-const estStudioAppId = 'com.eststudio.desktop';
+const estStudioAppId = 'com.atc.codestudio';
 const estFirmwareUpdateState = {
     inProgress: false
 };
@@ -94,7 +102,7 @@ const hardwareSession = new HardwareSession({
         estVisionWindow.close(); // eslint-disable-line no-use-before-define
     },
     isFirmwareBusy: () => estFirmwareUpdateState.inProgress || sparkFirmwareUpdateService.busy ||
-        newAiFirmwareUpdateService.busy
+        newAiFirmwareUpdateService.busy || newAiPeripheralUpdateService.busy
 });
 let hardwareDrafts;
 // The bridge only becomes available after both the service and hardware session exist.
@@ -105,20 +113,12 @@ const getHardwareDrafts = () => {
     return hardwareDrafts;
 };
 const EST_RECENT_PROJECTS_FILE = 'est-recent-projects.json';
-const EST_RECENT_PROJECT_LIMIT = 16;
+const homeHardwarePreferences = new HardwareSelectionPreferences(
+    path.join(app.getPath('appData'), 'EST Studio', 'hardware', 'selection.json'), 'homeHardwareId');
 const EST_PROJECT_THUMBNAILS_DIRECTORY = 'est-home-thumbnails';
 const EST_PROJECT_THUMBNAIL_WIDTH = 480;
 const EST_BUILD_LIBRARY_CACHE_DIRECTORY = 'est-build-library';
-const EST_HOME_BUILD_ITEM_IDS = [
-    'basic-01',
-    'basic-02',
-    'basic-04',
-    'basic-13',
-    'pbl-01',
-    'pbl-04',
-    'pbl-07',
-    'pbl-14'
-];
+const EST_HOME_BUILD_ITEM_IDS = getHomeContent('est').bundledBuildIds;
 const EST_BUILD_LIBRARY_ALLOWED_HOSTS = [
     'github.com'
 ];
@@ -128,6 +128,7 @@ const EST_BUILD_LIBRARY_ALLOWED_HOST_SUFFIXES = [
 const EST_BUILD_LIBRARY_MAX_REDIRECTS = 8;
 let estBuildLibraryService = null;
 let estBuildLibraryInstallPromise = null;
+let estBuildLibraryInstallHardwareId = null;
 let estBuildLibraryInstallOperation = null;
 let estBuildLibraryLastProgress = null;
 let estBuildLibraryProgressPublisher = null;
@@ -206,7 +207,7 @@ const captureProjectThumbnail = async (webContents, projectPath) => {
     try {
         const normalizedPath = normalizeProjectPath(projectPath);
         if (!webContents || webContents.isDestroyed() ||
-            path.extname(normalizedPath).toLowerCase() !== '.ests' ||
+            path.extname(normalizedPath).toLowerCase() !== '.atc' ||
             !await fs.pathExists(normalizedPath)) {
             return null;
         }
@@ -249,11 +250,14 @@ const writeRecentProjectPaths = paths => fs.outputJson(getRecentProjectsPath(), 
 
 const getRecentProjectInfo = async projectPath => {
     const normalizedPath = normalizeProjectPath(projectPath);
-    if (path.extname(normalizedPath).toLowerCase() !== '.ests') return null;
+    if (path.extname(normalizedPath).toLowerCase() !== '.atc') return null;
     try {
         const stats = await fs.stat(normalizedPath);
         if (!stats.isFile()) return null;
+        const hardware = await readProjectFileHardware(normalizedPath);
         return {
+            hardwareId: hardware ? hardware.id : null,
+            hardwareName: hardware ? hardware.name : null,
             modifiedAt: stats.mtime.toISOString(),
             name: path.basename(normalizedPath, path.extname(normalizedPath)),
             path: normalizedPath,
@@ -264,44 +268,28 @@ const getRecentProjectInfo = async projectPath => {
     }
 };
 
+const recentProjects = new HomeRecentProjects({
+    readPaths: readRecentProjectPaths,
+    writePaths: writeRecentProjectPaths,
+    readInfo: getRecentProjectInfo,
+    pathKey: projectPathKey
+});
+
 const rememberRecentProject = async projectPath => {
-    const project = await getRecentProjectInfo(projectPath);
-    if (!project) return null;
-    const currentPaths = await readRecentProjectPaths();
-    const projectKey = projectPathKey(project.path);
-    const nextPaths = [project.path]
-        .concat(currentPaths.filter(value => projectPathKey(value) !== projectKey))
-        .slice(0, EST_RECENT_PROJECT_LIMIT);
-    await writeRecentProjectPaths(nextPaths);
-    if (app.isReady()) {
-        app.addRecentDocument(project.path);
-    }
+    const project = await recentProjects.remember(projectPath);
+    if (project && app.isReady()) app.addRecentDocument(project.path);
     return project;
 };
-
-const listRecentProjects = async () => {
-    const currentPaths = await readRecentProjectPaths();
-    const projects = (await Promise.all(currentPaths.map(getRecentProjectInfo))).filter(Boolean);
-    const validPaths = projects.map(project => project.path);
-    if (validPaths.length !== currentPaths.length) {
-        await writeRecentProjectPaths(validPaths);
-    }
-    return projects;
-};
-
+const listRecentProjects = () => recentProjects.list();
 const removeRecentProject = async (projectPath, removeThumbnail = true) => {
-    const removeKey = projectPathKey(projectPath);
-    const currentPaths = await readRecentProjectPaths();
-    await writeRecentProjectPaths(currentPaths.filter(value => projectPathKey(value) !== removeKey));
-    if (removeThumbnail) {
-        await fs.remove(getProjectThumbnailPath(projectPath));
-    }
+    await recentProjects.remove(projectPath);
+    if (removeThumbnail) await fs.remove(getProjectThumbnailPath(projectPath));
 };
 
 const validateProjectName = value => {
     const projectName = String(value || '')
         .trim()
-        .replace(/\.ests$/i, '');
+        .replace(/\.atc$/i, '');
     if (!projectName || /[\\/:*?"<>|\0]/.test(projectName) || /[. ]$/.test(projectName)) {
         throw new Error('请输入有效的文件名。');
     }
@@ -323,7 +311,7 @@ const openProjectForHome = async projectPath => {
 const renameHomeProject = async request => {
     const sourcePath = normalizeProjectPath(request && request.path);
     const projectName = validateProjectName(request && request.name);
-    const destinationPath = path.join(path.dirname(sourcePath), `${projectName}.ests`);
+    const destinationPath = path.join(path.dirname(sourcePath), `${projectName}.atc`);
     if (projectPathKey(sourcePath) !== projectPathKey(destinationPath) && await fs.pathExists(destinationPath)) {
         throw new Error('同名项目已存在。');
     }
@@ -341,11 +329,11 @@ const copyHomeProject = async projectPath => {
     if (!sourceInfo) throw new Error('项目文件不存在或无法读取。');
     const directory = path.dirname(sourcePath);
     let suffix = ' - 副本';
-    let destinationPath = path.join(directory, `${sourceInfo.name}${suffix}.ests`);
+    let destinationPath = path.join(directory, `${sourceInfo.name}${suffix}.atc`);
     let copyIndex = 2;
     while (await fs.pathExists(destinationPath)) {
         suffix = ` - 副本 ${copyIndex}`;
-        destinationPath = path.join(directory, `${sourceInfo.name}${suffix}.ests`);
+        destinationPath = path.join(directory, `${sourceInfo.name}${suffix}.atc`);
         copyIndex += 1;
     }
     await fs.copy(sourcePath, destinationPath, {overwrite: false});
@@ -398,7 +386,8 @@ const resolveHomeBuildAssetPath = (directory, itemId, extension) => {
     return fs.existsSync(packagedPath) ? packagedPath : null;
 };
 
-const getHomeBuildThumbnails = async () => {
+const getHomeBuildThumbnails = async request => {
+    if (!getHomeContent(request && request.hardwareId).downloadableBuildLibrary) return {};
     const thumbnails = {};
     await Promise.all(EST_HOME_BUILD_ITEM_IDS.map(async itemId => {
         const thumbnailPath = resolveHomeBuildAssetPath('thumbnails', itemId, 'jpg');
@@ -574,6 +563,7 @@ const readBuildLibraryThumbnails = async items => {
 };
 
 const serializeInstalledBuildLibrary = async installed => ({
+    hardwareId: 'est',
     archiveBytes: EST_BUILD_LIBRARY_REMOTE_SUMMARY.archiveBytes,
     contentVersion: installed.contentVersion,
     installed: true,
@@ -588,21 +578,34 @@ const serializeInstalledBuildLibrary = async installed => ({
     totalItemCount: EST_BUILD_LIBRARY_REMOTE_SUMMARY.itemCount
 });
 
-const getHomeBuildLibraryState = async () => {
+const getHomeBuildLibraryState = async request => {
+    const hardwareId = request && request.hardwareId;
+    if (!getHomeContent(hardwareId).downloadableBuildLibrary) {
+        return {hardwareId, installed: false, items: [], thumbnails: {}, totalItemCount: 0, downloadActive: false};
+    }
     const installed = await getEstBuildLibraryService().getInstalledLibrary();
-    if (installed) return serializeInstalledBuildLibrary(installed);
+    const download = {
+        hardwareId,
+        downloadActive: Boolean(estBuildLibraryInstallPromise && estBuildLibraryInstallHardwareId === hardwareId),
+        downloadProgress: estBuildLibraryInstallHardwareId === hardwareId ? estBuildLibraryLastProgress : null
+    };
+    if (installed) return {...await serializeInstalledBuildLibrary(installed), ...download};
     return {
+        ...download,
         archiveBytes: EST_BUILD_LIBRARY_REMOTE_SUMMARY.archiveBytes,
         contentVersion: null,
         installed: false,
         itemCount: EST_HOME_BUILD_ITEM_IDS.length,
         items: null,
-        thumbnails: await getHomeBuildThumbnails(),
+        thumbnails: await getHomeBuildThumbnails(request),
         totalItemCount: EST_BUILD_LIBRARY_REMOTE_SUMMARY.itemCount
     };
 };
 
-const openHomeBuildGuide = async itemId => {
+const openHomeBuildGuide = async request => {
+    requireHomeBuildLibrary(request);
+    const itemId = request && request.itemId;
+    if (typeof itemId !== 'string') throw new Error('HOME_BUILD_UNAVAILABLE');
     const installed = await getEstBuildLibraryService().getInstalledLibrary();
     const installedItem = installed && installed.catalog.items.find(item => item.id === itemId);
     const guidePath = installedItem ?
@@ -623,7 +626,7 @@ const createWindowIcon = assetPath => {
         nativeImage.createFromDataURL(iconPath) :
         nativeImage.createFromPath(iconPath);
     if (icon.isEmpty()) {
-        log.warn(`Unable to load EST Studio window icon from ${iconPath}`);
+        log.warn(`Unable to load ATC CodeStudio window icon from ${iconPath}`);
         return undefined;
     }
     return icon;
@@ -692,7 +695,7 @@ const displayPermissionDeniedWarning = (browserWindow, permissionType) => {
         message = formatMessage({
             id: 'index.cameraPermissionDeniedMessage',
             default: 'Permission to use the camera has been denied. ' +
-                'EST Studio will not be able to take a photo or use video sensing blocks.',
+                'ATC CodeStudio will not be able to take a photo or use video sensing blocks.',
             description: 'message for camera permission denied'
         });
         break;
@@ -705,7 +708,7 @@ const displayPermissionDeniedWarning = (browserWindow, permissionType) => {
         message = formatMessage({
             id: 'index.microphonePermissionDeniedMessage',
             default: 'Permission to use the microphone has been denied. ' +
-                    'EST Studio will not be able to record sounds or detect loudness.',
+                    'ATC CodeStudio will not be able to record sounds or detect loudness.',
             description: 'message for microphone permission denied'
         });
         break;
@@ -727,14 +730,14 @@ const displayPermissionDeniedWarning = (browserWindow, permissionType) => {
     case 'darwin':
         instructions = formatMessage({
             id: 'index.darwinPermissionDeniedInstructions',
-            default: 'To change EST Studio permissions, please check "Security & Privacy" in System Preferences.',
+            default: 'To change ATC CodeStudio permissions, please check "Security & Privacy" in System Preferences.',
             description: 'prompt for fix darwin permission denied instructions'
         });
         break;
     default:
         instructions = formatMessage({
             id: 'index.permissionDeniedInstructions',
-            default: 'To change EST Studio permissions, please check your system settings and restart EST Studio.',
+            default: 'To change ATC CodeStudio permissions, please check your system settings and restart ATC CodeStudio.',
             description: 'prompt for fix permission denied instructions'
         });
         break;
@@ -849,8 +852,11 @@ const createWindow = ({search = null, url = 'index.html', ...browserWindowOption
         window.setIcon(windowIcon);
     }
     const webContents = window.webContents;
+    // Keep each native window's application/version or About title when the shared HTML loads.
+    webContents.on('page-title-updated', event => event.preventDefault());
     window.on('close', event => {
-        if (sparkFirmwareUpdateService.busy || newAiFirmwareUpdateService.busy) event.preventDefault();
+        if (sparkFirmwareUpdateService.busy || newAiFirmwareUpdateService.busy ||
+            newAiPeripheralUpdateService.busy) event.preventDefault();
     });
 
     // Keep renderer failures visible in the development terminal. This is
@@ -949,7 +955,7 @@ const createLoadingWindow = () => {
         transparent: true,
         hasShadow: false,
         search: 'route=loading',
-        title: `Loding ${productName} ${version}`
+        title: `Loading ${productName} ${version}`
     });
 
     window.once('ready-to-show', () => {
@@ -961,8 +967,8 @@ const createLoadingWindow = () => {
 
 const getIsProjectSave = downloadItem => {
     switch (downloadItem.getMimeType()) {
-    case 'application/x.openblock.ob':
-        return true;
+    case 'application/x.atc.project':
+        return path.extname(downloadItem.getFilename()).toLowerCase() === '.atc';
     }
     return false;
 };
@@ -993,7 +999,9 @@ const createMainWindow = () => {
             const extNameNoDot = extName.replace(/^\./, '');
             options.filters = [getFilterForExtension(extNameNoDot)];
         }
-        const userChosenPath = dialog.showSaveDialogSync(window, options);
+        const selectedPath = dialog.showSaveDialogSync(window, options);
+        const userChosenPath = selectedPath && isProjectSave && path.extname(selectedPath).toLowerCase() !== '.atc' ?
+            `${selectedPath}.atc` : selectedPath;
         // this will be falsy if the user canceled the save
         if (userChosenPath) {
             const userBaseName = path.basename(userChosenPath);
@@ -1012,7 +1020,7 @@ const createMainWindow = () => {
                     }
                     await fs.move(tempPath, userChosenPath, {overwrite: true});
                     if (isProjectSave) {
-                        const newProjectTitle = path.basename(userChosenPath, extName);
+                        const newProjectTitle = path.basename(userChosenPath, path.extname(userChosenPath));
                         webContents.send('setTitleFromSave', {title: newProjectTitle});
                         await rememberRecentProject(userChosenPath);
                         await captureProjectThumbnail(webContents, userChosenPath);
@@ -1051,13 +1059,13 @@ const createMainWindow = () => {
             type: 'question',
             message: formatMessage({
                 id: 'index.questionLeave',
-                default: 'Leave EST Studio?',
-                description: 'prompt for leaving EST Studio'
+                default: 'Leave ATC CodeStudio?',
+                description: 'prompt for leaving ATC CodeStudio'
             }),
             detail: formatMessage({
                 id: 'index.questionLeaveDetail',
                 default: 'Any unsaved changes will be lost.',
-                description: 'detail prompt for leaving EST Studio'
+                description: 'detail prompt for leaving ATC CodeStudio'
             }),
             buttons: [
                 formatMessage({
@@ -1122,7 +1130,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', event => {
-    if (sparkFirmwareUpdateService.busy || newAiFirmwareUpdateService.busy) {
+    if (sparkFirmwareUpdateService.busy || newAiFirmwareUpdateService.busy || newAiPeripheralUpdateService.busy) {
         event.preventDefault(); return;
     }
     if (isQuitting) {
@@ -1234,7 +1242,13 @@ registerEstAiIpc({
     })
 });
 
+ipcMain.handle('est-home-set-hardware', (event, request) => {
+    getHomeContent(request && request.hardwareId);
+    homeHardwarePreferences.write(request.hardwareId);
+    return request.hardwareId;
+});
 ipcMain.handle('est-home-get-startup-state', () => ({
+    homeHardwareId: homeHardwarePreferences.read(),
     hasInitialProject: argv._.length > 0,
     projectPath: argv._.length > 0 ? argv._[argv._.length - 1] : null
 }));
@@ -1249,14 +1263,23 @@ ipcMain.handle('est-home-remember-project', async (event, projectPath) => {
 ipcMain.handle('est-home-capture-thumbnail', (event, projectPath) => (
     captureProjectThumbnail(event.sender, projectPath)
 ));
+ipcMain.handle('est-home-choose-project', async event => {
+    const result = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
+        properties: ['openFile'], filters: [getFilterForExtension('atc')]
+    });
+    if (result.canceled || !result.filePaths.length) return null;
+    return openProjectForHome(result.filePaths[0]);
+});
 ipcMain.handle('est-home-open-project', (event, projectPath) => openProjectForHome(projectPath));
 ipcMain.handle('est-home-remove-recent-project', (event, projectPath) => removeRecentProject(projectPath));
 ipcMain.handle('est-home-rename-project', (event, request) => renameHomeProject(request));
 ipcMain.handle('est-home-copy-project', (event, projectPath) => copyHomeProject(projectPath));
-ipcMain.handle('est-home-get-build-thumbnails', () => getHomeBuildThumbnails());
-ipcMain.handle('est-home-get-build-library-state', () => getHomeBuildLibraryState());
-ipcMain.handle('est-home-download-build-library', (event) => {
+ipcMain.handle('est-home-get-build-thumbnails', (event, request) => getHomeBuildThumbnails(request));
+ipcMain.handle('est-home-get-build-library-state', (event, request) => getHomeBuildLibraryState(request));
+ipcMain.handle('est-home-download-build-library', (event, request) => {
+    const hardwareId = requireHomeBuildLibrary(request);
     if (!estBuildLibraryInstallPromise) {
+        estBuildLibraryInstallHardwareId = hardwareId;
         let lastPhase = '';
         let lastPercent = -1;
         let lastPaused = false;
@@ -1268,6 +1291,7 @@ ipcMain.handle('est-home-download-build-library', (event) => {
             const operationState = estBuildLibraryInstallOperation.snapshot();
             const nextProgress = {
                 ...progress,
+                hardwareId,
                 cancelled: operationState.cancelled,
                 paused: operationState.paused
             };
@@ -1294,11 +1318,12 @@ ipcMain.handle('est-home-download-build-library', (event) => {
         )
             .then(serializeInstalledBuildLibrary)
             .catch(error => {
-                if (error instanceof EstBuildLibraryCancelledError) return {cancelled: true};
+                if (error instanceof EstBuildLibraryCancelledError) return {hardwareId, cancelled: true};
                 throw error;
             })
             .finally(() => {
                 estBuildLibraryInstallPromise = null;
+                estBuildLibraryInstallHardwareId = null;
                 estBuildLibraryInstallOperation = null;
                 estBuildLibraryLastProgress = null;
                 estBuildLibraryProgressPublisher = null;
@@ -1306,7 +1331,8 @@ ipcMain.handle('est-home-download-build-library', (event) => {
     }
     return estBuildLibraryInstallPromise;
 });
-ipcMain.handle('est-home-pause-build-library-download', () => {
+ipcMain.handle('est-home-pause-build-library-download', (event, request) => {
+    requireHomeBuildLibrary(request);
     if (!estBuildLibraryInstallOperation) return {active: false, paused: false};
     const state = estBuildLibraryInstallOperation.pause();
     if (estBuildLibraryProgressPublisher && estBuildLibraryLastProgress) {
@@ -1314,7 +1340,8 @@ ipcMain.handle('est-home-pause-build-library-download', () => {
     }
     return {active: true, ...state};
 });
-ipcMain.handle('est-home-resume-build-library-download', () => {
+ipcMain.handle('est-home-resume-build-library-download', (event, request) => {
+    requireHomeBuildLibrary(request);
     if (!estBuildLibraryInstallOperation) return {active: false, paused: false};
     const state = estBuildLibraryInstallOperation.resume();
     if (estBuildLibraryProgressPublisher && estBuildLibraryLastProgress) {
@@ -1322,7 +1349,8 @@ ipcMain.handle('est-home-resume-build-library-download', () => {
     }
     return {active: true, ...state};
 });
-ipcMain.handle('est-home-cancel-build-library-download', () => {
+ipcMain.handle('est-home-cancel-build-library-download', (event, request) => {
+    requireHomeBuildLibrary(request);
     if (!estBuildLibraryInstallOperation) return {active: false, cancelled: false};
     const state = estBuildLibraryInstallOperation.cancel();
     if (estBuildLibraryProgressPublisher && estBuildLibraryLastProgress) {
@@ -1330,7 +1358,7 @@ ipcMain.handle('est-home-cancel-build-library-download', () => {
     }
     return {active: true, ...state};
 });
-ipcMain.handle('est-home-open-build-guide', (event, itemId) => openHomeBuildGuide(itemId));
+ipcMain.handle('est-home-open-build-guide', (event, request) => openHomeBuildGuide(request));
 
 const firmwareUpdateConnectionState = () => ({
     state: 'firmware-updating',
@@ -1363,6 +1391,10 @@ ipcMain.handle('hardware-draft-write', (event, request) => {
 ipcMain.handle('hardware-draft-read', (event, hardwareId) => {
     requireMainHardwareWindow(event);
     return getHardwareDrafts().read(hardwareId);
+});
+ipcMain.handle('hardware-drafts-clear', event => {
+    requireMainHardwareWindow(event);
+    return getHardwareDrafts().clear();
 });
 const hardwareUnavailableState = () => ({state: 'hardware-unavailable', compatible: false, status: null});
 const canUseEstAdapter = () => !hardwareSession.switching && hardwareSession.hardwareId === 'est';
@@ -1430,6 +1462,8 @@ ipcMain.handle('new-ai-stop-program', event => newAiOperation(event, () => newAi
 ipcMain.handle('new-ai-firmware-inspect', event => newAiOperation(event, () => newAiFirmwareUpdateService.inspect()));
 ipcMain.handle('new-ai-firmware-update', (event, request) =>
     newAiOperation(event, () => newAiFirmwareUpdateService.start(request)));
+ipcMain.handle('new-ai-peripheral-update', (event, request) =>
+    newAiOperation(event, () => newAiPeripheralUpdateService.start(request)));
 ipcMain.handle('new-ai-cancel', event => {
     requireMainHardwareWindow(event);
     hardwareSession.requireAdapter('new-usb');
@@ -1644,10 +1678,17 @@ const initialProjectDataPromise = (async () => {
     }
     const projectPath = argv._[argv._.length - 1];
     try {
+        if (path.extname(projectPath).toLowerCase() !== '.atc') {
+            throw new Error(formatMessage({
+                id: 'index.atcProjectOnly',
+                default: 'Please choose an ATC CodeStudio (.atc) project.'
+            }));
+        }
         const projectData = await promisify(fs.readFile)(projectPath, null);
         await rememberRecentProject(projectPath);
         return projectData;
     } catch (e) {
+        await app.whenReady();
         dialog.showMessageBox(_windows.main, {
             type: 'error',
             title: 'Failed to load project',

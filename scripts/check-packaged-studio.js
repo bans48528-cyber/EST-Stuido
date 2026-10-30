@@ -15,7 +15,7 @@ const built = path.resolve(process.argv[2]);
 const destination = path.resolve(process.argv[3]);
 const archive = path.join(built, 'resources/app.asar');
 const readArchive = filename => asar.extractFile(archive, path.normalize(filename));
-const executable = path.join(built, 'EST Studio.exe');
+const executable = path.join(built, 'ATC CodeStudio.exe');
 const expectedVersion = require('../package.json').version;
 const hash = file => createHash('sha256').update(fs.readFileSync(file))
     .digest('hex');

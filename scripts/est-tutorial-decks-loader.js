@@ -1,5 +1,5 @@
 /**
- * Remove the Scratch/OpenBlock tutorial deck payload from EST Studio builds.
+ * Remove the Scratch/OpenBlock tutorial deck payload from ATC CodeStudio builds.
  * Tutorial entry points and render surfaces are already removed from the EST
  * interface, but OpenBlock reducers still import this module while starting.
  * Returning an empty deck collection keeps those reducers valid without

@@ -65,7 +65,8 @@ export class NewAiDeviceService extends EventEmitter {
         return Boolean(this.connected && this.monitor && this.monitor.running);
     }
     get busy () {
-        return Boolean(this.firmwareLease || this.connecting || this.disconnecting || this.operation ||
+        return Boolean(this.firmwareLease || (this.peripheralUpdate && this.peripheralUpdate.active) ||
+            this.connecting || this.disconnecting || this.operation ||
             this.bleReconnecting);
     }
     getState () {
@@ -81,6 +82,8 @@ export class NewAiDeviceService extends EventEmitter {
                 this.monitor.version === NEW_RESOURCE_VERSION && this.compiler.supported),
             operation: this.operation ? {...this.operation.progress} : null,
             firmware: this.firmwareState || null,
+            peripheralUpdate: this.peripheralUpdate || null,
+            connectionRevision: this.epoch,
             result: this.result || null,
             warning: this.downloadInterrupted ? 'NEW_DOWNLOAD_INCOMPLETE' : null,
             port: this.port || null,
@@ -364,7 +367,6 @@ export class NewAiDeviceService extends EventEmitter {
                 ble ? this.timeouts.bleIdentify : this.timeouts.identify);
             await identity;
             if (!current() || epoch !== this.epoch) throw new NewAiError('NEW_CANCELLED');
-            if (ble && this.monitor.version !== NEW_RESOURCE_VERSION) throw new NewAiError('NEW_VERSION_UNSUPPORTED');
             this.connected = true;
             if (ble) this.bleDevice = device;
             else this.previousDevice = device;
@@ -414,7 +416,8 @@ export class NewAiDeviceService extends EventEmitter {
         this.disconnect({pauseAuto: false, allowBusy: true}).catch(() => {});
     }
     async disconnect ({pauseAuto = true, allowBusy = false} = {}) {
-        if ((this.operation || this.firmwareLease) && !allowBusy) throw new NewAiError('NEW_BUSY');
+        if ((this.operation || this.firmwareLease || (this.peripheralUpdate && this.peripheralUpdate.active)) &&
+            !allowBusy) throw new NewAiError('NEW_BUSY');
         if (pauseAuto) {
             this.autoEnabled = false;
             this.saveConnectionPreferences();
@@ -448,7 +451,9 @@ export class NewAiDeviceService extends EventEmitter {
         return this.getState();
     }
     async shutdown () {
-        if (this.firmwareLease) throw new NewAiError('NEW_BUSY');
+        if (this.firmwareLease || (this.peripheralUpdate && this.peripheralUpdate.active)) {
+            throw new NewAiError('NEW_BUSY');
+        }
         this.shuttingDown = true;
         this.setDiscoveryActive(false);
         if (this.autoConnectPromise) await this.autoConnectPromise;
@@ -456,6 +461,24 @@ export class NewAiDeviceService extends EventEmitter {
         if (this.jobPromise) await this.jobPromise.catch(() => {});
         await this.disconnect({pauseAuto: false, allowBusy: true});
         clearTimeout(this.publishTimer);
+    }
+    takeFirmwareTransport () {
+        if (!this.firmwareLease || !this.transport) throw new NewAiError('NEW_DISCONNECTED');
+        const transport = this.transport;
+        this.epoch++;
+        clearInterval(this.healthTimer);
+        clearTimeout(this.publishTimer);
+        if (this.removeTransportListeners) this.removeTransportListeners();
+        this.removeTransportListeners = null;
+        this.transport = null;
+        this.port = null;
+        this.monitor = null;
+        this.connected = false;
+        this.phase = 'disconnected';
+        this.emit('connection-lost', new NewAiError('NEW_DISCONNECTED'));
+        this.publish();
+        // Ownership passes to the updater; do not toggle DTR or close a live boot channel.
+        return transport;
     }
     reserveFirmwareUpdate () {
         if (this.busy || this.shuttingDown) throw new NewAiError('NEW_BUSY');

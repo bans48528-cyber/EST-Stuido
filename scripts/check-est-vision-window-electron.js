@@ -143,7 +143,7 @@ if (!process.versions.electron) {
             const setLocale = async locale => {
                 manager.setLocale(locale);
                 await until(() => evaluate(`lab.state.locale === ${JSON.stringify(locale)}`));
-                assert.strictEqual(window.getTitle(), 'EST Studio - ' + messages[locale]['camera.title']);
+                assert.strictEqual(window.getTitle(), 'ATC CodeStudio - ' + messages[locale]['camera.title']);
             };
             for (const locale of Object.keys(messages)) {
                 await setLocale(locale);

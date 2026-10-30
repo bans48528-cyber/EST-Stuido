@@ -150,19 +150,29 @@ export class SparkFirmwareUpdateService {
                     throw new SparkError('SPARK_FW_DEVICE_CHANGED');
                 }
                 this.update({phase: 'resetting'}, true);
+                const transport = this.device.takeFirmwareTransport();
+                link = new SparkFirmwareLink(transport, this.timeouts);
+                link.portPath = port.path;
+                await link.open({alreadyOpen: true});
                 // No ACK is defined for 6F. A USB close while writing can be the requested reset.
                 touched = true;
-                await firmwareBounded(this.device.transport.write(sparkFrame(0x6F,
+                await firmwareBounded(transport.write(sparkFrame(0x6F,
                     Buffer.from('RESET_FWLIB', 'ascii'))), 5000, 'SPARK_WRITE_TIMEOUT').catch(error => {
                     this.device.addLog(error.message);
                 });
             }
-            await this.device.closeTransport();
-            this.device.monitor = null;
             this.update({phase: 'waitingBoot'}, true);
-            if (!request.recovery) await firmwareDelay(this.timeouts.bootDelay);
-            const bootDeadline = Date.now() + this.timeouts.boot;
-            link = await this.openMatching(identity, bootDeadline);
+            if (!request.recovery) {
+                await firmwareDelay(this.timeouts.bootDelay);
+                if (link.failure) {
+                    await link.close(); link = null;
+                } else link.prepareBootTransfer();
+            }
+            if (!link) {
+                await this.device.closeTransport();
+                this.device.monitor = null;
+                link = await this.openMatching(identity, Date.now() + this.timeouts.boot);
+            }
             if (link.monitor) throw new SparkError('SPARK_FW_BOOT_REQUIRED');
             this.update({phase: 'transferring'}, true);
             // The Bootloader starts burning after ~1 s idle. Preload all files and
@@ -187,9 +197,17 @@ export class SparkFirmwareUpdateService {
             const deadline = Date.now() + this.timeouts.application;
             let monitor;
             let applicationPort;
+            let wrongVersion = false;
+            const applicationReady = sample => {
+                if (sample.version !== release.version) {
+                    wrongVersion = true; return false;
+                }
+                return true;
+            };
             while (Date.now() < deadline) {
                 try {
-                    monitor = await link.waitForMonitor(Math.min(500, Math.max(1, deadline - Date.now())));
+                    monitor = await link.waitForMonitor(Math.min(500, Math.max(1, deadline - Date.now())),
+                        applicationReady);
                 } catch (error) {
                     if (error.code !== 'SPARK_MONITOR_TIMEOUT') {
                         await link.close(); link = null;
@@ -202,7 +220,9 @@ export class SparkFirmwareUpdateService {
                     break;
                 }
             }
-            if (!monitor) throw new SparkError('SPARK_FW_RECONNECT_TIMEOUT');
+            if (!monitor) {
+                throw new SparkError(wrongVersion ? 'SPARK_FW_VERSION_MISMATCH' : 'SPARK_FW_RECONNECT_TIMEOUT');
+            }
             this.update({phase: 'reconnecting'}, true);
             await link.close(); link = null;
             await this.device.openConnection(applicationPort);

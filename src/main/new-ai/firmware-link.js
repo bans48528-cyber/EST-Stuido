@@ -48,13 +48,24 @@ export class NewAiFirmwareLink extends EventEmitter {
             }
         });
     }
-    async open () {
-        await newAiFirmwareBounded(this.transport.open(), this.timeouts.open, 'NEW_OPEN_TIMEOUT');
+    async open ({alreadyOpen = false} = {}) {
+        if (!alreadyOpen) {
+            await newAiFirmwareBounded(this.transport.open(), this.timeouts.open, 'NEW_OPEN_TIMEOUT');
+        }
         if (this.failure) throw this.failure;
+    }
+    prepareBootTransfer () {
+        // The last APP report can precede RESET_FWLIB on an unchanged USB handle.
+        // Only discard that cached report after the original application's boot delay.
+        this.monitor = null;
+        this.parser.pending = '';
+        this.parser.buffer = Buffer.alloc(0);
     }
     async send (command, payload) {
         if (this.closed || this.failure) throw this.failure || new NewAiError('NEW_DISCONNECTED');
-        if (this.monitor) throw new NewAiError('NEW_FW_BOOT_REQUIRED');
+        // Legacy firmware can keep streaming its device envelope during resource reception.
+        // The original updater advances by file ACKs, not by disappearance of that envelope.
+        if (this.monitor && !this.monitor.legacyProtocol) throw new NewAiError('NEW_FW_BOOT_REQUIRED');
         if (this.pending) throw new NewAiError('NEW_BUSY');
         if (this.lastCommand === 0xBB && Date.now() - this.lastAck > this.timeouts.gap) {
             throw new NewAiError('NEW_FW_GAP');
@@ -74,7 +85,7 @@ export class NewAiFirmwareLink extends EventEmitter {
         try {
             await Promise.all([acknowledgement, newAiFirmwareBounded(Promise.resolve().then(() => {
                 if (this.failure || this.closed) throw this.failure || new NewAiError('NEW_DISCONNECTED');
-                if (this.monitor) throw new NewAiError('NEW_FW_BOOT_REQUIRED');
+                if (this.monitor && !this.monitor.legacyProtocol) throw new NewAiError('NEW_FW_BOOT_REQUIRED');
                 return this.transport.write(newAiFrame(command, payload));
             }), this.timeouts.write, 'NEW_WRITE_TIMEOUT')]);
             this.lastCommand = command;
@@ -83,8 +94,8 @@ export class NewAiFirmwareLink extends EventEmitter {
             throw error;
         }
     }
-    waitForMonitor (timeout) {
-        if (this.monitor) return Promise.resolve(this.monitor);
+    waitForMonitor (timeout, accept = () => true) {
+        if (this.monitor && accept(this.monitor)) return Promise.resolve(this.monitor);
         if (this.failure || this.closed) return Promise.reject(this.failure || new NewAiError('NEW_DISCONNECTED'));
         return new Promise((resolve, reject) => {
             const wait = {};
@@ -93,7 +104,9 @@ export class NewAiFirmwareLink extends EventEmitter {
                 this.removeListener('monitor', wait.monitor); this.removeListener('lost', wait.lost);
                 if (error) reject(error); else resolve(value);
             };
-            wait.monitor = value => finish(null, value);
+            wait.monitor = value => {
+                if (accept(value)) finish(null, value);
+            };
             wait.lost = error => finish(error);
             wait.timer = setTimeout(() => finish(new NewAiError('NEW_MONITOR_TIMEOUT')), timeout);
             this.on('monitor', wait.monitor); this.on('lost', wait.lost);

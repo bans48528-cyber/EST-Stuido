@@ -7,6 +7,7 @@ import {
     getEstAiNodeSpec
 } from './est-block-spec';
 import {normalizeEstAiBitmap} from './est-ai-bitmap';
+import {newMatrixTextIssue} from '../new-ai/matrix-text';
 
 const ROOT_KEYS = new Set(['version', 'hardwareId', 'mode', 'stacks', 'variables', 'procedures']);
 const STACK_KEYS = new Set(['event', 'body', 'x', 'y']);
@@ -293,6 +294,14 @@ const normalizeNode = (node, expectedKind, path, depth, state) => {
         }
     });
 
+    if (node.type === 'new_matrix_lamp_text') {
+        const issue = newMatrixTextIssue(normalizedInputs.matrix_text);
+        if (issue) {
+            addError(state, 'INVALID_MATRIX_TEXT', `${path}.inputs.matrix_text`, issue === 'length' ?
+                'NEW AI 点阵每次滚动显示最多 31 个字符，请拆成多次显示。' :
+                'NEW AI 点阵仅支持大写英文、数字和 ?. + - * / =，请把中文标题改成英文，使用 = 代替冒号。');
+        }
+    }
     const normalized = {type: node.type};
     if (['spark_control_break', 'new_control_break'].includes(node.type) && !state.loopDepth) {
         addError(state, 'BREAK_OUTSIDE_LOOP', path, '退出循环积木必须位于循环内部');

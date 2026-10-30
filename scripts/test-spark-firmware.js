@@ -17,7 +17,7 @@ Module._extensions['.js'] = (module, filename) => {
 };
 const release = require('../src/main/spark-ai/firmware-release.json');
 const {SparkFirmwareUpdateService, getSparkFirmwareRoot} = require('../src/main/spark-ai/firmware-update-service');
-const {sparkFirmwareBlockers} = require('../src/common/spark-firmware');
+const {sparkFirmwareBlockers, sparkFirmwareMismatchKey} = require('../src/common/spark-firmware');
 const {sparkRuntimeText} = require('../src/renderer/spark-ai/runtime-messages');
 const {HardwareSession} = require('../src/main/hardware/session');
 const {SparkDeviceService} = require('../src/main/spark-ai/device-service');
@@ -37,11 +37,18 @@ class MockFirmwareTransport extends EventEmitter {
         super(); this.hardware = hardware; this.path = port;
     }
     async open () {
+        this.hardware.opens = (this.hardware.opens || 0) + 1;
+        if (this.hardware.retainUsb && this.hardware.mode === 'boot') {
+            throw Error('The existing boot handle must not be closed');
+        }
         this.hardware.active = this;
         if (this.hardware.mode === 'app') setImmediate(() => this.report());
     }
     report () {
-        if (!this.closed) this.emit('data', Buffer.from(`${JSON.stringify(monitor(this.hardware.version))}\r\n`));
+        if (!this.closed) {
+            this.emit('data', Buffer.from(`${JSON.stringify({...monitor(this.hardware.version),
+                WillAiState: this.hardware.running ? 'run' : 'stop'})}\r\n`));
+        }
     }
     async close () {
         if (this.closed) return;
@@ -58,8 +65,9 @@ class MockFirmwareTransport extends EventEmitter {
             if (command === 0xBA) this.report();
             else if (command === 0x6F) {
                 assert.equal(data.toString(), 'RESET_FWLIB');
-                h.mode = 'boot'; h.files.clear();
-                await this.close();
+                if (h.retainUsb) this.report();
+                h.mode = 'boot'; h.running = false; h.files.clear();
+                if (!h.retainUsb) await this.close();
             } else throw new Error(`Unexpected APP write ${command}`);
             return;
         }
@@ -87,6 +95,7 @@ class MockFirmwareTransport extends EventEmitter {
         this.emit('data', ack.subarray(3));
         if (command === 0xBB && h.files.has('updata.txt') && !h.file && !h.noApplication) {
             assert.equal(h.files.size, 5, 'commit marker must be the last complete file');
+            if (h.lateOldReport) setTimeout(() => this.report(), 2);
             h.timer = setTimeout(() => {
                 h.mode = 'app'; h.version = h.nextVersion || 110;
                 this.close();
@@ -97,7 +106,7 @@ class MockFirmwareTransport extends EventEmitter {
 const fixture = (options = {}) => {
     const hardware = {mode: 'app', version: 110, writes: [], names: [], files: new Map(), frames: 0, ...options};
     const device = new SparkDeviceService({
-        listPorts: async () => [portFor(hardware.mode === 'boot' ? 'COM_BOOT' : 'COM_APP')],
+        listPorts: async () => [portFor(hardware.mode === 'boot' && !hardware.retainUsb ? 'COM_BOOT' : 'COM_APP')],
         createTransport: port => new MockFirmwareTransport(hardware, port),
         timeouts: {connect: 150, monitor: 5000}
     });
@@ -150,6 +159,24 @@ async function updateIntegrationTests () {
         assert.ok(!commands.includes(0xBC) && !commands.includes(0xB9));
     } finally {
         await good.cleanup();
+    }
+
+    for (const {version, retainUsb, lateOldReport} of [{version: 109}, {version: 111},
+        {version: 109, retainUsb: true}, {version: 109, lateOldReport: true}]) {
+        const mismatch = fixture({version, running: true, retainUsb, lateOldReport});
+        try {
+            await mismatch.device.connect({path: 'COM_APP'});
+            assert.equal(mismatch.device.getState().compatible, false);
+            assert.equal(mismatch.device.getState().status.running, true);
+            const result = await mismatch.updater.start(request);
+            assert.equal(result.version, 110, 'older and newer application versions can be updated');
+            assert.equal(mismatch.device.getState().status.running, false, 'entering update mode ends the old program');
+            assert.equal(mismatch.hardware.writes.filter(bytes => bytes[4] === 0x6F).length, 1,
+                'one confirmation automatically sends RESET_FWLIB and enters update mode');
+            if (retainUsb) assert.equal(mismatch.hardware.opens, 3, 'APP open and final APP verification only');
+        } finally {
+            await mismatch.cleanup();
+        }
     }
 
     for (const options of [{failAt: 20}, {disconnectAt: 20}, {timeoutAt: 20}, {badAckAt: 20}]) {
@@ -267,16 +294,23 @@ async function updateIntegrationTests () {
         [{connectionMode: 'ble'}, 'SPARK_FW_USB_ONLY'],
         [{connected: false}, 'SPARK_DISCONNECTED'],
         [{busy: true}, 'SPARK_BUSY'],
-        [{stale: true}, 'SPARK_FW_STATUS_REQUIRED'],
-        [{monitoring: false}, 'SPARK_FW_STATUS_REQUIRED'],
-        [{status: null}, 'SPARK_FW_STATUS_REQUIRED'],
-        [{status: {version: 110, running: true}}, 'SPARK_STOP_FIRST'],
-        [{compatible: false, status: {version: 111}}, 'SPARK_FW_DEVICE_UNVERIFIED'],
         [{discovery: {status: 'recovery'}}, 'SPARK_FW_RECOVERY']
     ];
     for (const [change, reason] of blocked) {
         assert.ok(sparkFirmwareBlockers({...healthy, ...change}, report).includes(reason));
     }
+    for (const change of [{stale: true}, {monitoring: false}, {status: null},
+        {status: {version: 110, running: true}}, {compatible: false, status: {version: 109}},
+        {compatible: false, status: {version: 111}}]) {
+        assert.deepStrictEqual(sparkFirmwareBlockers({...healthy, ...change}, report), [],
+            'status/version checks must not add manual steps to an update');
+    }
+    assert.equal(sparkFirmwareMismatchKey(healthy), null);
+    const old = {...healthy, port: 'COM_APP', compatible: false, status: {version: 109}};
+    assert.equal(sparkFirmwareMismatchKey(old), 'COM_APP:109');
+    assert.equal(sparkFirmwareMismatchKey({...old, busy: true}), null);
+    assert.equal(sparkFirmwareMismatchKey({...old, stale: true}), null);
+    assert.equal(sparkFirmwareMismatchKey({...old, connectionMode: 'ble'}), null);
     assert.ok(sparkFirmwareBlockers(healthy).includes('SPARK_FW_CHECK_FIRST'));
     assert.ok(sparkFirmwareBlockers(healthy, {valid: false}).includes('SPARK_FW_RESOURCE_INVALID'));
     const allCodes = new Set([...blocked.map(item => item[1]), ...report.blockers,

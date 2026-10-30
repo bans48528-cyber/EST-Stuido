@@ -91,7 +91,7 @@ const rendererSummary = `({
 const expression = `(async () => {
     if (process.cwd().toLowerCase() !== ${JSON.stringify(root.toLowerCase())}) throw Error('Unexpected workspace');
     const {app, BrowserWindow} = process.mainModule.require('electron');
-    const title = ${JSON.stringify(`EST Studio ${version}`)};
+    const title = ${JSON.stringify(`ATC CodeStudio ${version}`)};
     const windows = BrowserWindow.getAllWindows().filter(w => w.getTitle() === title);
     if (windows.length !== 1) throw Error('Expected one current development window');
     const contents = windows[0].webContents, debug = contents.debugger;

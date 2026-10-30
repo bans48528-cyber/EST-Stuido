@@ -1,6 +1,6 @@
 /**
  * OpenBlock logs every costume as an error when no Scratch stage renderer is
- * attached. EST Studio is intentionally headless, so costume metadata is kept
+ * attached. ATC CodeStudio is intentionally headless, so costume metadata is kept
  * for project compatibility without reporting a renderer failure.
  * @param {string} source - OpenBlock VM costume loader source.
  * @returns {string} costume loader with the expected headless case silenced.
@@ -19,7 +19,7 @@ module.exports = function (source) {
 
     return source.replace(headlessRendererPattern, [
         '    if (!renderer) {',
-        '        // EST Studio intentionally runs without a stage renderer.',
+        '        // ATC CodeStudio intentionally runs without a stage renderer.',
         '        return Promise.resolve(costume);',
         '    }'
     ].join('\n'));

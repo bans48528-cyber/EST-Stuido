@@ -15,7 +15,7 @@ const removePidFile = () => {
         }
     } catch (error) {
         if (error.code !== 'ENOENT') {
-            console.error('Failed to remove EST Studio PID file:', error);
+            console.error('Failed to remove ATC CodeStudio PID file:', error);
         }
     }
 };

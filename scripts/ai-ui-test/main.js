@@ -27,6 +27,7 @@ Module._extensions['.js'] = (module, filename) => {
 const {registerEstAiIpc, createEstAiService} = require('../../src/main/est/ai-service');
 const {createEstAiKeyStore, getEstAiSettingsPath} = require('../../src/main/est/ai-key-store');
 const {NewAiCompiler} = require('../../src/main/new-ai/compiler');
+const {SparkCompiler} = require('../../src/main/spark-ai/compiler');
 Module._extensions['.js'] = originalLoader;
 let window;
 ipcMain.handle('test-typing-report', (event, report) => {
@@ -139,6 +140,54 @@ ipcMain.handle('test-new-ai-compile', async (event, cases) => {
     }
     console.log(`NEW AI assistant native Pika compilation passed: ${cases.length} programs.`);
 });
+ipcMain.handle('test-spark-ai-compile', async (event, cases) => {
+    assert.equal(event.sender, window.webContents);
+    const compiler = new SparkCompiler();
+    for (const item of cases) {
+        fs.writeFileSync(path.join(output, `${item.name}.py`), item.source);
+        const result = await compiler.compile(item.source);
+        assert.ok(result.length > 16, item.name);
+    }
+    console.log(`Spark AI native Pika compilation passed: ${cases.length} regression programs.`);
+});
+const executePikaFixture = (event, name, source, expected) => {
+    assert.equal(event.sender, window.webContents);
+    assert.ok(['new-ai-statistics', 'new-ai-list-boundaries', 'new-ai-operators',
+        'spark-ai-statistics', 'spark-ai-list-boundaries', 'spark-ai-operators'].includes(name));
+    const {spawnSync} = require('child_process');
+    const candidates = process.env.PYTHON ? [{command: process.env.PYTHON, args: []}] :
+        [{command: 'python', args: []}, {command: 'python3', args: []}, {command: 'py', args: ['-3']}];
+    const python = candidates.find(candidate => spawnSync(candidate.command, candidate.args.concat('--version'),
+        {windowsHide: true, timeout: 5000}).status === 0);
+    assert.ok(python, 'Python 3 is required for NEW AI semantic regression tests');
+    const execute = payload => {
+        const args = python.args.concat(path.join(__dirname, 'check-new-generated-program.py'));
+        const result = spawnSync(python.command, args,
+            {input: JSON.stringify(payload),
+                encoding: 'utf8',
+                windowsHide: true,
+                timeout: 10000,
+                env: {...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1'}});
+        assert.equal(result.status, 0, result.stdout + result.stderr);
+        return JSON.parse(result.stdout);
+    };
+    const report = execute({name, source, expected});
+    if (name === 'new-ai-statistics') {
+        const original = source.replace(/_studio_new_list_item\(raw,\s*seq\)/, 'raw[seq]');
+        assert.notEqual(original, source, 'The fixture must use the real list-item generator');
+        report.negativeControl = execute({name, source: original, expectOriginalIndexBug: true});
+    }
+    if (name === 'spark-ai-statistics') {
+        const legacy = source.replace(/_studio_spark_list_clear\(raw\)/, 'raw.remove_all()');
+        assert.notEqual(legacy, source);
+        report.negativeControl = execute({name, source: legacy, expectLegacyListFailure: true});
+    }
+    fs.writeFileSync(path.join(output, `${name}-result.json`), JSON.stringify(report, null, 2));
+    console.log(`Pika semantic simulation passed: ${JSON.stringify(report)}`);
+    return report;
+};
+ipcMain.handle('test-new-ai-execute', executePikaFixture);
+ipcMain.handle('test-pika-execute', executePikaFixture);
 ipcMain.handle('test-storage', () => {
     const encrypted = fs.readFileSync(configPath);
     assert.ok(!encrypted.toString('utf8').includes('test-key-not-real'));

@@ -78,7 +78,7 @@ import {
 } from './protocol';
 
 const PROGRAM_FIRMWARE_UPGRADE_MESSAGE =
-    '当前 EST 固件不支持这个程序使用的功能。请升级到支持相应 EST Studio 功能的固件后再运行。';
+    '当前 EST 固件不支持这个程序使用的功能。请升级到支持相应 ATC CodeStudio 功能的固件后再运行。';
 const EST_USB_DISCONNECTED_MESSAGE = 'EST USB 连接已断开，请重新连接 EST 后重试。';
 const PROGRAM_UNSUPPORTED_RUNTIME_MESSAGE =
     '当前 EST 固件尚未实现这个程序使用的积木接口，已阻止下载。请删除或替换这些积木，等待后续固件开放对应能力。';
@@ -720,12 +720,13 @@ export class EstDeviceService {
                 const compatibility = checkProgramFirmwareCompatibility({
                     firmwareVersion: this.firmwareVersion
                 });
-                if (compatibility.compatible) {
+                if (this.firmwareVersion) {
                     return {
                         state: 'connected',
                         device: this.device,
                         firmwareVersion: this.firmwareVersion,
-                        compatible: true,
+                        compatible: compatibility.compatible,
+                        programCompatible: compatibility.programCompatible,
                         status: null,
                         message: error.message
                     };

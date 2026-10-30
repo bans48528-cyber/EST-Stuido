@@ -32,7 +32,9 @@ import MessageBoxType from 'openblock-gui/src/lib/message-box.js';
 
 import showPrivacyPolicy from './showPrivacyPolicy';
 import {getEstText} from './est-i18n';
-import {HARDWARE_SWITCH_REQUEST_EVENT, switchHardwareWorkspace} from './hardware/project';
+import {getHardwareContext} from './hardware/context';
+import {HARDWARE_SWITCH_REQUEST_EVENT, requestHardwareSwitch, hardwareErrorText,
+    switchHardwareWorkspace} from './hardware/project';
 import {
     canLoadHomeProject,
     normalizeHomeProjectData
@@ -85,6 +87,8 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
                         this.props.onLoadingCompleted();
                         ipcRenderer.send('loading-completed');
                         this.props.onLoadedProject(this.props.loadingState, true);
+                        dispatchEstHomeEvent(EST_HOME_PROJECT_OPENED_EVENT,
+                            {hardwareId: this.props.vm.runtime.estStudioHardwareId});
                     },
                     e => {
                         this.props.onLoadingCompleted();
@@ -147,11 +151,15 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
             }
             this.hardwareSwitchInProgress = true;
             try {
+                if (detail.newProject && !this.homeProjectCanReplaceCurrent()) throw new Error('HARDWARE_CANCELLED');
                 await switchHardwareWorkspace({vm: this.props.vm,
                     hardwareId: detail.hardwareId,
-                    title: this.props.projectTitle,
+                    newProject: detail.newProject,
                     setTitle: this.props.onSetProjectTitle});
                 this.props.onHardwareProjectChanged();
+                if (detail.newProject) {
+                    dispatchEstHomeEvent(EST_HOME_PROJECT_OPENED_EVENT, {hardwareId: detail.hardwareId});
+                }
                 detail.resolve();
             } catch (error) {
                 detail.reject(error);
@@ -159,14 +167,21 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
                 this.hardwareSwitchInProgress = false;
             }
         }
-        handleHomeNewProject () {
-            if (this.hardwareSwitchInProgress) return;
-            if (!this.homeProjectCanReplaceCurrent()) return;
-            this.props.onRequestNewProject();
-            dispatchEstHomeEvent(EST_HOME_PROJECT_OPENED_EVENT);
+        handleHomeNewProject (event) {
+            const hardwareId = (event && event.detail && event.detail.hardwareId) || getHardwareContext().profile.id;
+            requestHardwareSwitch(hardwareId, true).catch(error => {
+                if (!String(error.message).includes('HARDWARE_CANCELLED')) {
+                    dispatchEstHomeEvent(EST_HOME_PROJECT_FAILED_EVENT, {message: hardwareErrorText(error)});
+                }
+            });
         }
         handleHomeOpenProject (event) {
-            if (this.hardwareSwitchInProgress) return;
+            if (this.hardwareSwitchInProgress || this.homeProjectLoadInProgress || this.pendingHomeProject) {
+                dispatchEstHomeEvent(EST_HOME_PROJECT_FAILED_EVENT, {
+                    message: hardwareErrorText(new Error('HARDWARE_BUSY'))
+                });
+                return;
+            }
             if (!event.detail || !event.detail.data) {
                 dispatchEstHomeEvent(EST_HOME_PROJECT_FAILED_EVENT);
                 return;
@@ -194,7 +209,9 @@ const ScratchDesktopGUIHOC = function (WrappedComponent) {
                 .then(() => {
                     this.props.onSetProjectTitle(project.title);
                     this.props.onFinishHomeProject(true);
-                    dispatchEstHomeEvent(EST_HOME_PROJECT_OPENED_EVENT, {path: project.path});
+                    dispatchEstHomeEvent(EST_HOME_PROJECT_OPENED_EVENT, {
+                        path: project.path, hardwareId: this.props.vm.runtime.estStudioHardwareId
+                    });
                     window.setTimeout(() => {
                         ipcRenderer.invoke('est-home-capture-thumbnail', project.path).catch(() => {});
                     }, 300);

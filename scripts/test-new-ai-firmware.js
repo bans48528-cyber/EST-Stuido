@@ -32,6 +32,8 @@ class Transport extends EventEmitter {
         super(); this.h = hardware;
     }
     async open () {
+        this.h.opens = (this.h.opens || 0) + 1;
+        if (this.h.retainUsb && this.h.mode === 'boot') throw Error('Existing boot handle must be retained');
         if (this.h.mode === 'app') {
             this.report(); this.timer = setInterval(() => this.report(), 5);
         }
@@ -39,7 +41,7 @@ class Transport extends EventEmitter {
     report () {
         if (this.closed) return;
         const m = this.h.wrongProduct ? {version: 110, WillAiState: 'stop', deviceList: [{}, {}, {}, {}]} :
-            (this.h.legacy ? legacy : monitor(this.h.version));
+            (this.h.legacy ? legacy : {...monitor(this.h.version), NewAiState: this.h.running ? 'run' : 'stop'});
         this.emit('data', Buffer.from(`${JSON.stringify(m)}\r\n`));
     }
     async close () {
@@ -56,7 +58,13 @@ class Transport extends EventEmitter {
         if (h.mode === 'app') {
             assert.equal(command, 0x6F);
             assert.equal(payload.toString('ascii'), 'RESET_FWLIB');
-            h.mode = 'boot'; h.files.clear(); await this.close(); return;
+            if (h.retainUsb) {
+                this.report(); // A final APP report must not be mistaken for the new boot session.
+                clearInterval(this.timer);
+            }
+            h.mode = 'boot'; h.files.clear();
+            if (!h.retainUsb) await this.close();
+            return;
         }
         h.frames++;
         if (h.failAt === h.frames) {
@@ -82,6 +90,7 @@ class Transport extends EventEmitter {
         this.emit('data', ack.subarray(0, 2));
         await new Promise(resolve => setImmediate(resolve));
         this.emit('data', ack.subarray(2));
+        if (h.monitorDuringBoot && command === 0xBB) this.report();
         if (command === 0xBB) {
             const last = h.current;
             h.current = null;
@@ -97,7 +106,7 @@ class Transport extends EventEmitter {
 const fixture = (options = {}) => {
     const h = {mode: 'app', version: 321, writes: [], files: new Map(), names: [], frames: 0, serial: 'NEW_TEST', ...options};
     const device = new NewAiDeviceService({
-        listPorts: async () => [{path: h.mode === 'app' ? 'COM_APP' : 'COM_BOOT',
+        listPorts: async () => [{path: h.mode === 'app' || h.retainUsb ? 'COM_APP' : 'COM_BOOT',
             vendorId: '0483',
             productId: '5740',
             serialNumber: h.serial}],
@@ -118,7 +127,10 @@ const fixture = (options = {}) => {
     const status = normalizeNewAiLegacyMonitor(legacy, 123);
     assert.equal(status.version, 214); assert.equal(status.running, null); assert.equal(status.battery, null);
     assert.equal(status.ports.length, 8);
-    for (const bad of [{...legacy, versionlist: {ver: 215}}, {...legacy, NewAiState: 'stop'},
+    for (const version of [0, 1, 193, 214, 215, 320, 321, 65535]) {
+        assert.equal(normalizeNewAiLegacyMonitor({...legacy, versionlist: {ver: version}}).version, version);
+    }
+    for (const bad of [{...legacy, versionlist: {ver: 'invalid'}}, {...legacy, NewAiState: 'stop'},
         {...legacy, deviceList: Array(8).fill({port: '0'})}, {...legacy, estlist: null}]) {
         assert.equal(normalizeNewAiLegacyMonitor(bad), null);
     }
@@ -131,15 +143,15 @@ const fixture = (options = {}) => {
             else assert.equal(monitors[0].version, 214);
         }
     }
-    for (const legacyMode of [false, true]) {
-        const f = fixture({legacy: legacyMode});
+    for (const {legacy: legacyMode, running, retainUsb, monitorDuringBoot} of [{legacy: false}, {legacy: true},
+        {legacy: false, running: true}, {legacy: true, retainUsb: true, monitorDuringBoot: true}]) {
+        const f = fixture({legacy: legacyMode, running, retainUsb, monitorDuringBoot});
         try {
             f.device.result = {stopObserved: true};
             await f.device.connect({path: 'COM_APP'});
             assert.equal(f.device.getState().result, null, 'old stop confirmation cannot survive a new connection');
             if (legacyMode) {
                 assert.equal(f.device.getState().programSupported, false);
-                await assert.rejects(f.updater.start(request), /NEW_FW_LEGACY_IDLE/);
                 assert.equal(f.h.writes.length, 0);
             }
             const report = await f.updater.inspect();
@@ -165,6 +177,7 @@ const fixture = (options = {}) => {
                 assert.deepStrictEqual(f.h.files.get(file.path), fs.readFileSync(path.join(getNewAiFirmwareRoot(), file.path)));
             }
             assert.ok(f.h.frames > 8500);
+            if (retainUsb) assert.equal(f.h.opens, 3, 'APP identification and final APP verification/reconnect only');
         } finally {
             await f.cleanup();
         }
@@ -186,7 +199,7 @@ const fixture = (options = {}) => {
     const recoveryFixture = fixture({mode: 'boot'});
     try {
         await recoveryFixture.device.listDevices();
-        await assert.rejects(recoveryFixture.updater.start({...request, recovery: true, path: 'COM_BOOT'}), /NEW_FW_CONFIRM_DEVICE/);
+        await assert.rejects(recoveryFixture.updater.start({...request, recovery: true, path: 'COM_MISSING'}), /NEW_FW_SELECT_PORT/);
         assert.equal(recoveryFixture.h.writes.length, 0);
         await recoveryFixture.updater.start({...request, recovery: true, path: 'COM_BOOT', confirmedRecoveryDevice: true});
         assert.ok(!recoveryFixture.h.writes.some(frame => frame[4] === 0x6F));

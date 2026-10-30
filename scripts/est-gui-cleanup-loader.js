@@ -1,5 +1,5 @@
 /**
- * Strip Scratch-style UI surfaces that are unreachable in EST Studio's single
+ * Strip Scratch-style UI surfaces that are unreachable in ATC CodeStudio's single
  * upload mode. Core blocks, alerts, generated code, upload progress and update
  * UI remain intact. Keeping this transform in the application repository avoids
  * editing the installed openblock-gui package directly.

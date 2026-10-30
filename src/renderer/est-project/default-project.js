@@ -64,7 +64,7 @@ const createEstDefaultProjectData = (hardwareId = getHardwareContext().profile.i
     meta: {
         semver: '3.0.0',
         vm: '0.1.0',
-        agent: 'EST Studio'
+        agent: 'ATC CodeStudio'
     }
 }, {estStudioHardwareId: hardwareId});
 

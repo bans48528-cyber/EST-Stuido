@@ -1,3 +1,4 @@
+import homeMessages from './home-messages.json';
 import editorMessageOverrides from './est-editor-message-overrides.json';
 import cameraMessages from '../common/est-camera-messages.json';
 import visionGuideMessages from './est-vision/guide-messages.json';
@@ -82,6 +83,7 @@ const zhCN = {
     'home.animation.car.action': '小车前进',
     'home.animation.car.result': '打开车灯',
     'home.recentFiles': '最近文件',
+    'home.unknownHardware': '未识别设备',
     'home.noRecentFiles': '还没有最近文件',
     'home.noRecentFilesHint': '新建或保存作品后，它会显示在这里。',
     'home.open': '打开',
@@ -140,9 +142,25 @@ const zhCN = {
     'home.build.sensorCar': '传感器车',
     'home.build.creative': '创意作品',
     'home.more.title': '使用与支持',
+    'home.more.chooseProduct': '选择正在使用的产品，查看对应指南。',
+    'home.more.selectPrompt': '请选择上方产品',
+    'home.more.productGuides': '{product} 使用指南',
+    'home.more.common': '通用',
+    'home.more.guide.hardware': '硬件说明',
+    'home.more.guide.hardwareSummary': '认识主控、接口和设备功能',
+    'home.more.guide.interaction': '交互指南',
+    'home.more.guide.interactionSummary': '连接设备，下载与运行程序',
+    'home.more.guide.sensors': '电机与传感器',
+    'home.more.guide.sensorsSummary': '了解端口、输出控制和传感器输入',
+    'home.more.guide.blocks': '积木块功能说明',
+    'home.more.guide.blocksSummary': '了解当前产品的积木编程功能',
+    'home.more.guide.ai': 'AI 功能',
+    'home.more.guide.aiSummary': '了解 AI 编程助手与产品支持的智能功能',
+    'home.more.guide.firmware': '固件升级',
+    'home.more.guide.firmwareSummary': '查看升级步骤、连接要求与注意事项',
     'home.more.intro': '查看视觉识别、设备连接、硬件端口、积木编程、AI 助手和软件使用说明。遇到问题时，也可以从对应指南快速排查。',
-    'home.more.est': '认识 EST',
-    'home.more.estSummary': '了解 EST 主控、硬件扩展、编程功能和智能能力',
+    'home.more.est': '产品指南',
+    'home.more.estSummary': '了解 EST、Spark AI 与 NEW AI 的硬件、编程和适用场景',
     'home.more.vision': '视觉识别与摄像头',
     'home.more.visionSummary': '识别双手、人体姿态和面部动作，并把结果发送到 EST',
     'home.more.interaction': '软硬件交互指南',
@@ -152,18 +170,219 @@ const zhCN = {
     'home.more.blocks': '积木块功能说明',
     'home.more.blocksSummary': '逐一说明当前工具箱中每个积木块的功能',
     'home.more.ai': 'AI 编程助手',
-    'home.more.aiSummary': '用自然语言生成、预览并应用 EST 积木程序',
+    'home.more.aiSummary': '为 EST、Spark AI 与 NEW AI 生成、预览并应用积木程序',
     'home.more.software': '软件信息',
     'home.more.softwareSummary': '版本、项目文件、工作区与更新说明',
     'home.more.about': '关于我们',
     'home.more.aboutSummary': '产品定位、技术基础与获取支持',
-    'home.dialog.est.title': 'EST 介绍',
-    'home.dialog.est.lead': 'EST 是一套以可编程主控为核心的教育机器人系统。它把积木机械结构、电机、传感器、屏幕与声音连接起来，并通过 EST Studio 完成搭建参考、程序设计、下载运行和调试。',
+    'home.dialog.est.title': '产品指南',
+    'home.dialog.est.lead':
+        'ATC CodeStudio 支持 EST、Spark AI 与 NEW AI。三款主机的端口、显示、传感器和程序格式不同；请选择产品查看完整说明，切换硬件前也可先用对比表确认差异。',
+    'home.dialog.est.prototype.selectorLabel': '选择产品',
+    'home.dialog.est.prototype.currentName': 'EST',
+    'home.dialog.est.prototype.newAName': 'Spark AI',
+    'home.dialog.est.prototype.newBName': 'NEW AI',
+    'home.dialog.est.prototype.currentSummary': '180 × 128 屏幕 · 电脑视觉',
+    'home.dialog.est.prototype.sparkSummary': '5 × 7 点阵 · 轻量移动控制',
+    'home.dialog.est.prototype.newAiSummary': '7 × 9 RGB 点阵 · 8 个复用端口',
+    'home.dialog.est.prototype.currentIntro':
+        '以可编程主控为核心，连接积木机械结构、电机、传感器、屏幕与声音，适合从编程入门到综合机器人项目。',
+    'home.dialog.est.prototype.sparkIntro':
+        'Spark AI 用清晰分离的电机端口和传感器端口、5 × 7 点阵以及 USB/蓝牙连接，覆盖电机控制、灰度巡线、避障和遥控等常见移动机器人任务。',
+    'home.dialog.est.prototype.newAiIntro':
+        'NEW AI 提供 A–H 八个电机/传感器复用端口、7 × 9 RGB 点阵、更多传感器与实体摄像头积木，适合多外设和智能识别项目。',
+    'home.dialog.est.prototype.imageNote': '产品外观图来自软件中的硬件选择界面；连接时请以机身上的端口字母和方向标识为准。',
+    'home.dialog.est.prototype.estImageAlt': 'EST 主机，带 180 × 128 显示屏、方向与确认按键以及 1–4 传感器端口',
+    'home.dialog.est.prototype.sparkImageAlt': 'Spark AI 主机，带 5 × 7 点阵、三个主机按键和分离的电机与传感器端口',
+    'home.dialog.est.prototype.newAiImageAlt': 'NEW AI 主机，带 7 × 9 RGB 点阵、三个主机按键和 A–H 复用端口',
+    'home.dialog.est.prototype.audienceLabel': '适合人群',
+    'home.dialog.est.prototype.hardwareLabel': '核心硬件',
+    'home.dialog.est.prototype.featureLabel': '特色能力',
+    'home.dialog.est.prototype.projectLabel': '典型项目',
+    'home.dialog.est.prototype.currentAudience': '机器人编程入门与综合项目学习',
+    'home.dialog.est.prototype.currentHardware': 'EST 主控、A–D 电机口、1–4 传感器口与 180 × 128 屏幕',
+    'home.dialog.est.prototype.currentFeature': '积木编程、Python、AI 助手与电脑视觉输入',
+    'home.dialog.est.prototype.currentProject': '巡线、避障、机械臂、分拣与创意机器人',
+    'home.dialog.est.prototype.sparkAudience': '机器人编程入门、移动小车与灰度巡线学习',
+    'home.dialog.est.prototype.sparkHardware': 'A–D 传感器口、E–H 电机口、5 × 7 点阵与主机按键',
+    'home.dialog.est.prototype.sparkFeature': 'USB/蓝牙编程、灰度校准、双传感器巡线与十个程序槽位',
+    'home.dialog.est.prototype.sparkProject': '基础小车、巡线、避障、遥控与点阵交互作品',
+    'home.dialog.est.prototype.newAiAudience': '进阶机器人、实体视觉识别与多外设综合项目',
+    'home.dialog.est.prototype.newAiHardware': 'A–H 八个复用端口、7 × 9 RGB 点阵、声音与主机按键',
+    'home.dialog.est.prototype.newAiFeature': '实体摄像头、巡线卡 V2、丰富传感器与二十个程序槽位',
+    'home.dialog.est.prototype.newAiProject': '视觉分拣、智能巡线、多传感器小车与交互装置',
+    'home.hostMenu.remote': '遥控',
+    'home.hostMenu.bluetooth': '蓝牙',
+    'home.hostMenu.pauto': 'P · 内置联动',
+    'home.hostMenu.program': '程序 {number}',
+    'home.hostMenu.battery': '电量',
+    'home.hostMenu.caption': '点阵图案按原版固件还原。程序编号和电量为显示示例；主机只列出已保存的程序，蓝牙图示为开启状态。',
+    'home.dialog.est.prototype.sparkMenuTitle': '主机点阵菜单与按键操作',
+    'home.dialog.est.prototype.sparkMenu1':
+        '待机时按左键或右键循环选择菜单，点阵以横向滑动效果切换。短按中键启动当前功能；运行时再短按中键停止，点阵返回菜单。',
+    'home.dialog.est.prototype.sparkMenu2':
+        '菜单包含遥控、蓝牙、P 内置联动，以及已保存的 0–9 号程序。数字对应下载时选择的程序槽位；没有保存程序的编号不会出现。',
+    'home.dialog.est.prototype.sparkMenu3':
+        'P 是内置传感器联动演示：左键选择正向触发与避障，右键选择反向触发与距离跟随。' +
+        '此模式按 A/B、C/D 分组联动 E/F、G/H 电机，同组超声波优先于触碰和反射光输入。',
+    'home.dialog.est.prototype.sparkMenu4':
+        '在蓝牙图标上短按中键切换开关：开启时图标常亮，关闭时约每 0.5 秒亮灭一次。进入遥控菜单前，先在此开启蓝牙。',
+    'home.dialog.est.prototype.sparkMenu5':
+        '遥控图标用于启动主机内置遥控程序；普通数字图标启动对应用户程序。待机时长按中键约 1.5 秒可关机。',
+    'home.dialog.est.prototype.sparkHostTitle': '主控、端口与内置硬件',
+    'home.dialog.est.prototype.sparkHost1':
+        'Spark AI 使用 STM32F103 主控并运行嵌入式 PikaPython。用户程序和资源保存在外置 SPI 闪存中，' +
+        '可从 0–9 十个程序槽位启动。',
+    'home.dialog.est.prototype.sparkHost2': 'A、B、C、D 是四个传感器端口；E、F、G、H 是四个电机端口。它们不是复用端口，搭建和编程时不能互换。',
+    'home.dialog.est.prototype.sparkHost3': '连接外设后，可在硬件状态面板核对 A–D 的设备类型与实时数值。P 内置联动模式的分组规则见上方菜单说明。',
+    'home.dialog.est.prototype.sparkHost4': '主机带 5 × 7 单色点阵、三个按键和蜂鸣器。点阵支持图案、滚动文字、像素、亮度和清屏；声音支持按音名和时长播放。',
+    'home.dialog.est.prototype.sparkHost5': 'USB-C 与蓝牙均可连接、下载和运行程序；主机还包含电池管理。硬件状态可查看连接、固件、电量、存储、程序状态、端口数据和输出。',
+    'home.dialog.est.prototype.sparkHostNote': '端口支持设备自动识别。固件升级仍必须使用 USB，不能通过蓝牙进行。',
+    'home.dialog.est.prototype.sparkDeviceTitle': '可连接的硬件',
+    'home.dialog.est.prototype.sparkDevice1': 'E–H 可连接电机；软件支持单电机、左右组合电机、定时运行、独立功率、制动或惯性停止以及双灰度巡线。',
+    'home.dialog.est.prototype.sparkDevice2': '触碰传感器提供按下/松开状态，可作为碰撞开关、机械限位和人工确认输入。',
+    'home.dialog.est.prototype.sparkDevice3': '灰度传感器在固件中读取反射光，支持阈值、状态以及一个或两个传感器的校准，用于黑白线和明暗判断。',
+    'home.dialog.est.prototype.sparkDevice4': '超声波传感器提供距离；手柄提供方向键和 1–4 号键。Spark AI 当前没有实体摄像头或电脑摄像头积木。',
+    'home.dialog.est.prototype.sparkMotorTitle': '电机与移动模式',
+    'home.dialog.est.prototype.sparkMotor1': '单电机可选择 E–H 端口，设置正反方向、功率和运行秒数；停止时可选择制动或惯性滑行。',
+    'home.dialog.est.prototype.sparkMotor2': '组合电机先指定两个不同端口及左右顺序，再使用前进、后退、左转、右转、定时移动或左右独立功率；实际左右轮端口应按搭建方向设置。',
+    'home.dialog.est.prototype.sparkMotor3': '巡线模式支持初始化、双灰度传感器、左右功率、KP/KD 参数和前后偏移量；先完成灰度校准，再用低速调整参数。',
+    'home.dialog.est.prototype.sparkSensorTitle': '传感器与主机输入模式',
+    'home.dialog.est.prototype.sparkSensor1': '触碰传感器提供“按下/未按下”判断，可用于碰撞开关、限位与人工确认。',
+    'home.dialog.est.prototype.sparkSensor2': '灰度传感器可读取反射光数值、比较阈值、判断是否触发，并支持单个或两个传感器定时校准。',
+    'home.dialog.est.prototype.sparkSensor3': '超声波传感器可读取厘米距离，也可直接判断距离与设定值的大小关系，用于避障、跟随和测距。',
+    'home.dialog.est.prototype.sparkSensor4': '手柄输入可判断方向键和 1–4 号功能键；主机按键支持按下/松开判断，计时器可读取毫秒并重置。',
+    'home.dialog.est.prototype.sparkProgramTitle': '编程、连接与程序槽位',
+    'home.dialog.est.prototype.sparkProgram1': '工具箱包含事件、电机、组合电机、点阵、声音、控制、传感、运算、变量、列表和自定义模块；切换到 Spark AI 后只显示对应积木。',
+    'home.dialog.est.prototype.sparkProgram2':
+        '积木会生成可查看的 Python，并在 Windows x64 上由软件内置的 PikaPython 编译器本地生成主机字节码；语法或大小检查失败时不会发送程序。',
+    'home.dialog.est.prototype.sparkProgram3': 'USB 串口和蓝牙都可用于连接、监控、下载与运行。自动连接会记住已验证设备；蓝牙连接前需打开电脑和主机蓝牙并允许系统权限。',
+    'home.dialog.est.prototype.sparkProgram4':
+        '选择 0–9 槽位后，“下载”编译并保存当前程序，“运行”会重新下载后启动所选槽位，“停止”请求主机结束程序；断开连接不保证主机程序自动停止。',
+    'home.dialog.est.prototype.sparkAiTitle': 'Spark AI 的 AI 编程能力',
+    'home.dialog.est.prototype.sparkAi1':
+        'AI 编程助手只生成 Spark AI 工具箱中的积木：电机使用 E–H，传感器使用 A–D，不会混入 EST 或 NEW AI 的端口与积木。',
+    'home.dialog.est.prototype.sparkAi2':
+        '描述移动任务时应写明左右电机端口；助手无法从硬件状态判断左右轮。点阵图案按 5 列 × 7 行生成，不能按 EST 图形屏处理。',
+    'home.dialog.est.prototype.sparkAi3':
+        '连接有效时，助手可参考 Spark AI 的实时传感器快照；Spark AI 当前没有电脑摄像头或实体摄像头积木，视觉需求不会被自动替换成其他产品能力。',
+    'home.dialog.est.prototype.sparkFirmwareTitle': 'Spark AI 固件升级',
+    'home.dialog.est.prototype.sparkFirmware1': '保存项目并停止主机程序，使用 USB 连接 Spark AI；固件更新不支持蓝牙连接。',
+    'home.dialog.est.prototype.sparkFirmware2': '在硬件状态中打开固件更新，先校验软件内置的 110 版固件与资源，再核对目标设备和 USB 端口。',
+    'home.dialog.est.prototype.sparkFirmware3': '确认清空主机中全部已保存程序后开始更新；传输期间保持 USB、供电和软件开启，过程不能暂停。',
+    'home.dialog.est.prototype.sparkFirmware4': '若正常连接不可用，可按面板提示使用恢复更新；完成后等待软件重新连接并核对固件版本。',
+    'home.dialog.est.prototype.sparkFirmwareNote': '升级会清空 0–9 槽位中的程序。更新失败时不要反复插拔或同时打开其他串口软件，应保留错误信息并重新执行完整更新。',
+    'home.dialog.est.prototype.newAiMenuTitle': '主机点阵菜单与按键操作',
+    'home.dialog.est.prototype.newAiMenu1':
+        '待机时按左键或右键循环选择菜单，点阵以逐行滚入效果切换。短按并松开中键确认；程序运行时，左右键可供程序读取，中键用于停止并返回菜单。',
+    'home.dialog.est.prototype.newAiMenu2':
+        '主机会先按编号列出已保存的 0–19 号程序，再显示遥控、蓝牙和电量图标。1 和 19 的图案见上图；空槽位不会出现在主机菜单中。',
+    'home.dialog.est.prototype.newAiMenu3':
+        '数字图标上短按中键运行对应槽位；遥控图标上短按中键启动主机资源中的遥控程序。程序结束或中键停止后，重新显示当前菜单图案。',
+    'home.dialog.est.prototype.newAiMenu4':
+        '在蓝牙图标上短按中键切换蓝牙开关。开启时显示蓝色图标，关闭时恢复橙黄色；该颜色表示蓝牙开关状态。',
+    'home.dialog.est.prototype.newAiMenu5':
+        '电量页以电池内部的填充格表示四档剩余电量，停留时会自动刷新。上图展示其中一档；查看电量无需启动程序或再按中键。',
+    'home.dialog.est.prototype.newAiHostTitle': '主控、复用端口与内置硬件',
+    'home.dialog.est.prototype.newAiHost1':
+        'NEW AI 使用 480 MHz 的 STM32H723 主控，运行 FreeRTOS 与嵌入式 PikaPython；' +
+        '固件还包含神经网络推理和姿态融合能力。',
+    'home.dialog.est.prototype.newAiHost2':
+        'A–H 是八个支持热插拔识别的电机/传感器复用端口，每 50 毫秒轮询一次设备。' +
+        '同一端口一次只连接一个设备，不能照搬 Spark AI 的端口分区。',
+    'home.dialog.est.prototype.newAiHost3': '7 × 9 RGB 点阵共 63 个像素，支持图案、滚动文字、单像素、亮度、颜色与清屏。',
+    'home.dialog.est.prototype.newAiHost4': '主机内置三个按键、惯性传感器、麦克风、声音输出和电池管理；可读取按键、声音强度、加速度、陀螺仪角度与姿态。',
+    'home.dialog.est.prototype.newAiHost5':
+        'USB-C 与蓝牙均可连接、监控、下载和运行程序；外置 QSPI 闪存保存资源和 0–19 二十个程序槽位。' +
+        '硬件状态可查看 A–H 设备与实时数据。',
+    'home.dialog.est.prototype.newAiDeviceTitle': '可连接的电机与传感器',
+    'home.dialog.est.prototype.newAiDevice1': 'A–H 可自动识别大电机和小电机。支持功率、速度、位置、相对角度、制动、保持和惯性停止，也可组成左右电机进行直行、转向与巡线。',
+    'home.dialog.est.prototype.newAiDevice2': '支持颜色、超声波、触碰和灰度巡线传感器：可读取颜色/RGB/反射光、距离、触碰状态以及巡线数值和状态。',
+    'home.dialog.est.prototype.newAiDevice3': '巡线卡 V2 是七通道设备，支持校准、阈值、各通道数值与黑白状态、RGB 指示灯、PID、路口判断和按路口/编码器/时间巡线。',
+    'home.dialog.est.prototype.newAiDevice4':
+        '实体 AI 摄像头、NFC 和手柄也可接入。摄像头支持人脸、标签、物体、颜色、道路、手势、人体、' +
+        '分类和拍照等模式，并返回目标编号、名称、位置与大小。',
+    'home.dialog.est.prototype.newAiMotorTitle': '电机与移动模式',
+    'home.dialog.est.prototype.newAiMotor1': '单电机可使用 A–H 任一空闲端口，设置方向、速度或功率，按圈数、角度或时间运行，并读取速度、位置、角度和重置累计角度。',
+    'home.dialog.est.prototype.newAiMotor2': '组合电机支持设定左右电机顺序、前进后退、转向、定时或定距离移动、左右独立功率以及制动、保持位置或惯性滑行。',
+    'home.dialog.est.prototype.newAiMotor3': '移动控制还包括按陀螺仪航向直行、原地旋转和双传感器巡线；先确认端口与机械方向，再从低速度和短距离开始调试。',
+    'home.dialog.est.prototype.newAiSensorTitle': '传感器与输入模式',
+    'home.dialog.est.prototype.newAiSensor1': '颜色传感器支持颜色判断与范围判断、原始 R/G/B 数值和反射光读取，可用于分类、标记识别和巡线。',
+    'home.dialog.est.prototype.newAiSensor2': '超声波传感器读取距离；主机内置麦克风读取声音强度；触碰传感器判断按下或松开，适合避障、声控和限位。',
+    'home.dialog.est.prototype.newAiSensor3': '陀螺仪可读取偏航、俯仰、横滚等姿态、加速度和角度，并支持航向重置，用于直行修正、转向和姿态交互。',
+    'home.dialog.est.prototype.newAiSensor4': '手柄、主机按键、计时器、巡线卡和 NFC 也可作为输入；实际可选模式以当前工具箱和已连接外设为准。',
+    'home.dialog.est.prototype.newAiVisionTitle': '实体摄像头与巡线卡 V2',
+    'home.dialog.est.prototype.newAiVision1': '摄像头识别积木面向连接在 A–H 端口的 NEW AI 实体摄像头，不读取电脑摄像头；EST 的电脑视觉扩展不能直接用于 NEW AI。',
+    'home.dialog.est.prototype.newAiVision2': '摄像头可设置并等待人脸、标签、二维码、物体、颜色、道路、手势、人体、物体分类和图像分类等算法，并读取目标名称或编号。',
+    'home.dialog.est.prototype.newAiVision3': '识别结果可读取 X/Y 位置、宽度、高度和置信度。应根据环境光、视角和距离设置容错，不能把单次识别结果作为安全保护。',
+    'home.dialog.est.prototype.newAiVision4': '巡线卡 V2 提供七通道数值、阈值、指示灯、PID、路口状态和通道映射，并可按路口、编码器计数或时间执行巡线。',
+    'home.dialog.est.prototype.newAiProgramTitle': '编程、连接与程序槽位',
+    'home.dialog.est.prototype.newAiProgram1': '工具箱包含电机、组合电机、RGB 点阵、声音、事件、控制、传感、摄像头识别、巡线卡 V2、运算、变量、列表和自定义模块。',
+    'home.dialog.est.prototype.newAiProgram2':
+        '积木生成可查看的 Python，并在 Windows x64 上由软件内置的 PikaPython 编译器本地生成主机字节码；编译成功后才会发送。',
+    'home.dialog.est.prototype.newAiProgram3': 'USB 和蓝牙都可用于连接、端口监控、下载与运行；两种连接分别保存设备偏好，并在收到有效 NEW AI 状态后确认连接。',
+    'home.dialog.est.prototype.newAiProgram4': '选择 0–19 槽位后，“下载”保存当前程序，“运行”重新下载并启动所选槽位，“停止”请求结束程序；切换产品不会自动转换积木或端口。',
+    'home.dialog.est.prototype.newAiAiTitle': 'NEW AI 的 AI 编程能力',
+    'home.dialog.est.prototype.newAiAi1':
+        'AI 编程助手只生成 NEW AI 工具箱中的积木，并按 A–H 八个复用端口处理电机和传感器；不会套用 Spark AI 的端口分区。',
+    'home.dialog.est.prototype.newAiAi2':
+        '描述双电机任务时应写明左右电机端口；助手会避免把实时快照中已识别为传感器的端口当作电机，但仍需人工核对搭建方向。',
+    'home.dialog.est.prototype.newAiAi3':
+        '点阵按 7 列 × 9 行 RGB 像素生成；摄像头积木只表示接在 A–H 端口上的实体摄像头，不表示电脑摄像头。实时端口参考要求主机使用受支持的 321 版资源。',
+    'home.dialog.est.prototype.newAiFirmwareTitle': 'NEW AI 固件升级',
+    'home.dialog.est.prototype.newAiFirmware1': '保存项目并停止程序，使用 USB 连接 NEW AI；蓝牙不能进入恢复加载器，也不能用于固件升级。',
+    'home.dialog.est.prototype.newAiFirmware2': '在固件更新面板先校验软件内置的 321 版固件与资源，再确认设备版本、USB 端口和升级条件。',
+    'home.dialog.est.prototype.newAiFirmware3': '勾选同意清空全部用户程序后开始升级；软件会传输原版固件与资源，重连后核对版本，期间保持 USB 和主机供电。',
+    'home.dialog.est.prototype.newAiFirmware4': '旧版 214 固件可读取版本并升级，但升级前不能下载或运行当前程序；没有正常状态上报时仅按面板说明使用恢复模式。',
+    'home.dialog.est.prototype.newAiFirmwareNote': '升级会清空 0–19 槽位中的程序。图形界面只更新 NEW AI 主机固件与资源，不提供传感器固件刷写。',
+    'home.dialog.est.prototype.comparisonTitle': '三款产品怎么选',
+    'home.dialog.est.prototype.comparisonIntro': '先按端口和显示能力选择主机，再确认项目需要的传感器、视觉方式、连接方式与程序槽位。',
+    'home.dialog.est.prototype.comparisonItem': '比较项目',
+    'home.dialog.est.prototype.comparisonPosition': '产品定位',
+    'home.dialog.est.prototype.comparisonPorts': '端口分配',
+    'home.dialog.est.prototype.comparisonDisplay': '显示与输出',
+    'home.dialog.est.prototype.comparisonConnection': '电脑连接',
+    'home.dialog.est.prototype.comparisonSlots': '程序槽位',
+    'home.dialog.est.prototype.comparisonAbility': '特色能力',
+    'home.dialog.est.prototype.comparisonProject': '推荐项目',
+    'home.dialog.est.prototype.currentPositionValue': '机器人编程与综合创作',
+    'home.dialog.est.prototype.sparkPositionValue': '移动机器人与巡线入门',
+    'home.dialog.est.prototype.newAiPositionValue': '多外设、实体视觉与进阶控制',
+    'home.dialog.est.prototype.estPortsValue': 'A–D 电机口；1–4 传感器口',
+    'home.dialog.est.prototype.sparkPortsValue': 'E–H 电机口；A–D 传感器口',
+    'home.dialog.est.prototype.newAiPortsValue': 'A–H 八个电机/传感器复用口',
+    'home.dialog.est.prototype.estDisplayValue': '180 × 128 黑白图形屏、状态灯、声音',
+    'home.dialog.est.prototype.sparkDisplayValue': '5 × 7 单色点阵、音符',
+    'home.dialog.est.prototype.newAiDisplayValue': '7 × 9 RGB 点阵、音效与音符',
+    'home.dialog.est.prototype.estConnectionValue': 'USB；固件也通过 USB 更新',
+    'home.dialog.est.prototype.sparkConnectionValue': 'USB 或蓝牙；固件仅 USB',
+    'home.dialog.est.prototype.newAiConnectionValue': 'USB 或蓝牙；固件仅 USB',
+    'home.dialog.est.prototype.estSlotsValue': '0–7，共 8 个',
+    'home.dialog.est.prototype.sparkSlotsValue': '0–9，共 10 个',
+    'home.dialog.est.prototype.newAiSlotsValue': '0–19，共 20 个',
+    'home.dialog.est.prototype.currentAbilityValue': '积木与 Python 编程、AI 助手、电脑视觉输入',
+    'home.dialog.est.prototype.sparkAbilityValue': '灰度校准、双传感器巡线、手柄与 5 × 7 点阵',
+    'home.dialog.est.prototype.newAiAbilityValue': '实体摄像头、巡线卡 V2、RGB 点阵与更多传感器',
+    'home.dialog.est.prototype.currentProjectValue': '巡线、避障、机械臂、分拣与创意结构',
+    'home.dialog.est.prototype.sparkProjectValue': '小车、巡线、避障、遥控与点阵交互',
+    'home.dialog.est.prototype.newAiProjectValue': '视觉分拣、智能巡线、多传感器与交互装置',
+    'home.dialog.est.prototype.sharedTitle': '共同的软件能力',
+    'home.dialog.est.prototype.sharedIntro':
+        '三款产品共用 ATC CodeStudio 的项目管理和辅助工具，但各自使用独立的积木、端口规则、编译器与硬件协议。',
+    'home.dialog.est.prototype.sharedProjectTitle': '项目与硬件目标',
+    'home.dialog.est.prototype.sharedProject1': '创建项目时先选择硬件。项目会保存目标产品，重新打开时恢复对应工具箱；切换产品不会把已有积木自动改成另一款产品的积木。',
+    'home.dialog.est.prototype.sharedProject2':
+        '积木程序都能生成可查看的 Python，但 EST、Spark AI 与 NEW AI 使用不同运行环境和设备接口，不能直接把生成代码跨产品下载。',
+    'home.dialog.est.prototype.sharedProject3': '下载前检查当前硬件、连接方式、端口和程序槽位；真机首次运行使用低速度、短时间，并给移动结构留出安全空间。',
+    'home.dialog.est.prototype.sharedAiTitle': 'AI 编程助手与设备操作',
+    'home.dialog.est.prototype.sharedAi1': 'AI 编程助手会读取当前产品及其可用积木，生成对应的积木方案；可以预览、插入或替换工作区，但不会自动下载或运行。',
+    'home.dialog.est.prototype.sharedAi2': '硬件状态面板用于连接、查看版本与运行状态、监控端口和维护固件；固件更新前先保存项目并停止设备程序。',
+    'home.dialog.est.prototype.sharedAi3': '电脑视觉只属于 EST；NEW AI 的摄像头积木读取实体摄像头；Spark AI 当前不提供摄像头积木。选择产品时要区分这三种能力边界。',
     'home.dialog.est.overviewTitle': 'EST 是什么',
     'home.dialog.est.overviewImageAlt': '由 EST 主控、电机和积木结构搭建的爬行蜘蛛模型',
     'home.dialog.est.overviewImageCaption': '软件内置搭建库中的“爬行蜘蛛”示例，展示 EST 主控、电机与积木机械结构的组合。',
     'home.dialog.est.overview1': 'EST 主控是模型的控制中心：程序读取按键和传感器，根据逻辑控制电机、显示、状态灯与声音，让静态结构变成能够感知和行动的机器人。',
-    'home.dialog.est.overview2': 'EST Studio 是配套桌面软件，负责项目管理、积木编程、Python 代码生成、USB 通信、硬件状态查看、程序下载运行与固件维护。',
+    'home.dialog.est.overview2': 'ATC CodeStudio 是配套桌面软件，负责项目管理、积木编程、Python 代码生成、USB 通信、硬件状态查看、程序下载运行与固件维护。',
     'home.dialog.est.overview3': '系统既适合第一次接触机器人编程的学习者，也支持巡线、避障、分拣、机械臂、仿生结构和视觉交互等综合项目。',
     'home.dialog.est.controllerTitle': '主控上的输入与输出',
     'home.dialog.est.controller1': '主控按键可作为程序输入，用于启动任务、切换状态或进行菜单交互；事件积木可以在按键按下或松开时启动程序堆。',
@@ -179,7 +398,7 @@ const zhCN = {
     'home.dialog.est.programming1': '积木工具箱包含事件、电机、移动、显示、声音、控制、传感器、视觉、运算、变量与列表和“我的模块”，可以从顺序动作逐步搭建复杂逻辑。',
     'home.dialog.est.programming2': '积木会生成可查看的 Python 代码。一个项目可以包含多个事件程序堆，通过条件、循环、广播、计时器和自定义模块组织并行或协作任务。',
     'home.dialog.est.programming3': '连接 EST 后可选择程序槽位。“下载”保存当前程序，“运行”会先下载再启动，“停止”终止用户程序并让设备处理电机安全停止。',
-    'home.dialog.est.programming4': '项目使用 .ests 文件保存；主页提供最近文件和搭建库，硬件状态面板显示连接、电量、固件和已识别外设，并提供固件升级或兼容性降级流程。',
+    'home.dialog.est.programming4': '项目使用 .atc 文件保存；主页提供最近文件和搭建库，硬件状态面板显示连接、电量、固件和已识别外设，并提供固件升级或兼容性降级流程。',
     'home.dialog.est.smartTitle': 'AI 与视觉能力',
     'home.dialog.est.smart1': 'AI 编程助手可以把自然语言需求转换为经过本地规则校验的积木方案，支持预览、插入或替换工作区；是否应用、下载和运行始终由用户决定。',
     'home.dialog.est.smart2': '视觉识别在电脑上处理左手、右手、人体姿态和面部动作，可向 EST 发送目标有效状态、类别、镜像位置与大小，程序通过视觉积木读取。',
@@ -193,7 +412,7 @@ const zhCN = {
     'home.dialog.vision.lead': '使用电脑摄像头在本机识别左手、右手、人体姿态和面部动作，并把结构化结果实时发送给正在运行的 EST 程序。摄像头窗口与项目窗口相互独立。',
     'home.dialog.vision.openAction': '打开摄像头',
     'home.dialog.vision.startTitle': '打开并开始识别',
-    'home.dialog.vision.startImageAlt': 'EST Studio 摄像头窗口正在识别左手',
+    'home.dialog.vision.startImageAlt': 'ATC CodeStudio 摄像头窗口正在识别左手',
     'home.dialog.vision.startImageCaption': '这是当前软件实际摄像头窗口的隔离测试画面；蓝色方块和识别结果为测试数据，不包含用户摄像头内容。',
     'home.dialog.vision.start1': '点击本指南上方的“打开摄像头”，或返回编辑器点击摄像头按钮；视觉识别会在独立窗口中打开。',
     'home.dialog.vision.start2': '在停止状态选择摄像头，并开启需要的左手、右手、身体或面部项目；至少要开启一项。只开启需要的项目可减少电脑负载。',
@@ -225,12 +444,12 @@ const zhCN = {
     'home.dialog.vision.troubleshoot3': '本机能识别但 EST 没有数据：检查 USB 连接、固件能力、程序是否正在运行，以及摄像头中是否开启了程序使用的目标。',
     'home.dialog.vision.troubleshoot4': '单项目正常、多项目不能发送：把摄像头切换为只开启一个目标测试；若单项目可用，请按硬件说明升级到支持协议 1.31 的固件。',
     'home.dialog.interaction.title': '软硬件交互指南',
-    'home.dialog.interaction.lead': '按照下面的顺序完成连接、编程和运行。EST Studio 会自动发现一台通过 USB 连接的 EST。',
+    'home.dialog.interaction.lead': '按照下面的顺序完成连接、编程和运行。ATC CodeStudio 会自动发现一台通过 USB 连接的 EST。',
     'home.dialog.interaction.connectTitle': '第一次连接',
     'home.dialog.interaction.connect1': '使用能够传输数据的 USB 线连接电脑与 EST，并开启 EST。',
-    'home.dialog.interaction.connect2': '打开 EST Studio；软件会自动查找设备，不需要手动选择主控型号。',
+    'home.dialog.interaction.connect2': '打开 ATC CodeStudio；软件会自动查找设备，不需要手动选择主控型号。',
     'home.dialog.interaction.connect3': '确认菜单栏显示“EST 已连接”。如果显示“未连接”，重新插拔 USB 线或更换电脑 USB 端口。',
-    'home.dialog.interaction.connect4': '新建或打开 .ests 项目，从“当程序启动时”积木开始搭建程序。',
+    'home.dialog.interaction.connect4': '新建或打开 .atc 项目，从“当程序启动时”积木开始搭建程序。',
     'home.dialog.interaction.programTitle': '下载、运行与停止',
     'home.dialog.interaction.program1': '程序槽位共有 0–7 八个。先选择槽位；槽位选择只决定程序保存位置，不会修改项目内容。',
     'home.dialog.interaction.program2': '“下载”会把当前积木生成的 Python 程序写入所选槽位，并覆盖该槽位原有程序。',
@@ -255,7 +474,7 @@ const zhCN = {
     'home.dialog.interaction.troubleshoot2': '下载中断：重新连接 EST，等待状态恢复后再次下载；中断不会主动删除槽位中的旧程序。',
     'home.dialog.interaction.troubleshoot3': '程序行为与预期不同：核对电机和传感器端口、数值单位、转向方向以及事件触发条件。',
     'home.dialog.hardware.title': '硬件说明',
-    'home.dialog.hardware.lead': 'EST Studio 面向一台电脑连接一台 EST 的使用场景。积木中的端口必须与实物接线一致。',
+    'home.dialog.hardware.lead': 'ATC CodeStudio 面向一台电脑连接一台 EST 的使用场景。积木中的端口必须与实物接线一致。',
     'home.dialog.hardware.controllerTitle': 'EST 主控',
     'home.dialog.hardware.controller1': 'USB 用于设备通信和程序传输。连接成功后，可在菜单栏查看连接状态。',
     'home.dialog.hardware.controller2': '硬件状态面板会显示连接、电量、固件版本和已识别的外设信息。',
@@ -300,7 +519,7 @@ const zhCN = {
     'home.dialog.hardware.hostSettings2':
         '选“语言”后按左、右切换中文、英语、葡萄牙语（巴西）；选“设备信息”后按确认，可查看型号、固件、引导程序、' +
         'USB 和电池信息。按返回先退回设置，再按返回回首页。',
-    'home.dialog.hardware.hostSettings3': '背光、音量与语言设置会在设备上保存。主机菜单没有固件升级入口；升级或降级请在电脑端 EST Studio 的“硬件状态”中完成，步骤见下文。',
+    'home.dialog.hardware.hostSettings3': '背光、音量与语言设置会在设备上保存。主机菜单没有固件升级入口；升级或降级请在电脑端 ATC CodeStudio 的“硬件状态”中完成，步骤见下文。',
     'home.dialog.hardware.outputTitle': '电机与输出',
     'home.dialog.hardware.output1': '电机使用 A、B、C、D 端口。控制单个电机时，在积木中选择它实际连接的端口。',
     'home.dialog.hardware.output2': '移动类积木同时控制左右两个电机。使用前先设置左右电机端口，并核对安装方向。',
@@ -354,8 +573,17 @@ const zhCN = {
     'home.dialog.blocks.pattern3': '多个任务：使用多个事件程序堆或广播拆分任务，并明确每个任务何时停止。',
     'home.dialog.blocks.patternNote': '先用低速度和短运行时间测试方向与端口，确认无误后再提高速度或加入循环。',
     'home.blockGuide.category.operators': '运算',
+    'home.blockGuide.category.matrix': '点阵显示',
+    'home.blockGuide.category.camera': '摄像头识别',
+    'home.blockGuide.category.grayv2': '巡线卡 V2',
     'home.blockGuide.category.variables': '变量与列表',
     'home.blockGuide.category.myBlocks': '我的模块',
+    'home.blockGuide.kind.event': '当条件发生时启动下面的程序。',
+    'home.blockGuide.kind.boolean': '返回真或假，可放入判断、等待或循环条件。',
+    'home.blockGuide.kind.reporter': '读取并返回一个值，可嵌入其他积木。',
+    'home.blockGuide.kind.branch': '按条件或次数执行内部积木，然后继续。',
+    'home.blockGuide.kind.terminal': '执行后结束当前流程，不再继续后面的积木。',
+    'home.blockGuide.kind.statement': '执行这项操作，然后继续下一块积木。',
     'home.blockGuide.modesTitle': '模式与参数',
     'home.blockGuide.previewLoading': '正在生成积木图片',
     'home.blockGuide.previewUnavailable': '积木图片暂不可用',
@@ -536,9 +764,10 @@ const zhCN = {
     'home.blockGuide.procedures_definition': '定义我的模块｜为一组可重复使用的积木命名，并可以添加数值、文字或真假参数。',
     'home.blockGuide.procedures_call': '调用我的模块｜执行已经定义的“我的模块”，并把当前输入值传给它的参数。',
     'home.dialog.ai.title': 'AI 编程助手',
-    'home.dialog.ai.lead': 'AI 编程助手可以把自然语言需求转换为经过本地规则校验的 EST 积木程序，并先生成真实积木预览；是否插入、替换、下载或运行始终由您决定。',
+    'home.dialog.ai.lead':
+        'AI 编程助手会根据当前选择的 EST、Spark AI 或 NEW AI，把自然语言需求转换为经过本地规则校验的对应积木程序，并先生成真实积木预览；是否插入、替换、下载或运行始终由您决定。',
     'home.dialog.ai.openTitle': '打开并认识面板',
-    'home.dialog.ai.openImageAlt': 'EST Studio 的 AI 编程助手空白界面',
+    'home.dialog.ai.openImageAlt': 'ATC CodeStudio 的 AI 编程助手空白界面',
     'home.dialog.ai.openImageCaption': 'AI 编程助手以浮动面板显示，不会覆盖或自动修改当前工作区。',
     'home.dialog.ai.open1': '返回编辑器，在菜单栏点击“AI 编程助手”打开右侧浮动面板；拖动标题栏可以移动面板。',
     'home.dialog.ai.open2': '关闭面板后当前对话仍会保留；右上角的“新建对话”会清空本次会话，适合开始另一个任务或在对话过长时重新开始。',
@@ -557,10 +786,12 @@ const zhCN = {
     'home.dialog.ai.prompt2':
         '复杂任务可以先让 AI 生成最小可运行部分，再通过后续对话逐步增加传感器或视觉判断、循环、变量、列表、' +
         '“我的模块”、自定义绘图、显示或声音；AI 会参考本次对话中上一版程序继续修改。',
-    'home.dialog.ai.prompt3': '连接 EST 时，助手会读取一次 USB 端口快照并优先使用已检测到的设备；USB 无法知道哪个电机是左轮或右轮，这类机械角色仍需在描述中写明。',
-    'home.dialog.ai.prompt4': '未连接 EST 也可以对话和生成程序，但您需要自行核对所有端口、硬件型号和安装方向。',
+    'home.dialog.ai.prompt3':
+        '设备已连接且状态有效时，助手会读取当前产品的一次端口快照并优先使用已检测外设；软件无法知道哪个电机是左轮或右轮，这类机械角色仍需在描述中写明。',
+    'home.dialog.ai.prompt4':
+        '未连接主机也可以对话和生成程序，但您需要自行核对产品型号、所有端口、外设类型和安装方向。',
     'home.dialog.ai.applyTitle': '生成、预览与应用',
-    'home.dialog.ai.applyImageAlt': 'AI 生成 EST 积木并显示预览和应用按钮',
+    'home.dialog.ai.applyImageAlt': 'AI 生成当前产品的积木并显示预览和应用按钮',
     'home.dialog.ai.applyImageCaption': '生成结果先显示为真实积木预览；“替换工作区”和“插入”都必须由您手动选择。',
     'home.dialog.ai.apply1': 'AI 可能先回答问题或追问缺少的信息；只有形成明确程序方案时，回复中才会出现“生成的积木堆”。',
     'home.dialog.ai.apply2': '软件会在本机校验积木类型、输入、端口和程序结构，再绘制预览；校验不通过的结果不会直接放入工作区。',
@@ -569,14 +800,18 @@ const zhCN = {
     'home.dialog.ai.apply5': '应用成功只代表积木已经进入工作区。AI 不会自动下载或运行程序；请再次检查程序，然后使用编辑器的下载或运行按钮。',
     'home.dialog.ai.applyNote': '真机测试前请抬起轮组或留出安全空间，先使用低速度、短时间验证方向和停止逻辑。AI 生成内容始终需要人工检查。',
     'home.dialog.ai.scopeTitle': '当前支持范围',
-    'home.dialog.ai.scope1': '可以生成当前 EST 工具箱中的事件、电机、移动、显示、声音、控制、传感器、视觉和运算类积木，并支持一个方案中的多个程序堆。',
-    'home.dialog.ai.scope2': '可以创建和使用变量、列表与“我的模块”；“我的模块”支持数值、文字和真假参数，也可以生成主控 180 × 128 屏幕的自定义位图绘制数据。',
+    'home.dialog.ai.scope1':
+        '可以生成当前硬件工具箱中的事件、电机、移动、显示、声音、控制、传感器和运算类积木，并支持一个方案中的多个程序堆；不会混用其他产品的积木和端口规则。',
+    'home.dialog.ai.scope2':
+        '三款产品均支持变量、列表与“我的模块”。此外，EST 支持 180 × 128 屏幕绘图与电脑视觉，' +
+        'Spark AI 支持 5 × 7 点阵和灰度巡线，NEW AI 支持 7 × 9 RGB 点阵、实体摄像头与巡线卡 V2。',
     'home.dialog.ai.scope3': '不会生成或执行任意 Python、XML 或 JavaScript，也不接受外部图片网址和未经允许的 Blockly 原始修改；超出积木能力的部分需要在工作区另行完成。',
     'home.dialog.ai.scope4': '单次候选程序最多包含 8 个程序堆、256 个积木，积木嵌套深度最多 24 层；超出时应把需求拆成较小步骤。',
     'home.dialog.ai.scope5': 'AI 会遵守软件提供的积木目录和数值规则，但仍可能误解自然语言、机械结构、视觉条件或教学意图，不能代替预览检查和真机验证。',
     'home.dialog.ai.privacyTitle': '数据、密钥与费用',
     'home.dialog.ai.privacy1': 'API 配置与密钥会加密保存在本机。密钥只用于您保存的 API 地址；更换地址时不会自动沿用旧密钥。',
-    'home.dialog.ai.privacy2': '请求会把本次对话、所需积木规则，以及连接设备时的一份 USB 端口快照发送到您配置的 AI 地址；软件不会自动上传整个当前项目。',
+    'home.dialog.ai.privacy2':
+        '请求会把本次对话、当前产品所需的积木规则，以及设备已连接时的一份端口快照发送到您配置的 AI 地址；软件不会自动上传整个当前项目。',
     'home.dialog.ai.privacy3': '远程模型的联网条件、可用性、额度、计费和内容处理规则由所选服务商决定；本软件不会替您创建账户或购买额度。',
     'home.dialog.ai.privacyNote': '不要在任务描述中填写密码、API 密钥、个人信息或其他敏感内容。仅使用您信任并有权访问的 AI 服务。',
     'home.dialog.ai.troubleshootTitle': '常见问题',
@@ -587,9 +822,9 @@ const zhCN = {
     'home.dialog.ai.troubleshoot3': '请求在 8 分钟内没有完成或提示网络中断：缩小任务范围后重试，并检查网络、本机 Ollama 服务或远程服务商状态。',
     'home.dialog.ai.troubleshoot4': '提示程序校验或积木预览失败：把任务拆小，明确端口和参数后重新生成；也可以点击错误旁的“检查连接设置”或“重试”。',
     'home.dialog.software.title': '软件信息',
-    'home.dialog.software.lead': '当前版本：EST Studio {version}。这是一款面向 EST 的桌面图形化编程软件。',
+    'home.dialog.software.lead': '当前版本：ATC CodeStudio {version}。这是一款面向 EST 的桌面图形化编程软件。',
     'home.dialog.software.fileTitle': '项目文件',
-    'home.dialog.software.file1': 'EST Studio 项目使用 .ests 扩展名。保存项目后，可从“最近文件”再次打开。',
+    'home.dialog.software.file1': 'ATC CodeStudio 项目使用 .atc 扩展名。保存项目后，可从“最近文件”再次打开。',
     'home.dialog.software.file2': '最近文件卡片支持打开、重命名和复制；“删除”只从最近列表移除记录，不会删除电脑中的项目文件。',
     'home.dialog.software.file3': '移动或删除电脑中的原始文件后，对应的最近文件记录可能无法再打开。',
     'home.dialog.software.workspaceTitle': '编程工作区',
@@ -600,10 +835,10 @@ const zhCN = {
     'home.dialog.software.updateTitle': '版本与更新',
     'home.dialog.software.update1': '软件版本与 EST 固件版本是两项独立信息；遇到兼容提示时，需要确认两者是否匹配。',
     'home.dialog.software.update2': '在硬件状态中可以查看固件版本，并在提供更新包时执行固件更新。',
-    'home.dialog.software.update3': '更换电脑或重新安装前，请单独备份重要的 .ests 项目文件。',
-    'home.dialog.software.updateNote': '反馈问题时，请同时记录 EST Studio 版本、固件版本、连接状态和复现步骤。',
+    'home.dialog.software.update3': '更换电脑或重新安装前，请单独备份重要的 .atc 项目文件。',
+    'home.dialog.software.updateNote': '反馈问题时，请同时记录 ATC CodeStudio 版本、固件版本、连接状态和复现步骤。',
     'home.dialog.about.title': '关于我们',
-    'home.dialog.about.lead': 'EST Studio 是为 EST 主控与配套外设设计的图形化编程环境，让搭建、编程和真机运行形成连续体验。',
+    'home.dialog.about.lead': 'ATC CodeStudio 是为 EST 主控与配套外设设计的图形化编程环境，让搭建、编程和真机运行形成连续体验。',
     'home.dialog.about.purposeTitle': '我们希望解决什么',
     'home.dialog.about.purpose1': '让学习者不必先配置通用硬件，就能直接进入 EST 积木编程。',
     'home.dialog.about.purpose2': '让教师和学生能够在同一软件中完成项目管理、搭建参考、积木与 AI 辅助编程、视觉交互和设备运行。',
@@ -614,7 +849,7 @@ const zhCN = {
     'home.dialog.about.supportTitle': '获取支持前的准备',
     'home.dialog.about.support1': '记录问题发生前的操作、界面提示，以及是否可以稳定复现。',
     'home.dialog.about.support2': '提供软件版本、EST 固件版本、Windows 版本和使用的外设类型。',
-    'home.dialog.about.support3': '涉及项目内容时，保留一份可复现问题的 .ests 文件，并移除不需要分享的个人信息。',
+    'home.dialog.about.support3': '涉及项目内容时，保留一份可复现问题的 .atc 文件，并移除不需要分享的个人信息。',
     'home.dialog.about.supportNote': '先查阅本页对应指南，通常可以快速排除线材、端口、固件和积木输入问题。',
     'home.dialog.build.title': '搭建说明',
     'home.dialog.build.body': '当前为搭建图占位内容，后续会替换为对应产品的真实搭建说明。',
@@ -645,7 +880,7 @@ const zhCN = {
     'programControls.failed': '操作失败',
     'programControls.errorTitle': 'EST 程序操作失败',
     'programControls.errorMessage': '无法完成程序操作。',
-    'programControls.firmwareUpgradeRequired': '当前 EST 固件不支持这个程序使用的功能。请升级到支持相应 EST Studio 功能的固件后再运行。',
+    'programControls.firmwareUpgradeRequired': '当前 EST 固件不支持这个程序使用的功能。请升级到支持相应 ATC CodeStudio 功能的固件后再运行。',
     'programControls.unknownError': '未知错误',
     'programControls.usbDisconnected': 'EST USB 连接已断开，请重新连接 EST 后重试。',
     'programControls.stopProgram': '停止程序',
@@ -986,6 +1221,7 @@ const en = {
     'home.animation.car.action': 'Drive forward',
     'home.animation.car.result': 'Turn on light',
     'home.recentFiles': 'Recent files',
+    'home.unknownHardware': 'Unknown device',
     'home.noRecentFiles': 'No recent files yet',
     'home.noRecentFilesHint': 'New and saved projects will appear here.',
     'home.open': 'Open',
@@ -1044,11 +1280,27 @@ const en = {
     'home.build.sensorCar': 'Sensor car',
     'home.build.creative': 'Creative build',
     'home.more.title': 'Guides and support',
+    'home.more.chooseProduct': 'Choose your product to find its guides.',
+    'home.more.selectPrompt': 'Select a product above',
+    'home.more.productGuides': '{product} guides',
+    'home.more.common': 'General',
+    'home.more.guide.hardware': 'Hardware guide',
+    'home.more.guide.hardwareSummary': 'Get to know the hub, ports and device features',
+    'home.more.guide.interaction': 'Interaction guide',
+    'home.more.guide.interactionSummary': 'Connect a device, download and run programs',
+    'home.more.guide.sensors': 'Motors and sensors',
+    'home.more.guide.sensorsSummary': 'Understand ports, output control and sensor input',
+    'home.more.guide.blocks': 'Block reference',
+    'home.more.guide.blocksSummary': 'Explore block programming for this product',
+    'home.more.guide.ai': 'AI features',
+    'home.more.guide.aiSummary': 'Explore the AI Coding Assistant and supported smart features',
+    'home.more.guide.firmware': 'Firmware update',
+    'home.more.guide.firmwareSummary': 'Review update steps, connection requirements and precautions',
     'home.more.intro':
         'Find help for vision recognition, device connections, hardware ports, block programming, ' +
         'the AI assistant and the app. Use the matching guide to troubleshoot a problem.',
-    'home.more.est': 'Meet EST',
-    'home.more.estSummary': 'Learn about the EST hub, hardware expansion, programming and smart features',
+    'home.more.est': 'Product guide',
+    'home.more.estSummary': 'Hardware, programming and project guidance for EST, Spark AI and NEW AI',
     'home.more.vision': 'Vision recognition and camera',
     'home.more.visionSummary': 'Recognize hands, body poses and face actions, then send results to EST',
     'home.more.interaction': 'Software and hardware guide',
@@ -1058,16 +1310,361 @@ const en = {
     'home.more.blocks': 'Block reference',
     'home.more.blocksSummary': 'A function-by-function reference for every block in the toolbox',
     'home.more.ai': 'AI Coding Assistant',
-    'home.more.aiSummary': 'Generate, preview and apply EST block programs from natural language',
+    'home.more.aiSummary': 'Generate, preview and apply block programs for EST, Spark AI and NEW AI',
     'home.more.software': 'Software information',
     'home.more.softwareSummary': 'Version, project files, workspace and updates',
     'home.more.about': 'About us',
     'home.more.aboutSummary': 'Product purpose, technical foundation and support',
-    'home.dialog.est.title': 'Introducing EST',
+    'home.dialog.est.title': 'Product guide',
     'home.dialog.est.lead':
-        'EST is an educational robotics system centered on a programmable hub. It connects block-built ' +
-        'mechanisms, motors, sensors, a display and sound, while EST Studio provides building references, ' +
-        'program design, download, execution and debugging.',
+        'ATC CodeStudio supports EST, Spark AI and NEW AI. Their ports, displays, sensors and program formats ' +
+        'are different. Choose a product for its full guide, then use the table to compare key differences.',
+    'home.dialog.est.prototype.selectorLabel': 'Choose a product',
+    'home.dialog.est.prototype.currentName': 'EST',
+    'home.dialog.est.prototype.newAName': 'Spark AI',
+    'home.dialog.est.prototype.newBName': 'NEW AI',
+    'home.dialog.est.prototype.currentSummary': '180 × 128 display · computer vision',
+    'home.dialog.est.prototype.sparkSummary': '5 × 7 matrix · compact mobile control',
+    'home.dialog.est.prototype.newAiSummary': '7 × 9 RGB matrix · eight shared ports',
+    'home.dialog.est.prototype.currentIntro':
+        'A programmable hub connects block mechanisms, motors, sensors, display and sound for projects ' +
+        'from coding fundamentals through integrated robotics.',
+    'home.dialog.est.prototype.sparkIntro':
+        'Spark AI combines separate motor and sensor ports, a 5 × 7 matrix and USB/Bluetooth connections ' +
+        'for motor control, grayscale line following, obstacle avoidance and remote-control projects.',
+    'home.dialog.est.prototype.newAiIntro':
+        'NEW AI provides eight shared motor/sensor ports, a 7 × 9 RGB matrix, more sensor modes and blocks ' +
+        'for a physical camera, making it suitable for multi-device and recognition projects.',
+    'home.dialog.est.prototype.imageNote':
+        'Product image from the app’s hardware chooser. Follow the port letters and orientation printed on the device.',
+    'home.dialog.est.prototype.estImageAlt':
+        'EST hub with a 180 by 128 display, navigation buttons and sensor ports 1 through 4',
+    'home.dialog.est.prototype.sparkImageAlt':
+        'Spark AI hub with a 5 by 7 matrix, three hub buttons and separate motor and sensor ports',
+    'home.dialog.est.prototype.newAiImageAlt':
+        'NEW AI hub with a 7 by 9 RGB matrix, three hub buttons and shared ports A through H',
+    'home.dialog.est.prototype.audienceLabel': 'Best for',
+    'home.dialog.est.prototype.hardwareLabel': 'Core hardware',
+    'home.dialog.est.prototype.featureLabel': 'Defining feature',
+    'home.dialog.est.prototype.projectLabel': 'Typical projects',
+    'home.dialog.est.prototype.currentAudience': 'Coding fundamentals and integrated robotics projects',
+    'home.dialog.est.prototype.currentHardware':
+        'EST hub, motor ports A–D, sensor ports 1–4 and a 180 × 128 display',
+    'home.dialog.est.prototype.currentFeature': 'Blocks, Python, AI assistance and computer vision input',
+    'home.dialog.est.prototype.currentProject': 'Line following, avoidance, robot arms, sorting and creative robots',
+    'home.dialog.est.prototype.sparkAudience': 'Robotics fundamentals, mobile robots and grayscale line following',
+    'home.dialog.est.prototype.sparkHardware':
+        'Sensor ports A–D, motor ports E–H, a 5 × 7 matrix and hub buttons',
+    'home.dialog.est.prototype.sparkFeature':
+        'USB/Bluetooth programming, grayscale calibration, two-sensor line following and ten program slots',
+    'home.dialog.est.prototype.sparkProject':
+        'Basic vehicles, line following, avoidance, remote control and matrix interactions',
+    'home.dialog.est.prototype.newAiAudience':
+        'Advanced robots, physical-camera recognition and multi-device projects',
+    'home.dialog.est.prototype.newAiHardware':
+        'Eight shared A–H ports, a 7 × 9 RGB matrix, sound and hub buttons',
+    'home.dialog.est.prototype.newAiFeature':
+        'Physical camera, Line Tracker V2, broad sensor support and twenty program slots',
+    'home.dialog.est.prototype.newAiProject':
+        'Vision sorting, advanced line following, multi-sensor vehicles and interactive devices',
+    'home.hostMenu.remote': 'Remote control',
+    'home.hostMenu.bluetooth': 'Bluetooth',
+    'home.hostMenu.pauto': 'P · Built-in demo',
+    'home.hostMenu.program': 'Program {number}',
+    'home.hostMenu.battery': 'Battery',
+    'home.hostMenu.caption':
+        'Patterns reproduce the original firmware. Program numbers and battery level are examples; the hub ' +
+        'lists only saved programs. The Bluetooth image shows the enabled state.',
+    'home.dialog.est.prototype.sparkMenuTitle': 'Hub matrix menu and buttons',
+    'home.dialog.est.prototype.sparkMenu1':
+        'While idle, press left or right to cycle through the menu with a horizontal slide. Short-press the ' +
+        'middle button to start the selected function; press it again while running to stop and return to the menu.',
+    'home.dialog.est.prototype.sparkMenu2':
+        'The menu contains Remote, Bluetooth, the P built-in demo and saved programs numbered 0–9. Each number ' +
+        'matches its download slot; empty slots do not appear.',
+    'home.dialog.est.prototype.sparkMenu3':
+        'P is a built-in sensor/motor demo. Left selects forward triggering and obstacle avoidance; right ' +
+        'selects reverse triggering and distance following. A/B and C/D control E/F and G/H respectively. ' +
+        'Within each group in this mode, ultrasonic takes priority over touch and reflected-light inputs.',
+    'home.dialog.est.prototype.sparkMenu4':
+        'Short-press the middle button on Bluetooth to toggle it. Enabled is steady; disabled blinks about ' +
+        'every 0.5 seconds. Enable Bluetooth here before entering Remote.',
+    'home.dialog.est.prototype.sparkMenu5':
+        'The Remote icon starts the built-in remote-control program; a number starts that user program. ' +
+        'While idle, hold the middle button for about 1.5 seconds to power off.',
+    'home.dialog.est.prototype.sparkHostTitle': 'Controller, ports and built-in hardware',
+    'home.dialog.est.prototype.sparkHost1':
+        'Spark AI uses an STM32F103 controller with embedded PikaPython. Programs and resources are stored ' +
+        'in external SPI flash and can start from ten slots numbered 0–9.',
+    'home.dialog.est.prototype.sparkHost2':
+        'A, B, C and D are sensor ports; E, F, G and H are motor ports. They are not shared ports and ' +
+        'must not be interchanged in a build or program.',
+    'home.dialog.est.prototype.sparkHost3':
+        'After connecting devices, check their types and live A–D values in Hardware Status. See the menu ' +
+        'instructions above for grouping rules specific to the built-in P demo.',
+    'home.dialog.est.prototype.sparkHost4':
+        'The hub has a 5 × 7 monochrome matrix, three buttons and a buzzer. The matrix supports patterns, ' +
+        'scrolling text, pixels, brightness and clear; sound supports named notes and duration.',
+    'home.dialog.est.prototype.sparkHost5':
+        'USB-C and Bluetooth can connect, download and run programs. Battery management is built in, and ' +
+        'Hardware Status shows connection, firmware, battery, storage, program state, port data and output.',
+    'home.dialog.est.prototype.sparkHostNote':
+        'Ports support automatic device detection. Firmware updates still require USB and cannot use Bluetooth.',
+    'home.dialog.est.prototype.sparkDeviceTitle': 'Compatible hardware',
+    'home.dialog.est.prototype.sparkDevice1':
+        'E–H accept motors. The app supports single motors, ordered left/right pairs, timed runs, independent ' +
+        'power, brake or coast stopping, and two-grayscale-sensor line following.',
+    'home.dialog.est.prototype.sparkDevice2':
+        'Touch sensors report pressed or released for bumpers, mechanical limits and user confirmation.',
+    'home.dialog.est.prototype.sparkDevice3':
+        'The grayscale sensor reads reflected light and supports thresholds, state and timed calibration for ' +
+        'one or two sensors, for black/white lines and light/dark detection.',
+    'home.dialog.est.prototype.sparkDevice4':
+        'Ultrasonic sensors report distance, while the handheld controller supplies direction and buttons 1–4. ' +
+        'Spark AI currently has no physical-camera or computer-camera blocks.',
+    'home.dialog.est.prototype.sparkMotorTitle': 'Motor and movement modes',
+    'home.dialog.est.prototype.sparkMotor1':
+        'A single motor uses E–H and supports direction, power and timed runs. Stop mode can brake or coast.',
+    'home.dialog.est.prototype.sparkMotor2':
+        'A motor pair stores two different ports in left/right order, then supports forward, backward, ' +
+        'turning, timed movement and independent left/right power. Match the order to the physical build.',
+    'home.dialog.est.prototype.sparkMotor3':
+        'Line following supports initialization, two grayscale sensors, left/right power, KP/KD and forward/' +
+        'backward offsets. Calibrate the sensors first, then tune at low speed.',
+    'home.dialog.est.prototype.sparkSensorTitle': 'Sensor and hub input modes',
+    'home.dialog.est.prototype.sparkSensor1':
+        'The touch sensor reports pressed or released for bumpers, limit switches and user confirmation.',
+    'home.dialog.est.prototype.sparkSensor2':
+        'The grayscale sensor reports reflected light, compares a threshold, reports trigger state and ' +
+        'supports timed calibration for one or two sensors.',
+    'home.dialog.est.prototype.sparkSensor3':
+        'The ultrasonic sensor reports centimeters or compares distance with a value for avoidance, ' +
+        'following and ranging.',
+    'home.dialog.est.prototype.sparkSensor4':
+        'Handheld-controller direction and buttons 1–4, hub-button pressed/released state, and a millisecond ' +
+        'timer with reset are available as inputs.',
+    'home.dialog.est.prototype.sparkProgramTitle': 'Programming, connections and slots',
+    'home.dialog.est.prototype.sparkProgram1':
+        'The toolbox includes Events, Motor, Motor Pair, Matrix, Sound, Control, Sensing, Operators, ' +
+        'Variables, Lists and My Blocks. Only Spark AI blocks appear for this target.',
+    'home.dialog.est.prototype.sparkProgram2':
+        'Blocks generate visible Python. On Windows x64, the bundled PikaPython compiler creates device ' +
+        'bytecode locally; source, syntax and size checks run before anything is sent.',
+    'home.dialog.est.prototype.sparkProgram3':
+        'USB serial and Bluetooth support connection, monitoring, download and run. Auto-connect remembers ' +
+        'a verified device; Bluetooth requires both radios and system permission.',
+    'home.dialog.est.prototype.sparkProgram4':
+        'Choose slot 0–9. Download compiles and saves, Run downloads again then starts the selected slot, ' +
+        'and Stop requests program termination. Disconnecting does not guarantee the device program stops.',
+    'home.dialog.est.prototype.sparkAiTitle': 'AI Coding for Spark AI',
+    'home.dialog.est.prototype.sparkAi1':
+        'The assistant generates only Spark AI toolbox blocks: motors use E–H and sensors use A–D. ' +
+        'It does not mix in EST or NEW AI ports and blocks.',
+    'home.dialog.est.prototype.sparkAi2':
+        'State the left and right motor ports for movement tasks because hardware status cannot infer wheel ' +
+        'roles. Matrix patterns are 5 columns by 7 rows, not EST graphics-screen drawings.',
+    'home.dialog.est.prototype.sparkAi3':
+        'With a valid connection, the assistant can use a live Spark AI sensor snapshot. Spark AI currently ' +
+        'has no computer-camera or physical-camera blocks, so vision requests are not mapped to another product.',
+    'home.dialog.est.prototype.sparkFirmwareTitle': 'Update Spark AI firmware',
+    'home.dialog.est.prototype.sparkFirmware1':
+        'Save the project, stop the device program and connect Spark AI by USB. Firmware update is not ' +
+        'available over Bluetooth.',
+    'home.dialog.est.prototype.sparkFirmware2':
+        'Open firmware update in Hardware Status, verify the bundled version 110 firmware and resources, ' +
+        'then confirm the target device and USB port.',
+    'home.dialog.est.prototype.sparkFirmware3':
+        'Confirm erasing all saved programs, then start. Keep USB, power and the app active; transfer ' +
+        'cannot be paused.',
+    'home.dialog.est.prototype.sparkFirmware4':
+        'If the normal connection is unavailable, follow the panel’s recovery-update flow. Wait for reconnect ' +
+        'and version verification before using the hub.',
+    'home.dialog.est.prototype.sparkFirmwareNote':
+        'Updating clears slots 0–9. On failure, keep the error details, close other serial apps and ' +
+        'restart a complete update.',
+    'home.dialog.est.prototype.newAiMenuTitle': 'Hub matrix menu and buttons',
+    'home.dialog.est.prototype.newAiMenu1':
+        'While idle, press left or right to cycle through the menu with a row-by-row reveal. Press and release ' +
+        'the middle button to confirm. During a program, left/right are program inputs; middle stops and returns.',
+    'home.dialog.est.prototype.newAiMenu2':
+        'Saved programs 0–19 appear in numeric order, followed by Remote, Bluetooth and Battery. Patterns for ' +
+        '1 and 19 are shown above; empty slots do not appear on the hub.',
+    'home.dialog.est.prototype.newAiMenu3':
+        'Short-press middle on a number to run that slot, or on Remote to start the remote-control program ' +
+        'in the hub resources. Completion or a middle-button stop restores the selected menu pattern.',
+    'home.dialog.est.prototype.newAiMenu4':
+        'Short-press middle on Bluetooth to toggle it. The icon is blue when enabled and orange-yellow when ' +
+        'disabled; color indicates whether Bluetooth is switched on.',
+    'home.dialog.est.prototype.newAiMenu5':
+        'Battery uses four fill levels and refreshes automatically while selected. The image shows one ' +
+        'example level. No program or extra middle-button press is required.',
+    'home.dialog.est.prototype.newAiHostTitle': 'Controller, shared ports and built-in hardware',
+    'home.dialog.est.prototype.newAiHost1':
+        'NEW AI uses a 480 MHz STM32H723 controller running FreeRTOS and embedded PikaPython. Its firmware ' +
+        'also includes neural-network inference and fused motion sensing.',
+    'home.dialog.est.prototype.newAiHost2':
+        'A–H are eight hot-plug-detected shared motor/sensor ports, scanned every 50 ms. Connect one device ' +
+        'per port and do not apply Spark AI’s separate motor and sensor port layout.',
+    'home.dialog.est.prototype.newAiHost3':
+        'The 7 × 9 RGB matrix has 63 pixels and supports patterns, scrolling text, individual pixels, ' +
+        'brightness, color and clear.',
+    'home.dialog.est.prototype.newAiHost4':
+        'The hub includes three buttons, an inertial sensor, microphone, audio output and battery management. ' +
+        'Programs can read buttons, sound level, acceleration, gyro angle and attitude.',
+    'home.dialog.est.prototype.newAiHost5':
+        'USB-C and Bluetooth support connection, monitoring, download and run. External QSPI flash stores ' +
+        'resources and twenty slots numbered 0–19; Hardware Status shows A–H devices and live data.',
+    'home.dialog.est.prototype.newAiDeviceTitle': 'Compatible motors and sensors',
+    'home.dialog.est.prototype.newAiDevice1':
+        'A–H can identify large and small motors. Modes include power, speed, position, relative angle, brake, ' +
+        'hold and coast, plus paired driving, turning and line following.',
+    'home.dialog.est.prototype.newAiDevice2':
+        'Color, ultrasonic, touch and grayscale line sensors provide color/RGB/reflected light, distance, ' +
+        'touch state, and line values or states.',
+    'home.dialog.est.prototype.newAiDevice3':
+        'Line Tracker V2 has seven channels with calibration, thresholds, per-channel values and black/white ' +
+        'state, RGB indicators, PID, junction detection, and line following by junction, encoder or time.',
+    'home.dialog.est.prototype.newAiDevice4':
+        'A physical AI camera, NFC and handheld controller are also supported. Camera modes include face, tag, ' +
+        'object, color, road, gesture, body, classification and photo, returning ID, name, position and size.',
+    'home.dialog.est.prototype.newAiMotorTitle': 'Motor and movement modes',
+    'home.dialog.est.prototype.newAiMotor1':
+        'A single motor can use any free A–H port. Set direction, speed or power, run for rotations, degrees ' +
+        'or time, read speed/position/angle, and reset accumulated angle.',
+    'home.dialog.est.prototype.newAiMotor2':
+        'Motor pairs support ordered left/right ports, forward/backward, steering, time or distance, independent ' +
+        'power, and brake, hold or coast stop modes.',
+    'home.dialog.est.prototype.newAiMotor3':
+        'Movement also supports gyro-guided straight driving, turns and two-sensor line following. Verify ports ' +
+        'and mechanical direction, then begin at low speed and short distance.',
+    'home.dialog.est.prototype.newAiSensorTitle': 'Sensor and input modes',
+    'home.dialog.est.prototype.newAiSensor1':
+        'The color sensor supports color and range tests, raw R/G/B values and reflected light for sorting, ' +
+        'markers and lines.',
+    'home.dialog.est.prototype.newAiSensor2':
+        'Ultrasonic distance, the hub microphone’s sound level, and touch pressed/released support avoidance, ' +
+        'sound control and limit switches.',
+    'home.dialog.est.prototype.newAiSensor3':
+        'The gyroscope reports yaw, pitch, roll, acceleration and angle, with heading reset for straight-line ' +
+        'correction, turns and pose interactions.',
+    'home.dialog.est.prototype.newAiSensor4':
+        'The handheld controller, hub buttons, timer, line-tracking card and NFC also provide input. Available ' +
+        'modes follow the current toolbox and attached device.',
+    'home.dialog.est.prototype.newAiVisionTitle': 'Physical camera and Line Tracker V2',
+    'home.dialog.est.prototype.newAiVision1':
+        'Camera Recognition blocks address a physical NEW AI camera on an A–H port, not the computer camera. ' +
+        'EST computer vision is not available on this target.',
+    'home.dialog.est.prototype.newAiVision2':
+        'Camera algorithms include face, tag, QR code, object, color, road, gesture, body, object classification ' +
+        'and image classification, with names or IDs for recognized targets.',
+    'home.dialog.est.prototype.newAiVision3':
+        'Results include X/Y, width, height and confidence. Allow for lighting, view and distance; a single ' +
+        'recognition result is not a safety interlock.',
+    'home.dialog.est.prototype.newAiVision4':
+        'Line Tracker V2 supplies seven channels, threshold, LEDs, PID, junction state and channel mapping, ' +
+        'with line-following actions bounded by junction, encoder counts or time.',
+    'home.dialog.est.prototype.newAiProgramTitle': 'Programming, connections and slots',
+    'home.dialog.est.prototype.newAiProgram1':
+        'The toolbox includes Motor, Motor Pair, RGB Matrix, Sound, Events, Control, Sensing, Camera Recognition, ' +
+        'Line Tracker V2, Operators, Variables, Lists and My Blocks.',
+    'home.dialog.est.prototype.newAiProgram2':
+        'Blocks generate visible Python. On Windows x64, the bundled PikaPython compiler creates device ' +
+        'bytecode locally and sends it only after successful compilation.',
+    'home.dialog.est.prototype.newAiProgram3':
+        'USB and Bluetooth support connection, monitoring, download and run. Each connection mode remembers ' +
+        'its device preference and confirms only after receiving valid NEW AI status.',
+    'home.dialog.est.prototype.newAiProgram4':
+        'Choose slot 0–19. Download saves the current program, Run downloads it again and starts that slot, ' +
+        'and Stop requests termination. Switching products does not convert blocks or ports.',
+    'home.dialog.est.prototype.newAiAiTitle': 'AI Coding for NEW AI',
+    'home.dialog.est.prototype.newAiAi1':
+        'The assistant generates only NEW AI toolbox blocks and treats A–H as eight shared motor/sensor ports. ' +
+        'It does not apply Spark AI’s separate port groups.',
+    'home.dialog.est.prototype.newAiAi2':
+        'State left and right motor ports for paired movement. The assistant avoids ports reported as sensors ' +
+        'in the live snapshot, but you must still verify the physical direction.',
+    'home.dialog.est.prototype.newAiAi3':
+        'Matrix output is a 7-column by 9-row RGB image. Camera blocks address a physical camera on A–H, ' +
+        'not the computer camera. Live port context requires the supported version 321 device resources.',
+    'home.dialog.est.prototype.newAiFirmwareTitle': 'Update NEW AI firmware',
+    'home.dialog.est.prototype.newAiFirmware1':
+        'Save the project, stop the program and connect NEW AI by USB. Bluetooth cannot enter the recovery ' +
+        'loader or update firmware.',
+    'home.dialog.est.prototype.newAiFirmware2':
+        'Verify the bundled version 321 firmware and resources in the update panel, then confirm device ' +
+        'version, USB port and blockers.',
+    'home.dialog.est.prototype.newAiFirmware3':
+        'Agree to erase all user programs, then start. The app restores original firmware and resources and ' +
+        'verifies the version after reconnect; keep USB and power stable.',
+    'home.dialog.est.prototype.newAiFirmware4':
+        'Legacy version 214 can report its version and be updated, but cannot download or run current programs ' +
+        'until updated. Use recovery mode only as described when normal status is unavailable.',
+    'home.dialog.est.prototype.newAiFirmwareNote':
+        'Updating clears slots 0–19. The graphical interface updates the NEW AI hub and resources; it does ' +
+        'not flash sensor firmware.',
+    'home.dialog.est.prototype.comparisonTitle': 'Choose among the three products',
+    'home.dialog.est.prototype.comparisonIntro':
+        'Start with ports and display, then check the sensors, vision method, connection and slot count ' +
+        'required by the project.',
+    'home.dialog.est.prototype.comparisonItem': 'Compare',
+    'home.dialog.est.prototype.comparisonPosition': 'Positioning',
+    'home.dialog.est.prototype.comparisonPorts': 'Port assignment',
+    'home.dialog.est.prototype.comparisonDisplay': 'Display and output',
+    'home.dialog.est.prototype.comparisonConnection': 'Computer connection',
+    'home.dialog.est.prototype.comparisonSlots': 'Program slots',
+    'home.dialog.est.prototype.comparisonAbility': 'Defining ability',
+    'home.dialog.est.prototype.comparisonProject': 'Recommended projects',
+    'home.dialog.est.prototype.currentPositionValue': 'Robotics coding and integrated creation',
+    'home.dialog.est.prototype.sparkPositionValue': 'Mobile robotics and line-following fundamentals',
+    'home.dialog.est.prototype.newAiPositionValue': 'Multiple devices, physical vision and advanced control',
+    'home.dialog.est.prototype.estPortsValue': 'Motor A–D; sensor 1–4',
+    'home.dialog.est.prototype.sparkPortsValue': 'Motor E–H; sensor A–D',
+    'home.dialog.est.prototype.newAiPortsValue': 'Eight shared motor/sensor ports A–H',
+    'home.dialog.est.prototype.estDisplayValue': '180 × 128 monochrome graphics, status light and sound',
+    'home.dialog.est.prototype.sparkDisplayValue': '5 × 7 monochrome matrix and notes',
+    'home.dialog.est.prototype.newAiDisplayValue': '7 × 9 RGB matrix, effects and notes',
+    'home.dialog.est.prototype.estConnectionValue': 'USB; firmware also updates over USB',
+    'home.dialog.est.prototype.sparkConnectionValue': 'USB or Bluetooth; firmware by USB only',
+    'home.dialog.est.prototype.newAiConnectionValue': 'USB or Bluetooth; firmware by USB only',
+    'home.dialog.est.prototype.estSlotsValue': '0–7, eight total',
+    'home.dialog.est.prototype.sparkSlotsValue': '0–9, ten total',
+    'home.dialog.est.prototype.newAiSlotsValue': '0–19, twenty total',
+    'home.dialog.est.prototype.currentAbilityValue':
+        'Blocks and Python, AI assistance and computer vision input',
+    'home.dialog.est.prototype.sparkAbilityValue':
+        'Grayscale calibration, two-sensor line following, controller and 5 × 7 matrix',
+    'home.dialog.est.prototype.newAiAbilityValue':
+        'Physical camera, Line Tracker V2, RGB matrix and broader sensors',
+    'home.dialog.est.prototype.currentProjectValue':
+        'Line following, avoidance, robot arms, sorting and creative builds',
+    'home.dialog.est.prototype.sparkProjectValue':
+        'Vehicles, line following, avoidance, remote control and matrix interactions',
+    'home.dialog.est.prototype.newAiProjectValue':
+        'Vision sorting, advanced line following, multi-sensor and interactive devices',
+    'home.dialog.est.prototype.sharedTitle': 'Shared software capabilities',
+    'home.dialog.est.prototype.sharedIntro':
+        'All three products share ATC CodeStudio project management and assistance, but each has its own blocks, ' +
+        'port rules, compiler and device protocol.',
+    'home.dialog.est.prototype.sharedProjectTitle': 'Projects and hardware targets',
+    'home.dialog.est.prototype.sharedProject1':
+        'Choose hardware when creating a project. The file saves its target and restores that toolbox; ' +
+        'switching hardware does not convert existing blocks.',
+    'home.dialog.est.prototype.sharedProject2':
+        'All block programs produce visible Python, but EST, Spark AI and NEW AI use different runtimes and ' +
+        'device APIs. Generated code cannot be downloaded across products.',
+    'home.dialog.est.prototype.sharedProject3':
+        'Before download, verify hardware, connection, ports and slot. Start physical tests at low speed and ' +
+        'short duration with clear space around moving parts.',
+    'home.dialog.est.prototype.sharedAiTitle': 'AI Coding Assistant and device operations',
+    'home.dialog.est.prototype.sharedAi1':
+        'The AI Coding Assistant reads the current product and available blocks. It can preview, insert or ' +
+        'replace a proposal, but never downloads or runs it automatically.',
+    'home.dialog.est.prototype.sharedAi2':
+        'Hardware Status connects the device, shows version and program state, monitors ports and maintains ' +
+        'firmware. Save the project and stop the device before an update.',
+    'home.dialog.est.prototype.sharedAi3':
+        'Computer vision belongs to EST; NEW AI camera blocks read a physical camera; Spark AI currently has ' +
+        'no camera blocks. Keep these boundaries in mind when choosing a product.',
     'home.dialog.est.overviewTitle': 'What EST is',
     'home.dialog.est.overviewImageAlt':
         'A crawling spider model built with an EST hub, motors and block mechanisms',
@@ -1078,7 +1675,7 @@ const en = {
         'The EST hub is the model’s control center. A program reads buttons and sensors, then controls ' +
         'motors, the display, status light and sound so a static structure can sense and act.',
     'home.dialog.est.overview2':
-        'EST Studio is the companion desktop app for projects, block programming, Python generation, ' +
+        'ATC CodeStudio is the companion desktop app for projects, block programming, Python generation, ' +
         'USB communication, Hardware Status, program download and execution, and firmware maintenance.',
     'home.dialog.est.overview3':
         'The system suits first-time robotics learners and supports integrated projects such as line ' +
@@ -1120,7 +1717,7 @@ const en = {
         'After connecting EST, choose a program slot. Download saves the current program, Run downloads ' +
         'then starts it, and Stop ends the user program while the device handles safe motor stopping.',
     'home.dialog.est.programming4':
-        'Projects are saved as .ests files. The home page provides recent files and building guides. ' +
+        'Projects are saved as .atc files. The home page provides recent files and building guides. ' +
         'Hardware Status shows connection, battery, firmware and peripherals and provides firmware updates.',
     'home.dialog.est.smartTitle': 'AI and vision features',
     'home.dialog.est.smart1':
@@ -1153,7 +1750,7 @@ const en = {
         'window is independent of the project window.',
     'home.dialog.vision.openAction': 'Open camera',
     'home.dialog.vision.startTitle': 'Open and start recognition',
-    'home.dialog.vision.startImageAlt': 'EST Studio camera window recognizing a left hand',
+    'home.dialog.vision.startImageAlt': 'ATC CodeStudio camera window recognizing a left hand',
     'home.dialog.vision.startImageCaption':
         'This is the actual camera window from the current app using an isolated test source. The ' +
         'blue square and recognition result are test data and contain no user camera content.',
@@ -1238,17 +1835,17 @@ const en = {
         'follow the Hardware guide to install firmware with protocol 1.31 support.',
     'home.dialog.interaction.title': 'Software and hardware guide',
     'home.dialog.interaction.lead':
-        'Follow this sequence to connect, program and run. EST Studio automatically finds one EST ' +
+        'Follow this sequence to connect, program and run. ATC CodeStudio automatically finds one EST ' +
         'connected over USB.',
     'home.dialog.interaction.connectTitle': 'Connect for the first time',
     'home.dialog.interaction.connect1': 'Connect the computer and EST with a data-capable USB cable, then turn on EST.',
     'home.dialog.interaction.connect2':
-        'Open EST Studio. The app finds the device automatically, so you do not need to choose a ' +
+        'Open ATC CodeStudio. The app finds the device automatically, so you do not need to choose a ' +
         'hub model.',
     'home.dialog.interaction.connect3':
         'Check that the menu bar says “EST connected.” If it does not, reconnect the cable or try ' +
         'another USB port.',
-    'home.dialog.interaction.connect4': 'Create or open an .ests project and begin with a “when program starts” block.',
+    'home.dialog.interaction.connect4': 'Create or open an .atc project and begin with a “when program starts” block.',
     'home.dialog.interaction.programTitle': 'Download, run and stop',
     'home.dialog.interaction.program1':
         'There are eight program slots, numbered 0–7. The slot changes where a program is stored, ' +
@@ -1304,7 +1901,7 @@ const en = {
         'conditions.',
     'home.dialog.hardware.title': 'Hardware guide',
     'home.dialog.hardware.lead':
-        'EST Studio is designed for one computer connected to one EST. Every port selected in a ' +
+        'ATC CodeStudio is designed for one computer connected to one EST. Every port selected in a ' +
         'block must match the physical wiring.',
     'home.dialog.hardware.controllerTitle': 'EST hub',
     'home.dialog.hardware.controller1':
@@ -1402,7 +1999,7 @@ const en = {
         'information. Press Back to return to Settings, then Back again to return home.',
     'home.dialog.hardware.hostSettings3':
         'Backlight, volume and language settings are saved on the hub. Firmware updates are not ' +
-        'started from this menu; use Hardware Status in EST Studio on the computer and follow the ' +
+        'started from this menu; use Hardware Status in ATC CodeStudio on the computer and follow the ' +
         'steps below.',
     'home.dialog.hardware.outputTitle': 'Motors and outputs',
     'home.dialog.hardware.output1':
@@ -1533,8 +2130,17 @@ const en = {
         'Test ports and direction at low speed for a short time before increasing speed or adding ' +
         'a loop.',
     'home.blockGuide.category.operators': 'Operators',
+    'home.blockGuide.category.matrix': 'Matrix display',
+    'home.blockGuide.category.camera': 'Camera recognition',
+    'home.blockGuide.category.grayv2': 'Line Tracker V2',
     'home.blockGuide.category.variables': 'Variables and lists',
     'home.blockGuide.category.myBlocks': 'My Blocks',
+    'home.blockGuide.kind.event': 'Starts the blocks below when the event occurs.',
+    'home.blockGuide.kind.boolean': 'Reports true or false for a condition, wait or loop.',
+    'home.blockGuide.kind.reporter': 'Reads and reports a value for use inside another block.',
+    'home.blockGuide.kind.branch': 'Runs the blocks inside according to a condition or count, then continues.',
+    'home.blockGuide.kind.terminal': 'Ends the current flow, so later blocks do not run.',
+    'home.blockGuide.kind.statement': 'Performs this operation, then continues to the next block.',
     'home.blockGuide.modesTitle': 'Modes and parameters',
     'home.blockGuide.previewLoading': 'Generating block image',
     'home.blockGuide.previewUnavailable': 'Block image is temporarily unavailable',
@@ -1851,11 +2457,11 @@ const en = {
         'Call My Block｜Runs an existing custom block and passes its current inputs to the parameters.',
     'home.dialog.ai.title': 'AI Coding Assistant',
     'home.dialog.ai.lead':
-        'The AI Coding Assistant turns natural-language requests into EST block programs checked ' +
-        'against local rules, then renders real block previews. You always decide whether to ' +
+        'The AI Coding Assistant uses the selected EST, Spark AI or NEW AI target to turn natural-language ' +
+        'requests into locally validated blocks, then renders real previews. You always decide whether to ' +
         'insert, replace, download or run the result.',
     'home.dialog.ai.openTitle': 'Open and use the panel',
-    'home.dialog.ai.openImageAlt': 'The empty AI Coding Assistant panel in EST Studio',
+    'home.dialog.ai.openImageAlt': 'The empty AI Coding Assistant panel in ATC CodeStudio',
     'home.dialog.ai.openImageCaption':
         'The AI Coding Assistant floats above the editor and does not modify the workspace on its own.',
     'home.dialog.ai.open1':
@@ -1898,20 +2504,21 @@ const en = {
         'logic, loops, variables, lists, My Blocks, custom drawing, display or sound in follow-up ' +
         'messages. The assistant can refine the previous proposal in the current conversation.',
     'home.dialog.ai.prompt3':
-        'When EST is connected, the assistant reads one USB port snapshot and prefers detected ' +
-        'devices. USB cannot know semantic roles such as left or right wheel, so state those roles.',
+        'When a device has a valid connection, the assistant reads one port snapshot for the current ' +
+        'product and prefers detected devices. It cannot infer mechanical roles such as left or right ' +
+        'wheel, so state those roles.',
     'home.dialog.ai.prompt4':
-        'You can chat and generate without connecting EST, but you must verify every port, device ' +
-        'type and installation direction yourself.',
+        'You can chat and generate without a connected hub, but you must verify the product, every port, ' +
+        'device type and installation direction yourself.',
     'home.dialog.ai.applyTitle': 'Generate, preview and apply',
-    'home.dialog.ai.applyImageAlt': 'AI-generated EST blocks with preview and apply controls',
+    'home.dialog.ai.applyImageAlt': 'AI-generated blocks for the current product with preview and apply controls',
     'home.dialog.ai.applyImageCaption':
         'Results first appear as real block previews. You must choose Replace workspace or Insert.',
     'home.dialog.ai.apply1':
         'The assistant may answer or ask for missing details first. Generated blocks appear only ' +
         'after it has a clear program proposal.',
     'home.dialog.ai.apply2':
-        'EST Studio locally validates block types, inputs, ports and program structure before ' +
+        'ATC CodeStudio locally validates block types, inputs, ports and program structure before ' +
         'drawing the preview. A result that fails validation is not applied to the workspace.',
     'home.dialog.ai.apply3':
         'Review ports, direction, speed, units, thresholds, loops and stopping logic, and read any ' +
@@ -1927,11 +2534,13 @@ const en = {
         'short durations to verify direction and stopping. Always review AI-generated content.',
     'home.dialog.ai.scopeTitle': 'Current scope',
     'home.dialog.ai.scope1':
-        'The assistant can generate event, motor, movement, display, sound, control, sensing, vision ' +
-        'and operator blocks from the current EST toolbox, including several stacks in one proposal.',
+        'The assistant can generate event, motor, movement, display, sound, control, sensing and operator ' +
+        'blocks from the current hardware toolbox, including several stacks in one proposal. It does not ' +
+        'mix blocks or port rules from another product.',
     'home.dialog.ai.scope2':
-        'It can create and use variables, lists and My Blocks. My Blocks support number, text and ' +
-        'Boolean arguments, and it can generate custom bitmap data for the 180 × 128 hub display.',
+        'All three products support variables, lists and My Blocks. EST adds 180 × 128 drawing and computer ' +
+        'vision; Spark AI adds a 5 × 7 matrix and grayscale line following; NEW AI adds a 7 × 9 RGB matrix, ' +
+        'physical camera and Line Tracker V2.',
     'home.dialog.ai.scope3':
         'It does not generate or execute arbitrary Python, XML or JavaScript, accept external image ' +
         'URLs, or apply unapproved raw Blockly mutations. Complete unsupported work separately.',
@@ -1947,12 +2556,12 @@ const en = {
         'API settings and keys are encrypted on this computer. A key is used only with its saved ' +
         'API URL and is not automatically reused after the address changes.',
     'home.dialog.ai.privacy2':
-        'Requests send this conversation, the required block rules and, when connected, one USB ' +
-        'port snapshot to your configured AI endpoint. EST Studio does not automatically upload ' +
-        'the entire current project.',
+        'Requests send this conversation, the block rules for the current product and, when connected, ' +
+        'one port snapshot to your configured AI endpoint. ATC CodeStudio does not automatically upload the ' +
+        'entire current project.',
     'home.dialog.ai.privacy3':
         'Network access, availability, quotas, billing and data-handling rules for remote models ' +
-        'come from the selected provider. EST Studio does not create an account or buy quota for you.',
+        'come from the selected provider. ATC CodeStudio does not create an account or buy quota for you.',
     'home.dialog.ai.privacyNote':
         'Do not enter passwords, API keys, personal information or other sensitive content in a ' +
         'task description. Use only an AI service you trust and are authorized to access.',
@@ -1971,11 +2580,11 @@ const en = {
         'generate again. You can also use Check connection settings or Retry beside an error.',
     'home.dialog.software.title': 'Software information',
     'home.dialog.software.lead':
-        'Current version: EST Studio {version}. This desktop visual programming app is made for ' +
+        'Current version: ATC CodeStudio {version}. This desktop visual programming app is made for ' +
         'EST.',
     'home.dialog.software.fileTitle': 'Project files',
     'home.dialog.software.file1':
-        'EST Studio projects use the .ests extension. A saved project appears in Recent files for ' +
+        'ATC CodeStudio projects use the .atc extension. A saved project appears in Recent files for ' +
         'quick access.',
     'home.dialog.software.file2':
         'A recent-file card can open, rename or copy a project. Delete only removes it from the ' +
@@ -2005,14 +2614,14 @@ const en = {
         'Hardware Status shows the firmware version and can install firmware when an update ' +
         'package is available.',
     'home.dialog.software.update3':
-        'Back up important .ests files separately before moving to another computer or ' +
+        'Back up important .atc files separately before moving to another computer or ' +
         'reinstalling the app.',
     'home.dialog.software.updateNote':
-        'When reporting a problem, include the EST Studio version, firmware version, connection ' +
+        'When reporting a problem, include the ATC CodeStudio version, firmware version, connection ' +
         'status and reproduction steps.',
     'home.dialog.about.title': 'About us',
     'home.dialog.about.lead':
-        'EST Studio is a visual programming environment for the EST hub and its peripherals, ' +
+        'ATC CodeStudio is a visual programming environment for the EST hub and its peripherals, ' +
         'joining building, coding and device testing in one flow.',
     'home.dialog.about.purposeTitle': 'What we aim to solve',
     'home.dialog.about.purpose1':
@@ -2038,7 +2647,7 @@ const en = {
         'Include the app version, EST firmware version, Windows version and peripheral types in ' +
         'use.',
     'home.dialog.about.support3':
-        'For project-specific issues, keep an .ests file that reproduces the problem and remove ' +
+        'For project-specific issues, keep an .atc file that reproduces the problem and remove ' +
         'personal information you do not need to share.',
     'home.dialog.about.supportNote':
         'Check the matching guide on this page first; cable, port, firmware and block-input ' +
@@ -2074,7 +2683,7 @@ const en = {
     'programControls.errorMessage': 'Could not complete the program operation.',
     'programControls.firmwareUpgradeRequired':
         'The current EST firmware does not support features used by this program. Upgrade to ' +
-        'firmware that supports the required EST Studio features before running it.',
+        'firmware that supports the required ATC CodeStudio features before running it.',
     'programControls.unknownError': 'Unknown error',
     'programControls.usbDisconnected': 'EST USB was disconnected. Reconnect EST and try again.',
     'programControls.stopProgram': 'Stop program',
@@ -2422,6 +3031,7 @@ const ptBR = {
     'home.animation.car.action': 'Avancar',
     'home.animation.car.result': 'Acender luz',
     'home.recentFiles': 'Arquivos recentes',
+    'home.unknownHardware': 'Dispositivo desconhecido',
     'home.noRecentFiles': 'Ainda nao ha arquivos recentes',
     'home.noRecentFilesHint': 'Projetos novos e salvos aparecerao aqui.',
     'home.open': 'Abrir',
@@ -2479,7 +3089,7 @@ const ptBR = {
     'home.more.software': 'Informacoes do software',
     'home.more.about': 'Sobre nos',
     'home.dialog.software.title': 'Informacoes do software',
-    'home.dialog.software.body': 'EST Studio {version}\nSoftware visual de programacao para desktop',
+    'home.dialog.software.body': 'ATC CodeStudio {version}\nSoftware visual de programacao para desktop',
     'menu.hardwareStatus': 'Status do hardware',
     'status.disconnected': 'EST desconectado',
     'status.connected': 'EST conectado',
@@ -2782,6 +3392,7 @@ const zhTW = {
     'home.start': '開始',
     'home.returnToEditor': '返回編輯',
     'home.recentFiles': '最近檔案',
+    'home.unknownHardware': '未識別裝置',
     'home.noRecentFiles': '尚無最近檔案',
     'home.noRecentFilesHint': '新建或儲存作品後會顯示在這裡。',
     'home.open': '開啟',
@@ -2803,7 +3414,7 @@ const zhTW = {
     'home.more.software': '軟體資訊',
     'home.more.about': '關於我們',
     'home.dialog.software.title': '軟體資訊',
-    'home.dialog.software.body': 'EST Studio {version}\n桌面圖形化程式設計軟體',
+    'home.dialog.software.body': 'ATC CodeStudio {version}\n桌面圖形化程式設計軟體',
     'menu.hardwareStatus': '硬體狀態',
     'status.disconnected': 'EST 未連線',
     'status.connected': 'EST 已連線',
@@ -2867,6 +3478,7 @@ const ru = {
     'home.start': 'Начать',
     'home.returnToEditor': 'Вернуться в редактор',
     'home.recentFiles': 'Недавние файлы',
+    'home.unknownHardware': 'Неизвестное устройство',
     'home.noRecentFiles': 'Недавних файлов пока нет',
     'home.noRecentFilesHint': 'Новые и сохраненные проекты появятся здесь.',
     'home.open': 'Открыть',
@@ -2883,7 +3495,7 @@ const ru = {
     'home.more.software': 'О программе',
     'home.more.about': 'О нас',
     'home.dialog.software.title': 'О программе',
-    'home.dialog.software.body': 'EST Studio {version}\nВизуальная среда программирования',
+    'home.dialog.software.body': 'ATC CodeStudio {version}\nВизуальная среда программирования',
     'menu.hardwareStatus': 'Состояние оборудования',
     'status.disconnected': 'EST не подключен',
     'status.connected': 'EST подключен',
@@ -2916,7 +3528,7 @@ const EST_MESSAGES = {
     'pt-br': {...ptBR, ...cameraMessages['pt-br'], ...visionGuideMessages['pt-br']}
 };
 
-Object.keys(EST_MESSAGES).forEach(locale => Object.assign(EST_MESSAGES[locale], hardwareMessages[locale]));
+Object.keys(EST_MESSAGES).forEach(locale => Object.assign(EST_MESSAGES[locale], hardwareMessages[locale], homeMessages[locale]));
 
 const normalizeKey = locale => String(locale || EST_DEFAULT_LOCALE)
     .toLowerCase()

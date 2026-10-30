@@ -10,6 +10,9 @@ import {
 } from './est-connection-status';
 import {getEstText} from './est-i18n';
 import styles from './est-status-panel.css';
+import {dialog, getCurrentWindow} from '@electron/remote';
+import {createFirmwareVersionNotifier} from './hardware/firmware-version-notifier';
+import firmwareVersionMessages from './hardware/firmware-version-messages.json';
 
 const INITIAL_REFRESH_DELAY_MS = 1000;
 const NORMAL_REFRESH_INTERVAL_MS = 3000;
@@ -33,18 +36,30 @@ class EstStatusPanel extends React.Component {
         this.refreshInFlight = false;
         this.programRunning = false;
         this.unmounted = false;
+        this.notifyVersion = createFirmwareVersionNotifier(({version, locale}) =>
+            dialog.showMessageBox(getCurrentWindow(), {type: 'warning',
+                title: 'EST',
+                message: (firmwareVersionMessages[locale] || firmwareVersionMessages.en)
+                    .replace('{device}', 'EST').replace('{version}', String(version))}));
         this.handleProgramActivity = this.handleProgramActivity.bind(this);
+        this.handleAutoConnectPause = event => {
+            this.autoConnectPaused = Boolean(event.detail);
+            this.clearRefreshTimer();
+            if (!this.autoConnectPaused) this.scheduleRefresh(0);
+        };
     }
 
     componentDidMount () {
         // Let the main editor paint before opening the native HID handle.
         window.addEventListener(EST_PROGRAM_ACTIVITY_EVENT, this.handleProgramActivity);
+        window.addEventListener('est-auto-connect-paused', this.handleAutoConnectPause);
         this.scheduleRefresh(INITIAL_REFRESH_DELAY_MS);
     }
 
     componentWillUnmount () {
         this.unmounted = true;
         window.removeEventListener(EST_PROGRAM_ACTIVITY_EVENT, this.handleProgramActivity);
+        window.removeEventListener('est-auto-connect-paused', this.handleAutoConnectPause);
         this.clearRefreshTimer();
     }
 
@@ -63,13 +78,14 @@ class EstStatusPanel extends React.Component {
 
     scheduleRefresh (delay = (this.programRunning ? RUNNING_REFRESH_INTERVAL_MS : NORMAL_REFRESH_INTERVAL_MS)) {
         this.clearRefreshTimer();
-        if (this.unmounted) {
+        if (this.unmounted || this.autoConnectPaused) {
             return;
         }
         this.refreshTimer = setTimeout(() => this.refresh(), delay);
     }
 
     async refresh () {
+        if (this.autoConnectPaused) return;
         if (this.refreshInFlight) {
             this.scheduleRefresh();
             return;
@@ -77,9 +93,16 @@ class EstStatusPanel extends React.Component {
         this.refreshInFlight = true;
         try {
             const result = await ipcRenderer.invoke('est-auto-connect', {reuseConnection: true});
-            if (this.unmounted) return;
+            if (this.unmounted || this.autoConnectPaused) return;
             const isConnected = result.state === 'connected';
             const isCompatible = isConnected && result.compatible === true;
+            this.notifyVersion({connected: isConnected,
+                compatible: isCompatible &&
+                !(result.status && result.status.compatibility &&
+                    result.status.compatibility.programCompatible === false) && result.programCompatible !== false,
+                identity: result.device && result.device.path,
+                version: result.firmwareVersion,
+                locale: this.props.locale});
             this.programRunning = isProgramStatusActive(result.status);
             this.setState({
                 isCompatible,
@@ -92,7 +115,7 @@ class EstStatusPanel extends React.Component {
                 detail: {isCompatible, isConnected, maxProgramBytes}
             }));
         } catch (error) {
-            if (this.unmounted) return;
+            if (this.unmounted || this.autoConnectPaused) return;
             this.programRunning = false;
             this.setState({isCompatible: false, isConnected: false});
             window.dispatchEvent(new CustomEvent(EST_CONNECTION_STATUS_EVENT, {
@@ -109,6 +132,7 @@ class EstStatusPanel extends React.Component {
     }
 
     render () {
+        if (this.props.hidden) return null;
         const {locale} = this.props;
         const {isCompatible, isConnected} = this.state;
         let statusClass = styles.disconnected;
@@ -138,7 +162,8 @@ class EstStatusPanel extends React.Component {
 }
 
 EstStatusPanel.propTypes = {
-    locale: PropTypes.string.isRequired
+    locale: PropTypes.string.isRequired,
+    hidden: PropTypes.bool
 };
 
 const mapStateToProps = state => ({

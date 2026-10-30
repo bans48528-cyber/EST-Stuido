@@ -1,0 +1,52 @@
+{
+  "zh-cn": {
+    "home.selectHardware": "主页设备",
+    "home.returnToHardwareProject": "返回 {name} 工程",
+    "home.openFile": "打开文件",
+    "home.unknownFiles": "未知设备文件",
+    "home.unknownFilesHint": "这些文件的设备信息无法识别，未列入任何设备的最近文件。",
+    "home.deviceFiles": "当前设备文件",
+    "home.build.none": "暂无搭建图",
+    "home.build.noneHint": "{name} 的搭建资料尚未提供。"
+  },
+  "zh-tw": {
+    "home.selectHardware": "首頁裝置",
+    "home.returnToHardwareProject": "返回 {name} 專案",
+    "home.openFile": "開啟檔案",
+    "home.unknownFiles": "未知裝置檔案",
+    "home.unknownFilesHint": "無法識別這些檔案的裝置資訊，因此未列入任何裝置的最近檔案。",
+    "home.deviceFiles": "目前裝置檔案",
+    "home.build.none": "暫無搭建圖",
+    "home.build.noneHint": "尚未提供 {name} 的搭建資料。"
+  },
+  "en": {
+    "home.selectHardware": "Homepage device",
+    "home.returnToHardwareProject": "Return to {name} project",
+    "home.openFile": "Open file",
+    "home.unknownFiles": "Unknown-device files",
+    "home.unknownFilesHint": "The device metadata in these files could not be identified. They are not included in any device’s recent files.",
+    "home.deviceFiles": "Current device files",
+    "home.build.none": "No building guides yet",
+    "home.build.noneHint": "Building guides for {name} are not available yet."
+  },
+  "pt-br": {
+    "home.selectHardware": "Dispositivo da página inicial",
+    "home.returnToHardwareProject": "Voltar ao projeto {name}",
+    "home.openFile": "Abrir arquivo",
+    "home.unknownFiles": "Arquivos de dispositivo desconhecido",
+    "home.unknownFilesHint": "Não foi possível identificar o dispositivo destes arquivos. Eles não aparecem nos arquivos recentes de nenhum dispositivo.",
+    "home.deviceFiles": "Arquivos do dispositivo atual",
+    "home.build.none": "Nenhum guia de montagem",
+    "home.build.noneHint": "Os guias de montagem de {name} ainda não estão disponíveis."
+  },
+  "ru": {
+    "home.selectHardware": "Устройство на главной",
+    "home.returnToHardwareProject": "Вернуться к проекту {name}",
+    "home.openFile": "Открыть файл",
+    "home.unknownFiles": "Файлы неизвестного устройства",
+    "home.unknownFilesHint": "Не удалось определить устройство по метаданным этих файлов. Они не включены в недавние файлы устройств.",
+    "home.deviceFiles": "Файлы текущего устройства",
+    "home.build.none": "Схем сборки пока нет",
+    "home.build.noneHint": "Схемы сборки для {name} пока недоступны."
+  }
+}

@@ -58,6 +58,15 @@ const fixture = (options = {}) => {
     return {service, transport};
 };
 (async () => {
+    for (const version of [0, 1, 193, 214, 320, 322, 65535]) {
+        const {service} = fixture({onOpen: transport => transport.report(monitor({version}))});
+        try {
+            await service.connect({path: port.path});
+            assert.equal(service.getState().connected, true);
+            assert.equal(service.getState().programSupported, false);
+            assert.throws(() => service.requireControlReady(), /NEW_VERSION_UNSUPPORTED/);
+        } finally { await service.shutdown(); }
+    }
     const status = normalizeNewAiMonitor(monitor(), 123);
     assert.equal(status.version, 321);
     assert.equal(status.timestamp, 123);

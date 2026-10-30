@@ -1,7 +1,10 @@
 import computedStyleToInlineStyle from 'computed-style-to-inline-style';
 import ScratchBlocks from 'openblock-blocks';
 
+import {defineNewBlocksWithLocale, getNewToolboxCategories} from './new-ai/blocks';
+import {defineSparkBlocksWithLocale, getSparkToolboxCategories} from './spark-ai/blocks';
 import EST_HOME_BLOCK_GUIDE_CATEGORIES from './est-home-block-guide';
+import {getProductBlockGuideIds} from './est-home-product-block-guide';
 import {getEstToolboxCategories} from './est-blocks/toolbox';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -14,10 +17,15 @@ const previewCache = {};
 const previewRequests = {};
 const imageDataUriCache = {};
 
-const allGuideBlockIds = () => EST_HOME_BLOCK_GUIDE_CATEGORIES.reduce(
-    (blockIds, category) => blockIds.concat(category.items),
-    []
-);
+const allGuideBlockIds = (hardwareId, locale) => {
+    if (hardwareId === 'est') {
+        return EST_HOME_BLOCK_GUIDE_CATEGORIES.reduce(
+            (blockIds, category) => blockIds.concat(category.items),
+            []
+        );
+    }
+    return getProductBlockGuideIds(hardwareId, locale);
+};
 
 const makeWorkspaceMetrics = () => ({
     absoluteLeft: 0,
@@ -83,9 +91,14 @@ const createPreviewWorkspace = () => {
     return {host, workspace};
 };
 
-const createToolboxBlockMap = locale => {
+const createToolboxBlockMap = (hardwareId, locale) => {
+    if (hardwareId === 'spark-ai') defineSparkBlocksWithLocale(ScratchBlocks, locale);
+    if (hardwareId === 'new-ai') defineNewBlocksWithLocale(ScratchBlocks, locale);
+    const toolbox = hardwareId === 'spark-ai' ? getSparkToolboxCategories(locale) :
+        hardwareId === 'new-ai' ? getNewToolboxCategories(locale) :
+            getEstToolboxCategories(locale, true);
     const toolboxDocument = new DOMParser().parseFromString(
-        `<xml>${getEstToolboxCategories(locale, true)}</xml>`,
+        `<xml>${toolbox}</xml>`,
         'text/xml'
     );
     return Array.from(toolboxDocument.getElementsByTagName('block')).reduce((blockMap, blockNode) => {
@@ -245,11 +258,11 @@ const renderBlockPreview = async (workspace, blockNode) => {
     }
 };
 
-const generatePreviews = (locale, onProgress) => new Promise(resolve => {
-    const blockIds = allGuideBlockIds();
+const generatePreviews = (hardwareId, locale, onProgress) => new Promise(resolve => {
+    const blockIds = allGuideBlockIds(hardwareId, locale);
     const previews = {};
     const previewWorkspace = createPreviewWorkspace();
-    const blockMap = createToolboxBlockMap(locale);
+    const blockMap = createToolboxBlockMap(hardwareId, locale);
     addDataBlocks(previewWorkspace.workspace, blockMap, locale);
     addProcedureBlocks(blockMap, locale);
     let index = 0;
@@ -259,7 +272,7 @@ const generatePreviews = (locale, onProgress) => new Promise(resolve => {
         if (previewWorkspace.host.parentNode) {
             previewWorkspace.host.parentNode.removeChild(previewWorkspace.host);
         }
-        previewCache[locale] = previews;
+        previewCache[`${hardwareId}:${locale}`] = previews;
         resolve(previews);
     };
 
@@ -289,18 +302,22 @@ const generatePreviews = (locale, onProgress) => new Promise(resolve => {
     window.setTimeout(() => renderBatch(), 0);
 });
 
-export const createEstBlockPreviews = (locale, onProgress) => {
-    if (previewCache[locale]) {
-        if (onProgress) onProgress(previewCache[locale]);
-        return Promise.resolve(previewCache[locale]);
+export const createHardwareBlockPreviews = (hardwareId, locale, onProgress) => {
+    const cacheKey = `${hardwareId}:${locale}`;
+    if (previewCache[cacheKey]) {
+        if (onProgress) onProgress(previewCache[cacheKey]);
+        return Promise.resolve(previewCache[cacheKey]);
     }
-    if (!previewRequests[locale]) {
-        previewRequests[locale] = generatePreviews(locale, onProgress).then(previews => {
-            delete previewRequests[locale];
+    if (!previewRequests[cacheKey]) {
+        previewRequests[cacheKey] = generatePreviews(hardwareId, locale, onProgress).then(previews => {
+            delete previewRequests[cacheKey];
             return previews;
         });
     }
-    return previewRequests[locale];
+    return previewRequests[cacheKey];
 };
+
+export const createEstBlockPreviews = (locale, onProgress) =>
+    createHardwareBlockPreviews('est', locale, onProgress);
 
 export default createEstBlockPreviews;

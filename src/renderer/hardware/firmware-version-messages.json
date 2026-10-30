@@ -1,0 +1,7 @@
+{
+  "zh-cn": "已连接 {device}，固件版本为 {version}，与当前软件不匹配。请在设备信息中更新固件后使用编程功能。",
+  "zh-tw": "已連接 {device}，韌體版本為 {version}，與目前軟體不相容。請在裝置資訊中更新韌體後使用程式設計功能。",
+  "en": "Connected to {device}, firmware {version}. This version does not match the software. Update the firmware in Device information before programming.",
+  "pt-br": "Conectado a {device}, firmware {version}. Esta versão não corresponde ao software. Atualize o firmware em Informações do dispositivo antes de programar.",
+  "ru": "Подключено устройство {device}, прошивка {version}. Версия не соответствует программе. Обновите прошивку в информации об устройстве перед программированием."
+}

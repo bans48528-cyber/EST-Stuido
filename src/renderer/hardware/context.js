@@ -1,6 +1,7 @@
 import {DEFAULT_HARDWARE_ID, getHardwareProfile} from '../../common/hardware-profiles';
 
 export const HARDWARE_CHANGED_EVENT = 'est-hardware-changed';
+export const HARDWARE_DRAFTS_DISCARDED_EVENT = 'est-hardware-drafts-discarded';
 let hardwareId = DEFAULT_HARDWARE_ID;
 let busy = false;
 let generation = 0;

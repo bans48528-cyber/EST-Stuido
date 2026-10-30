@@ -5,6 +5,14 @@
  * @returns {string} transformed component source.
  */
 module.exports = function (source) {
+    const newProjectPattern = / {4}handleClickNew \(\) \{[\s\S]*?\r?\n {4}\}\r?\n(?= {4}handleClickRemix)/;
+    if (!newProjectPattern.test(source)) throw new Error('Cannot locate new-project menu handler');
+    source = source.replace(newProjectPattern, [
+        '    handleClickNew () {',
+        '        this.props.onRequestCloseFile();',
+        "        window.dispatchEvent(new CustomEvent('est-home-new-project'));",
+        '    }', ''
+    ].join('\n'));
     const deviceSelectionPattern = new RegExp([
         ' {20}<Divider className=\\{classNames\\(styles\\.divider\\)\\} \\/>\\r?\\n',
         ' {20}<div\\r?\\n',
@@ -165,7 +173,7 @@ module.exports = function (source) {
         .replace(communityImport, '')
         .replace(communityHandlerPattern, [
             '    handleClickOpenCommunity () {',
-            '        // Community navigation is not part of EST Studio.',
+            '        // Community navigation is not part of ATC CodeStudio.',
             '    }',
             ''
         ].join('\n'))
@@ -589,7 +597,7 @@ module.exports = function (source) {
             .replace(openBlockLogoSmallImport, '')
             .replace(openBlockLogoSrc, 'src={estMenuLogo}')
             .replace(openBlockLogoDefaultProps, estLogoDefaultProps)
-            .replace('alt="OpenBlock"', 'alt="EST Studio"');
+            .replace('alt="OpenBlock"', 'alt="ATC CodeStudio"');
     }
 
     const settingMenuPattern = new RegExp([

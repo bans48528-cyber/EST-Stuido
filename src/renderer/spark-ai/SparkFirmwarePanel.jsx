@@ -1,196 +1,205 @@
 /* eslint-disable react/jsx-no-bind */
 import React from 'react';
 import PropTypes from 'prop-types';
+import {createPortal} from 'react-dom';
 import {ipcRenderer} from 'electron';
-import {sparkFirmwareBlockers, sparkFirmwareRecoveryPort} from '../../common/spark-firmware';
+import {SPARK_FIRMWARE_VERSION, sparkFirmwareMismatchKey, sparkFirmwareRecoveryPort,
+    sparkFirmwareBlockers} from '../../common/spark-firmware';
 import {sparkRuntimeText, sparkRuntimeError} from './runtime-messages';
 import styles from './SparkRuntime.css';
 
+// Mounted beside the connection button so version prompts also work with the inspector closed.
 export default class SparkFirmwarePanel extends React.Component {
     constructor (props) {
         super(props);
         this.state = {open: Boolean(props.device.firmware && props.device.firmware.active),
-            checking: false,
             starting: false,
-            report: null,
+            attempted: Boolean(props.device.firmware && props.device.firmware.active),
             error: '',
-            confirmed: false,
-            recovery: false,
-            path: ''};
+            mismatch: false};
+        this.panel = React.createRef();
+        this.connectionEpoch = 0;
+        this.keydown = event => {
+            if (!this.state.open) return;
+            event.stopPropagation();
+            if (event.key === 'Escape') {
+                event.preventDefault(); this.close();
+            }
+            if (event.key !== 'Tab' || !this.panel.current) return;
+            const items = [...this.panel.current.querySelectorAll('button:not(:disabled)')];
+            if (!items.length) {
+                event.preventDefault(); return;
+            }
+            const index = items.indexOf(document.activeElement);
+            if (event.shiftKey && index <= 0) {
+                event.preventDefault(); items[items.length - 1].focus();
+            } else if (!event.shiftKey && (index < 0 || index === items.length - 1)) {
+                event.preventDefault(); items[0].focus();
+            }
+        };
     }
     componentDidMount () {
-        if (this.state.open) this.inspect();
+        document.addEventListener('keydown', this.keydown, true);
+        this.maybePrompt();
+    }
+    componentDidUpdate (previous, state) {
+        const before = previous.device;
+        const after = this.props.device;
+        if (before.connected !== after.connected || before.port !== after.port ||
+            before.connectionMode !== after.connectionMode) {
+            this.connectionEpoch++;
+            if (!after.connected && !this.active()) this.prompted = null;
+        }
+        this.maybePrompt();
+        if (!state.open && this.state.open && this.panel.current) {
+            const button = this.panel.current.querySelector('button:not(:disabled)');
+            (button || this.panel.current).focus({preventScroll: true});
+        }
     }
     componentWillUnmount () {
         this.unmounted = true;
+        document.removeEventListener('keydown', this.keydown, true);
     }
-    async inspect () {
-        if (this.inspectPending) return;
-        this.inspectPending = true;
-        this.setState({checking: true, error: ''});
-        try {
-            const report = await ipcRenderer.invoke('spark-firmware-inspect');
-            if (!this.unmounted) this.setState({report});
-        } catch (error) {
-            if (!this.unmounted) this.setState({report: null, error});
-        } finally {
-            this.inspectPending = false;
-            if (!this.unmounted) this.setState({checking: false});
-        }
+    active () {
+        return this.state.starting || Boolean(this.props.device.firmware && this.props.device.firmware.active);
+    }
+    waitingForRestart () {
+        const firmware = this.props.device.firmware;
+        return Boolean(firmware && firmware.active && firmware.transferComplete &&
+            ['restarting', 'reconnecting'].includes(firmware.phase));
+    }
+    maybePrompt () {
+        const key = sparkFirmwareMismatchKey(this.props.device);
+        if (!key || this.prompted === key || this.state.open) return;
+        this.prompted = key;
+        this.open(true);
+    }
+    open (mismatch = false) {
+        if (this.state.open) return;
+        this.previousFocus = document.activeElement;
+        this.prompted = sparkFirmwareMismatchKey(this.props.device) || this.prompted;
+        this.setState({open: true, error: '', attempted: this.active(), mismatch});
+        if (this.props.onOpen) this.props.onOpen();
+    }
+    close () {
+        if (this.active() && !this.waitingForRestart()) return;
+        this.setState({open: false}, () => {
+            if (this.previousFocus && this.previousFocus.isConnected) this.previousFocus.focus({preventScroll: true});
+        });
     }
     async start () {
-        if (this.startPending) return;
+        if (this.startPending || this.active() || this.props.device.busy) return;
         this.startPending = true;
-        this.setState({starting: true, error: ''});
-        const {report, recovery, path, confirmed} = this.state;
+        const epoch = this.connectionEpoch;
+        this.setState({starting: true, attempted: true, error: ''});
         try {
-            await ipcRenderer.invoke('spark-firmware-update', {releaseId: report && report.releaseId,
-                confirmedErase: confirmed,
-                recovery: recovery && !this.props.device.connected,
+            // File validation is automatic. The dialog's Update button is the sole user confirmation.
+            const report = await ipcRenderer.invoke('spark-firmware-inspect');
+            if (this.unmounted) return;
+            if (epoch !== this.connectionEpoch) throw new Error('SPARK_FW_DEVICE_CHANGED');
+            const device = this.props.device;
+            const recovery = !device.connected && Boolean((device.firmware && device.firmware.recoveryRequired) ||
+                device.error === 'SPARK_FW_RECOVERY' || (device.discovery && device.discovery.status === 'recovery'));
+            const ports = ((device.discovery && device.discovery.ports) || []).filter(sparkFirmwareRecoveryPort);
+            const path = recovery && ports.length === 1 ? ports[0].path : null;
+            const blockers = sparkFirmwareBlockers(device, report, {recovery, path});
+            if (blockers.length) throw new Error(blockers[0]);
+            await ipcRenderer.invoke('spark-firmware-update', {releaseId: report.releaseId,
+                confirmedErase: true,
+                recovery,
                 path});
         } catch (error) {
             if (!this.unmounted) this.setState({error});
         } finally {
             this.startPending = false;
-            if (!this.unmounted) this.setState({starting: false, confirmed: false});
+            if (!this.unmounted) this.setState({starting: false});
         }
     }
     render () {
+        if (!this.state.open) return null;
         const {locale, device} = this.props;
-        const {open, checking, starting, report, error, confirmed, recovery: requestedRecovery, path} = this.state;
-        const recovery = requestedRecovery && !device.connected;
+        const {starting, attempted, error, mismatch} = this.state;
         const t = (id, values) => sparkRuntimeText(id, locale, values);
-        const firmware = device.firmware;
-        const active = starting || Boolean(firmware && firmware.active);
-        const blockers = sparkFirmwareBlockers(device, report, {recovery, path});
-        const ports = ((device.discovery && device.discovery.ports) || []).filter(sparkFirmwareRecoveryPort);
-        return (<section className={styles.firmwareSection}>
-            <button
-                type="button"
-                id="spark-firmware-toggle"
-                className={styles.command}
-                aria-expanded={open}
-                aria-controls="spark-firmware-panel"
-                onClick={() => this.setState({open: !open}, () => {
-                    if (!open) this.inspect();
-                })}
-            >{t('firmwareUpdate')}</button>
-            {open ? <div
+        const firmware = attempted ? device.firmware : null;
+        const active = this.active();
+        const dismissible = this.waitingForRestart();
+        const complete = !error && !active && firmware && firmware.phase === 'complete';
+        const failure = error || (!active && firmware && firmware.phase === 'error' && firmware.error);
+        const phase = starting && (!firmware || !firmware.active) ? 'checking' : (firmware && firmware.phase);
+        return createPortal(<div className={styles.backdrop}>
+            <section
                 id="spark-firmware-panel"
-                aria-busy={checking}
+                className={styles.firmwareDialog}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="spark-firmware-title"
+                aria-describedby="spark-firmware-notice"
+                aria-busy={active}
+                tabIndex={-1}
+                ref={this.panel}
             >
-                <h3>{t('firmwareResources')}</h3>
-                <p className={styles.firmwareNotice}>{t('firmwareEraseNotice')}</p>
-                {report ? <React.Fragment>
-                    <dl className={styles.summary}>
-                        <div><dt>{t('firmwareBundleVersion')}</dt><dd>{report.version}</dd></div>
-                        <div><dt>{t('firmwareSource')}</dt><dd>{report.source}</dd></div>
-                    </dl>
-                    <p role="status">{t(report.valid ? 'firmwareIntegrityPassed' : 'SPARK_FW_RESOURCE_INVALID')}</p>
-                    <table className={styles.firmwareFiles}>
-                        <thead><tr><th>{t('firmwareFile')}</th><th>{t('firmwareSize')}</th>
-                            <th>{t('firmwareCheck')}</th></tr></thead>
-                        <tbody>{report.files.map(file => (<tr key={file.path}>
-                            <td>{file.path}</td><td>{file.bytes.toLocaleString(locale)} B</td>
-                            <td>{t(file.valid ? 'firmwareFilePassed' : file.error)}</td>
-                        </tr>))}</tbody>
-                    </table>
-                </React.Fragment> : null}
-                {error ? <p
-                    className={styles.error}
-                    role="alert"
-                >{sparkRuntimeError(error, locale)}</p> : null}
-                {firmware && firmware.phase !== 'idle' ? <div
+                <h2 id="spark-firmware-title">{t(complete ? 'firmwareDone' : 'firmwareUpdate')}</h2>
+                {attempted ? null : <p>{mismatch ? t('firmwareMismatch',
+                    {current: device.status && device.status.version, version: SPARK_FIRMWARE_VERSION}) :
+                    t('firmwareQuestion', {version: SPARK_FIRMWARE_VERSION})}</p>}
+                <p id="spark-firmware-notice">{t('firmwareEraseNotice')}</p>
+                {dismissible ? <p>{t('firmwareBackgroundHint')}</p> : null}
+                {active || complete ? <div
                     className={styles.firmwareProgress}
                     role="status"
                 >
-                    <strong>{t(`fw.${firmware.phase}`, {version: firmware.result && firmware.result.version})}</strong>
-                    {firmware.active && firmware.phase === 'transferring' ? <React.Fragment>
+                    <strong>{t(`fw.${complete ? 'complete' : phase || 'checking'}`,
+                        {version: firmware && firmware.result && firmware.result.version})}</strong>
+                    {active && phase === 'transferring' && firmware ? <React.Fragment>
                         <progress
                             max={firmware.total}
                             value={firmware.bytes}
                         />
-                        <span>{firmware.file} · {Math.floor(firmware.bytes * 100 / firmware.total)}%</span>
-                    </React.Fragment> : null}
-                    {firmware.error && !error ? <span>{t(firmware.error)}</span> : null}
-                </div> : null}
-                {!device.connected && !active ? <div className={styles.firmwareRecovery}>
-                    <label><input
-                        id="spark-firmware-recovery"
-                        type="checkbox"
-                        checked={recovery}
-                        onChange={event => this.setState({recovery: event.target.checked,
-                            confirmed: false,
-                            path: ports.length === 1 ? ports[0].path : path})}
-                    />{t('firmwareRecovery')}</label>
-                    {recovery ? <React.Fragment>
-                        <p>{t('firmwareRecoveryHelp')}</p>
-                        <select
-                            id="spark-firmware-recovery-port"
-                            value={path}
-                            aria-label={t('serial')}
-                            onChange={event => this.setState({path: event.target.value, confirmed: false})}
-                        >
-                            <option value="">{t('SPARK_FW_SELECT_PORT')}</option>
-                            {ports.map(port => (<option
-                                key={port.path}
-                                value={port.path}
-                            >{port.path}</option>))}
-                        </select>
+                        <span>{Math.floor(firmware.bytes * 100 / firmware.total)}%</span>
                     </React.Fragment> : null}
                 </div> : null}
-                <ul
-                    id="spark-firmware-blockers"
-                    className={styles.firmwareBlockers}
-                >
-                    {active ? null : blockers.map(code => <li key={code}>{t(code)}</li>)}
-                </ul>
-                <label className={styles.firmwareConfirm}><input
-                    id="spark-firmware-confirm"
-                    type="checkbox"
-                    checked={confirmed}
-                    disabled={active}
-                    onChange={event => this.setState({confirmed: event.target.checked})}
-                />{t('firmwareEraseConfirm')}</label>
+                {failure ? <p
+                    className={styles.error}
+                    role="alert"
+                >{sparkRuntimeError(failure, locale)}</p> : null}
                 <div className={styles.firmwareActions}>
                     <button
+                        id="spark-firmware-cancel"
                         type="button"
-                        id="spark-firmware-check"
                         className={styles.command}
-                        disabled={checking || active}
-                        onClick={() => this.inspect()}
-                    >{t(checking ? 'firmwareChecking' : 'firmwareRecheck')}</button>
-                    <button
-                        type="button"
+                        disabled={active && !dismissible}
+                        onClick={() => this.close()}
+                    >{t(dismissible || complete || failure ? 'firmwareClose' : 'firmwareCancel')}</button>
+                    {complete ? null : <button
                         id="spark-firmware-start"
-                        className={styles.command}
-                        disabled={checking || active || !confirmed || blockers.length > 0}
-                        aria-describedby="spark-firmware-blockers"
+                        type="button"
+                        className={`${styles.command} ${styles.firmwarePrimary}`}
+                        disabled={active || device.busy}
                         onClick={() => this.start()}
-                    >{t('firmwareStart')}</button>
+                    >{t(active ? 'firmwareUpdating' : (failure ? 'firmwareRetry' : 'firmwareStart'))}</button>}
                 </div>
-            </div> : null}
-        </section>);
+            </section>
+        </div>, document.body);
     }
 }
 SparkFirmwarePanel.propTypes = {
     locale: PropTypes.string.isRequired,
+    onOpen: PropTypes.func,
     device: PropTypes.shape({
         connected: PropTypes.bool,
+        port: PropTypes.string,
         connectionMode: PropTypes.string,
-        compatible: PropTypes.bool,
         busy: PropTypes.bool,
-        stale: PropTypes.bool,
-        monitoring: PropTypes.bool,
         error: PropTypes.string,
         firmware: PropTypes.shape({active: PropTypes.bool,
+            transferComplete: PropTypes.bool,
+            recoveryRequired: PropTypes.bool,
             phase: PropTypes.string,
             total: PropTypes.number,
             bytes: PropTypes.number,
-            file: PropTypes.string,
             error: PropTypes.string,
             result: PropTypes.shape({version: PropTypes.number})}),
         discovery: PropTypes.shape({status: PropTypes.string, ports: PropTypes.arrayOf(PropTypes.shape({}))}),
-        status: PropTypes.shape({version: PropTypes.number, running: PropTypes.bool})
+        status: PropTypes.shape({version: PropTypes.number})
     }).isRequired
 };

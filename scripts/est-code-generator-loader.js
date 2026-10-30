@@ -1,5 +1,5 @@
 /**
- * EST Studio has one built-in MicroPython target and does not use OpenBlock's
+ * ATC CodeStudio has one built-in MicroPython target and does not use OpenBlock's
  * generic device picker. Make the code editor select Python when deviceType is
  * intentionally empty.
  * @param {string} source - OpenBlock code-generator or device helper source.

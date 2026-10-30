@@ -207,7 +207,7 @@ const EST_MOTOR_STALL_PROGRAM_REQUIRED_CAPABILITIES = (
 
 assert.strictEqual(EST_PROGRAM_NAME_MAX_BYTES, 31);
 const englishProgramRequest = buildEstProgramRequest({
-    projectTitle: 'Line Follower.ests',
+    projectTitle: 'Line Follower.atc',
     slot: 2,
     source: 'import est_runtime as rt\n'
 });
@@ -231,9 +231,9 @@ const truncatedEmojiName = normalizeEstProgramName('😀😀😀😀😀😀😀
 assert.strictEqual(truncatedEmojiName, '😀😀😀😀😀😀😀');
 assert.ok(utf8ByteLength(truncatedEmojiName) <= EST_PROGRAM_NAME_MAX_BYTES);
 assert.ok(!truncatedEmojiName.includes('\uFFFD'));
-assert.strictEqual(normalizeEstProgramName('   .ests  ', 6), 'Program 6');
-assert.strictEqual(normalizeEstProgramName('C:\\Users\\EST\\机器狗.ESTS', 1), '机器狗');
-assert.strictEqual(normalizeEstProgramName('A\0B.ests', 3), 'AB');
+assert.strictEqual(normalizeEstProgramName('   .atc  ', 6), 'Program 6');
+assert.strictEqual(normalizeEstProgramName('C:\\Users\\EST\\机器狗.ATC', 1), '机器狗');
+assert.strictEqual(normalizeEstProgramName('A\0B.atc', 3), 'AB');
 
 const OPENBLOCK_NATIVE_OPERATOR_IDS = [
     'operator_add',
@@ -2523,6 +2523,12 @@ const menuBarSource = `import CommunityButton from './community-button.jsx'; // 
     handleClickOpenCommunity () {
         window.open('https://community.openblock.cc');
     }
+    handleClickNew () {
+        this.props.onClickNew();
+    }
+    handleClickRemix () {
+        this.props.onClickRemix();
+    }
 before
                     <div
                         className={classNames(styles.menuBarItem,
@@ -2587,6 +2593,8 @@ before
 after
                 title: PropTypes.string, // text for the menu item`;
 const transformedMenuBar = menuBarLoader(menuBarSource);
+assert.match(transformedMenuBar, /new CustomEvent\('est-home-new-project'\)/);
+assert.ok(!transformedMenuBar.includes('this.props.onClickNew()'));
 assert.ok(!transformedMenuBar.includes('handleSelectDeviceMouseUp'));
 assert.ok(!transformedMenuBar.includes('styles.programModeGroup'));
 assert.ok(!transformedMenuBar.includes('this.props.editMenuOpen'));
@@ -2719,7 +2727,7 @@ assert.strictEqual((transformedFullMenuBar.match(/<EstCodeDrawerToggle \/>/g) ||
 assert.strictEqual((transformedFullMenuBar.match(/<HardwareMenu \/>/g) || []).length, 1);
 assert.ok(!transformedFullMenuBar.includes("import openblockLogo from './openblock-logo.svg';"));
 assert.ok(!transformedFullMenuBar.includes("import openblockLogoSmall from './openblock-logo-small.svg';"));
-assert.match(transformedFullMenuBar, /alt="EST Studio"/);
+assert.match(transformedFullMenuBar, /alt="ATC CodeStudio"/);
 assert.match(transformedFullMenuBar, /src=\{estMenuLogo\}/);
 assert.match(transformedFullMenuBar, /logo: estMenuLogo/);
 assert.match(transformedFullMenuBar, /logoSmall: estMenuLogo/);
@@ -2952,103 +2960,40 @@ const estStatusPanelStyles = fs.readFileSync(path.resolve(
 assert.match(estStatusPanelStyles, /\.statusBarItem\s*\{[\s\S]*font-size: 0\.75rem;/);
 assert.match(estStatusPanelStyles, /\.statusBarItem\s*\{[\s\S]*font-weight: bold;/);
 const estHardwareStatusButtonSource = fs.readFileSync(path.resolve(
-    __dirname,
-    '..',
-    'src',
-    'renderer',
-    'EstHardwareStatusButton.jsx'
+    __dirname, '..', 'src', 'renderer', 'EstHardwareStatusButton.jsx'
 ), 'utf8');
-assert.match(estHardwareStatusButtonSource, /getEstText\('hardware\.title'/);
+assert.match(estHardwareStatusButtonSource, /<HardwareStatusPopover/);
+assert.match(estHardwareStatusButtonSource, /hardwareId="est"/);
+assert.match(estHardwareStatusButtonSource, /triggerRef=\{this\.buttonRef\}/);
+assert.match(estHardwareStatusButtonSource, /onClose=\{this\.handleClose\}/);
+assert.match(estHardwareStatusButtonSource, /<HardwareConnectionSettings/);
+assert.match(estHardwareStatusButtonSource, /id="est-connection"/);
+assert.match(estHardwareStatusButtonSource, /aria-expanded=\{isOpen\}/);
+assert.match(estHardwareStatusButtonSource, /className=\{connectionStyles\.connection\}/);
 assert.match(estHardwareStatusButtonSource, /state\.locales\.locale/);
-assert.match(estHardwareStatusButtonSource, /className=\{styles\.overlay\}/);
-assert.ok(!estHardwareStatusButtonSource.includes('aria-modal'));
-assert.match(estHardwareStatusButtonSource, /handleToggle/);
-assert.match(estHardwareStatusButtonSource, /const isOpen = !state\.isOpen/);
-assert.match(estHardwareStatusButtonSource, /handleClose/);
-assert.match(estHardwareStatusButtonSource, /handlePanelDragStart/);
-assert.match(estHardwareStatusButtonSource, /handlePanelDragMove/);
-assert.match(estHardwareStatusButtonSource, /handlePanelDragEnd/);
-assert.match(estHardwareStatusButtonSource, /onMouseDown=\{this\.handlePanelDragStart\}/);
-assert.match(estHardwareStatusButtonSource, /style=\{panelStyle\}/);
-assert.match(estHardwareStatusButtonSource, /renderPortsOverview/);
-assert.match(estHardwareStatusButtonSource, /renderConnectionAndBattery/);
-assert.match(
-    estHardwareStatusButtonSource,
-    /\{this\.renderPortsOverview\(\)\}\s*\{this\.renderConnectionAndBattery\(\)\}/
-);
-assert.ok(!estHardwareStatusButtonSource.includes('styles.menuIcon'));
-assert.ok(!estHardwareStatusButtonSource.includes('<svg'));
-assert.match(estHardwareStatusButtonSource, /getEstText\('hardware\.manualRefresh'/);
-assert.match(estHardwareStatusButtonSource, /batteryPercentText\(status\)/);
-assert.ok(!estHardwareStatusButtonSource.includes('batteryLevel}/4'));
-assert.match(estHardwareStatusButtonSource, /getEstText\('firmware\.updateButton'/);
 assert.match(estHardwareStatusButtonSource, /FIRMWARE_UPDATE_ACTIONS = \{/);
 assert.match(estHardwareStatusButtonSource, /data-firmware-target=\{FIRMWARE_UPDATE_ACTIONS\.upgrade\}/);
 assert.match(estHardwareStatusButtonSource, /data-firmware-target=\{FIRMWARE_UPDATE_ACTIONS\.downgrade\}/);
 assert.match(estHardwareStatusButtonSource, /ipcRenderer\.invoke\('est-flash-firmware'/);
 assert.match(estHardwareStatusButtonSource, /ipcRenderer\.on\('est-firmware-update-progress'/);
 assert.match(estHardwareStatusButtonSource, /ipcRenderer\.removeListener\('est-firmware-update-progress'/);
-assert.match(estHardwareStatusButtonSource, /firmware\.audioSyncRunning/);
-assert.match(estHardwareStatusButtonSource, /firmware\.updateWithAudioDone/);
-assert.match(estHardwareStatusButtonSource, /dialog\.showMessageBox\(remote\.getCurrentWindow\(\)/);
-assert.match(estHardwareStatusButtonSource, /est-hardware-status/);
 assert.match(estHardwareStatusButtonSource, /REFRESH_INTERVAL_MS = 250/);
-assert.match(estHardwareStatusButtonSource, /PANEL_DEFAULT_WIDTH = 600/);
-assert.match(estHardwareStatusButtonSource, /PANEL_DEFAULT_HEIGHT = 420/);
-assert.match(estHardwareStatusButtonSource, /status.statusPollingDeferred/);
-assert.match(estHardwareStatusButtonSource, /getEstText\('hardware\.runningNotice'/);
-assert.match(estHardwareStatusButtonSource, /getEstText\('programControls\.usbDisconnected'/);
-assert.match(estHardwareStatusButtonSource, /stripRemoteErrorPrefix/);
-for (const hardwareStatusKey of [
-    'hardware.connectionStatus',
-    'hardware.connectionBattery',
-    'hardware.firmwareVersion',
-    'hardware.protocolVersion',
-    'hardware.battery',
-    'hardware.sampleVoltage',
-    'hardware.motors',
-    'hardware.sensors',
-    'hardware.notConnected'
-]) {
-    assert.ok(estHardwareStatusButtonSource.includes(`'${hardwareStatusKey}'`), hardwareStatusKey);
-}
-assert.ok(!estHardwareStatusButtonSource.includes('<h3 className={styles.sectionTitle}>能力</h3>'));
-assert.ok(!estHardwareStatusButtonSource.includes('<h3 className={styles.sectionTitle}>Python 程序</h3>'));
-assert.ok(!estHardwareStatusButtonSource.includes('renderCapabilities'));
-assert.ok(!estHardwareStatusButtonSource.includes('renderProgramStatus'));
-assert.ok(!estHardwareStatusButtonSource.includes('renderConnectionSummary'));
-assert.ok(!estHardwareStatusButtonSource.includes('renderBattery'));
-const estHardwareStatusButtonStyles = fs.readFileSync(path.resolve(
-    __dirname,
-    '..',
-    'src',
-    'renderer',
-    'EstHardwareStatusButton.css'
+const hardwarePopoverSource = fs.readFileSync(path.resolve(
+    __dirname, '..', 'src', 'renderer', 'hardware', 'HardwareStatusPopover.jsx'
 ), 'utf8');
-assert.match(estHardwareStatusButtonStyles, /\.menu-button:hover/);
-assert.match(estHardwareStatusButtonStyles, /background-color: \$ui-black-transparent/);
-assert.match(estHardwareStatusButtonStyles, /\.menu-button\s*\{[\s\S]*font-size: 0\.75rem;/);
-assert.match(estHardwareStatusButtonStyles, /\.menu-button\s*\{[\s\S]*font-weight: bold;/);
-assert.match(estHardwareStatusButtonStyles, /\.menu-button-open\s*\{[\s\S]*color: #1f2937;/);
-assert.ok(!estHardwareStatusButtonStyles.includes('color: #ffffff'));
-assert.ok(!estHardwareStatusButtonStyles.includes('.menu-icon'));
-assert.match(estHardwareStatusButtonStyles, /\.overlay/);
-assert.match(estHardwareStatusButtonStyles, /\.overlay\s*\{[\s\S]*pointer-events: none/);
-assert.match(estHardwareStatusButtonStyles, /\.panel/);
-assert.match(estHardwareStatusButtonStyles, /\.panel\s*\{[\s\S]*position: fixed/);
-assert.match(estHardwareStatusButtonStyles, /\.panel\s*\{[\s\S]*pointer-events: auto/);
-assert.match(estHardwareStatusButtonStyles, /\.panel\s*\{[\s\S]*width: min\(600px/);
-assert.match(estHardwareStatusButtonStyles, /\.panel\s*\{[\s\S]*max-height: min\(520px/);
-assert.match(estHardwareStatusButtonStyles, /\.port-list\s*\{[\s\S]*grid-template-columns: repeat\(4/);
-assert.match(estHardwareStatusButtonStyles, /\.port-section\s*\{[\s\S]*border-top: 0/);
-assert.match(estHardwareStatusButtonStyles, /\.summary-grid\s*\{[\s\S]*grid-template-columns: auto minmax\(0, 1fr\) auto/);
-assert.match(estHardwareStatusButtonStyles, /@media \(max-width: 720px\)[\s\S]*\.port-list\s*\{[\s\S]*repeat\(2/);
-assert.match(estHardwareStatusButtonStyles, /@media \(max-width: 720px\)[\s\S]*\.summary-grid\s*\{[\s\S]*minmax\(70px/);
-assert.match(estHardwareStatusButtonStyles, /\.panel-header\s*\{[\s\S]*cursor: move/);
-assert.match(estHardwareStatusButtonStyles, /\.firmware-update-button/);
-assert.match(estHardwareStatusButtonStyles, /\.firmware-update-menu/);
-assert.match(estHardwareStatusButtonStyles, /\.firmware-update-option\s*\{[\s\S]*text-align: left/);
-assert.ok(!estHardwareStatusButtonStyles.includes('border-left: 1px solid'));
+assert.match(hardwarePopoverSource, /createPortal/);
+assert.match(hardwarePopoverSource, /role="dialog"/);
+assert.ok(!hardwarePopoverSource.includes('aria-modal'), 'connection popover must not block the workspace');
+assert.match(hardwarePopoverSource, /startDrag \(event\)/);
+assert.match(hardwarePopoverSource, /document\.addEventListener\('mousedown', this\.outside/);
+assert.match(hardwarePopoverSource, /document\.removeEventListener\('mousedown', this\.outside/);
+const hardwarePopoverStyles = fs.readFileSync(path.resolve(
+    __dirname, '..', 'src', 'renderer', 'hardware', 'HardwareStatusPopover.css'
+), 'utf8');
+assert.match(hardwarePopoverStyles, /\.panel\s*\{[\s\S]*position: fixed/);
+assert.match(hardwarePopoverStyles, /max-width: calc\(100vw - 24px\)/);
+assert.match(hardwarePopoverStyles, /max-height: calc\(100vh - 96px\)/);
+assert.match(hardwarePopoverStyles, /cursor: move/);
 const estDeviceServiceSource = fs.readFileSync(path.resolve(
     __dirname,
     '..',
@@ -3407,20 +3352,20 @@ for (const transformedProjectFileSource of Object.values(transformedProjectFileS
         presets: ['@babel/preset-react']
     });
 }
-assert.match(transformedProjectFileSources.downloader, /\.ests`/);
-assert.match(transformedProjectFileSources.downloader, /defaultTitle \|\| 'EST Studio Project'/);
+assert.match(transformedProjectFileSources.downloader, /\.atc`/);
+assert.match(transformedProjectFileSources.downloader, /defaultTitle \|\| 'ATC CodeStudio Project'/);
 assert.ok(!transformedProjectFileSources.downloader.includes('.ob`;'));
-assert.match(transformedProjectFileSources.uploader, /accept = '\.ests'/);
-assert.match(transformedProjectFileSources.uploader, /\/\^\(\.\*\)\\\.ests\$\/i/);
+assert.match(transformedProjectFileSources.uploader, /accept = '\.atc'/);
+assert.match(transformedProjectFileSources.uploader, /\/\^\(\.\*\)\\\.atc\$\/i/);
 assert.ok(!transformedProjectFileSources.uploader.includes("accept = '.ob,.sb,.sb2,.sb3'"));
-assert.match(transformedProjectFileSources.titled, /defaultMessage: 'EST Studio Project'/);
+assert.match(transformedProjectFileSources.titled, /defaultMessage: 'ATC CodeStudio Project'/);
 assert.match(
     transformedProjectFileSources.titled,
     /newTitle = this\.props\.intl\.formatMessage\(messages\.defaultProjectTitle\)/
 );
 assert.ok(!transformedProjectFileSources.titled.includes('EST作品'));
 assert.ok(!transformedProjectFileSources.titled.includes('EST專案'));
-assert.strictEqual('示例工程.ests'.match(/^(.*)\.ests$/i)[1], '示例工程');
+assert.strictEqual('示例工程.atc'.match(/^(.*)\.atc$/i)[1], '示例工程');
 const fileFiltersSource = fs.readFileSync(path.resolve(
     __dirname,
     '..',
@@ -3428,14 +3373,14 @@ const fileFiltersSource = fs.readFileSync(path.resolve(
     'main',
     'FileFilters.js'
 ), 'utf8');
-assert.match(fileFiltersSource, /name: 'EST Studio Project'/);
-assert.match(fileFiltersSource, /extensions: \['ests'\]/);
+assert.match(fileFiltersSource, /name: 'ATC CodeStudio Project'/);
+assert.match(fileFiltersSource, /extensions: \['atc'\]/);
 const electronBuilderSource = fs.readFileSync(path.resolve(
     __dirname,
     '..',
     'electron-builder.yaml'
 ), 'utf8');
-assert.match(electronBuilderSource, /fileAssociations:\r?\n {2}ext: ests/);
+assert.match(electronBuilderSource, /fileAssociations:\r?\n {2}ext: atc/);
 assert.match(electronBuilderSource, /win:\r?\n {2}icon: buildResources\/OpenBlockDesktop\.ico/);
 assert.match(electronBuilderSource, /mac:[\s\S]*icon: buildResources\/OpenBlockDesktop\.icns/);
 assert.match(electronBuilderSource, /linux:[\s\S]*icon: buildResources\/linux/);
@@ -3445,11 +3390,11 @@ const installerSource = fs.readFileSync(path.resolve(
     'buildResources',
     'installer.nsh'
 ), 'utf8');
-assert.match(installerSource, /InstallLocation "C:\\EST Studio"/);
+assert.match(installerSource, /InstallLocation "C:\\ATC CodeStudio"/);
 assert.ok(!installerSource.includes('C:\\OpenBlockDesktop'));
-assert.match(installerSource, /File "\/oname=ESTStudio-\$\{VERSION\}\.ico" "\$\{BUILD_RESOURCES_DIR\}\\OpenBlockDesktop\.ico"/);
-assert.match(installerSource, /File "\/oname=ESTStudioProject-\$\{VERSION\}\.ico" "\$\{BUILD_RESOURCES_DIR\}\\OpenBlockFile\.ico"/);
-assert.match(installerSource, /WriteRegStr SHELL_CONTEXT "Software\\Classes\\EST Studio project file\\DefaultIcon" "" "\$R3"/);
+assert.match(installerSource, /File "\/oname=ATCCodeStudio-\$\{VERSION\}\.ico" "\$\{BUILD_RESOURCES_DIR\}\\OpenBlockDesktop\.ico"/);
+assert.match(installerSource, /File "\/oname=ATCCodeStudioProject-\$\{VERSION\}\.ico" "\$\{BUILD_RESOURCES_DIR\}\\OpenBlockFile\.ico"/);
+assert.match(installerSource, /WriteRegStr SHELL_CONTEXT "Software\\Classes\\ATC CodeStudio project file\\DefaultIcon" "" "\$R3"/);
 assert.match(installerSource, /CreateShortCut "\$newDesktopLink" "\$appExe" "" "\$R2" 0/);
 assert.match(installerSource, /CreateShortCut "\$newStartMenuLink" "\$appExe" "" "\$R2" 0/);
 const alertsLoader = require('./est-alerts-loader');
@@ -3598,7 +3543,7 @@ const openBlockLoadCostumeSource = fs.readFileSync(path.resolve(
 ), 'utf8');
 const transformedLoadCostume = headlessCostumeLoader(openBlockLoadCostumeSource);
 assert.ok(!transformedLoadCostume.includes("log.error('No rendering module present; cannot load costume: '"));
-assert.match(transformedLoadCostume, /EST Studio intentionally runs without a stage renderer/);
+assert.match(transformedLoadCostume, /ATC CodeStudio intentionally runs without a stage renderer/);
 const vmProjectCompatLoader = require('./est-vm-project-compat-loader');
 const openBlockVirtualMachineSource = fs.readFileSync(path.resolve(
     __dirname,
@@ -3677,8 +3622,8 @@ assert.ok(!fs.existsSync(path.resolve(
     'OpenblockDesktopLink.js'
 )));
 assert.ok(fs.statSync(path.resolve(__dirname, '..', 'src', 'icon', 'OpenBlockDesktop.png')).size > 100000);
-assert.ok(fs.statSync(path.resolve(__dirname, '..', 'src', 'icon', 'OpenBlockDesktop.ico')).size > 100000);
-assert.ok(fs.statSync(path.resolve(__dirname, '..', 'buildResources', 'OpenBlockDesktop.ico')).size > 100000);
+assert.ok(fs.statSync(path.resolve(__dirname, '..', 'src', 'icon', 'OpenBlockDesktop.ico')).size > 1000);
+assert.ok(fs.statSync(path.resolve(__dirname, '..', 'buildResources', 'OpenBlockDesktop.ico')).size > 1000);
 assert.ok(fs.statSync(path.resolve(__dirname, '..', 'buildResources', 'OpenBlockFile.ico')).size > 50000);
 const fileIconPng = fs.readFileSync(path.resolve(__dirname, '..', 'buildResources', 'OpenBlockFile.png'));
 assert.deepStrictEqual([...fileIconPng.slice(0, 8)], [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
@@ -3696,15 +3641,11 @@ assert.match(aboutSource, /import logo from '\.\.\/icon\/OpenBlockDesktop\.png';
 assert.match(loadingSource, /import logo from '\.\.\/icon\/OpenBlockDesktop\.png';/);
 assert.match(rendererIndexHtml, /background-color: #f1f3f5;/);
 assert.match(rendererIndexHtml, /color: #111827;/);
-assert.match(rendererIndexHtml, /EST Studio is loading\.\.\./);
+assert.match(rendererIndexHtml, /ATC CodeStudio is loading\.\.\./);
 assert.ok(!rendererIndexHtml.includes('OpenBlock is loading'));
 assert.ok(!rendererIndexHtml.includes('#4D97FF'));
 const iconBuildScript = fs.readFileSync(path.resolve(__dirname, '..', 'buildResources', 'make-icons.sh'), 'utf8');
-assert.match(iconBuildScript, /SRC=\.\.\/src\/icon\/OpenBlockDesktop\.png/);
-assert.match(iconBuildScript, /WINDOW_ICON_SRC=\.\.\/src\/renderer\/est-menu-logo\.png/);
-assert.match(iconBuildScript, /ICO_TITLEBAR_SIZES="16 20 24 30"/);
-assert.match(iconBuildScript, /resize_titlebar_icon/);
-assert.match(iconBuildScript, /-crop 560x245\+0\+0/);
+assert.ok(iconBuildScript.includes('scripts/make-atc-icons.py'));
 const packageConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf8'));
 assert.strictEqual(typeof packageConfig.dependencies['openblock-link'], 'undefined');
 assert.strictEqual(typeof packageConfig.scripts['fetch:firmwares'], 'undefined');

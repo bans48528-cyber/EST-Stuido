@@ -1,0 +1,32 @@
+.form { display: grid; gap: 16px; min-width: 0; }
+.form h3 { margin: 0; font-family: inherit; font-size: 16px; font-weight: 600; line-height: 1.5; }
+.form button { border: 1px solid #c9d5df; border-radius: 8px; background: #fff; min-height: 36px; padding: 7px 12px; }
+.form button.primary { background: #1675c3; border-color: #1675c3; color: #fff; font-weight: 600; }
+.form button.primary:hover:not(:disabled) { background: #1064aa; border-color: #1064aa; }
+.form button.secondary { color: #344e65; }
+.form .modes { display: flex; gap: 6px; padding: 4px; background: #f1f4f6; border-radius: 10px; }
+.modes button { flex: 1; display: flex; justify-content: center; align-items: center; gap: 7px; min-width: 0; border-color: transparent; background: transparent; }
+.form .modes button[aria-pressed="true"] { background: #fff; border-color: #d5e1e9; color: #1262a4; }
+.state { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: #445765; }
+.dot { width: 8px; height: 8px; background: #82919c; border-radius: 50%; flex: none; }
+.state[data-connected="true"] .dot { background: #168951; }
+.address { margin-left: auto; font-size: 12px; color: #606e79; overflow-wrap: anywhere; max-width: 65%; }
+.usbField { display: grid; gap: 8px; min-width: 0; }
+.usbField label { font-size: 12px; font-weight: 600; color: #526472; }
+.usbRow { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
+.usbRow select, .hidDevice { flex: 1; width: 0; min-width: 0; border: 1px solid #c9d5df; border-radius: 8px; background: #fff; color: #29343e; padding: 8px 10px; font: inherit; }
+.hidDevice { background: #f7f9fa; }
+.form .hint { margin: 0; color: #606e79; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.remembered { display: flex; align-items: center; gap: 12px; }
+.remembered > div, .devices li > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.remembered span, .remembered small, .devices small { display: block; color: #606e79; font-size: 12px; }
+.remembered strong, .devices strong { display: block; margin: 3px 0; font-weight: 600; }
+.remembered button, .usbRow button, .devices button { flex: none; }
+.devices { margin: 0; padding: 0; list-style: none; max-height: 200px; overflow-y: auto; }
+.devices li { display: flex; gap: 10px; align-items: center; padding: 12px 0; border-top: 1px solid #e5eaee; }
+.automatic { padding-top: 15px; border-top: 1px solid #e5eaee; }
+.automatic label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+.automatic input { margin: 4px 0 0; accent-color: #1675c3; flex: none; }
+.automatic p { margin: 7px 0 0 22px; color: #606e79; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.error { margin: 0; color: #a12739; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+@media (max-width: 430px) { .form { gap: 14px; } .form button { padding-inline: 10px; } }

@@ -5,13 +5,14 @@
     "gui.menuBar.new": "New Project",
     "gui.menuBar.downloadToComputer": "Save to Computer",
     "gui.gui.projectTitlePlaceholder": "Project title",
-    "gui.gui.defaultProjectTitle": "EST Studio Project",
+    "gui.gui.defaultProjectTitle": "ATC CodeStudio Project",
     "gui.sharedMessages.loadFromComputerTitle": "Open from Computer",
     "gui.alerts.creating": "Creating new project...",
     "gui.alerts.savingError": "Project could not be saved.",
     "gui.alerts.savesuccess": "Project saved.",
-    "gui.projectLoader.loadError": "The selected EST Studio project could not be opened.",
-    "gui.crashMessage.description": "We are so sorry, but it looks like EST Studio has crashed. This bug has been automatically reported to the EST Studio Team. Please refresh your page to try again."
+    "gui.projectLoader.loadError": "The selected ATC CodeStudio project could not be opened.",
+    "gui.crashMessage.description": "We are so sorry, but it looks like ATC CodeStudio has crashed. This bug has been automatically reported to the ATC CodeStudio Team. Please refresh your page to try again.",
+    "gui.projectLoader.atcOnly": "Please choose an ATC CodeStudio (.atc) project."
   },
   "ru": {
     "gui.menuBar.LanguageSelector": "Язык",
@@ -19,13 +20,14 @@
     "gui.menuBar.new": "Новый проект",
     "gui.menuBar.downloadToComputer": "Сохранить на компьютер",
     "gui.gui.projectTitlePlaceholder": "Название проекта",
-    "gui.gui.defaultProjectTitle": "Проект EST Studio",
+    "gui.gui.defaultProjectTitle": "Проект ATC CodeStudio",
     "gui.sharedMessages.loadFromComputerTitle": "Открыть с компьютера",
     "gui.alerts.creating": "Создание нового проекта...",
     "gui.alerts.savingError": "Не удалось сохранить проект.",
     "gui.alerts.savesuccess": "Проект сохранен.",
-    "gui.projectLoader.loadError": "Не удалось открыть выбранный проект EST Studio.",
-    "gui.crashMessage.description": "К сожалению, в работе EST Studio произошел сбой. Этот сбой был автоматически отправлен команде EST Studio. Перезагрузите страницу и повторите попытку."
+    "gui.projectLoader.loadError": "Не удалось открыть выбранный проект ATC CodeStudio.",
+    "gui.crashMessage.description": "К сожалению, в работе ATC CodeStudio произошел сбой. Этот сбой был автоматически отправлен команде ATC CodeStudio. Перезагрузите страницу и повторите попытку.",
+    "gui.projectLoader.atcOnly": "Выберите проект ATC CodeStudio (.atc)."
   },
   "zh-cn": {
     "gui.menuBar.LanguageSelector": "语言菜单",
@@ -33,13 +35,14 @@
     "gui.menuBar.new": "新作品",
     "gui.menuBar.downloadToComputer": "保存到电脑",
     "gui.gui.projectTitlePlaceholder": "在此填写作品标题",
-    "gui.gui.defaultProjectTitle": "EST Studio 作品",
+    "gui.gui.defaultProjectTitle": "ATC CodeStudio 作品",
     "gui.sharedMessages.loadFromComputerTitle": "从电脑打开",
     "gui.alerts.creating": "正在创建新作品...",
     "gui.alerts.savingError": "作品无法保存。",
     "gui.alerts.savesuccess": "作品已保存。",
-    "gui.projectLoader.loadError": "无法打开所选 EST Studio 工程。",
-    "gui.crashMessage.description": "很抱歉，EST Studio 出故障了。这个问题已经自动报告给 EST Studio 开发团队。请刷新页面再试试。"
+    "gui.projectLoader.loadError": "无法打开所选 ATC CodeStudio 工程。",
+    "gui.crashMessage.description": "很抱歉，ATC CodeStudio 出故障了。这个问题已经自动报告给 ATC CodeStudio 开发团队。请刷新页面再试试。",
+    "gui.projectLoader.atcOnly": "请选择 ATC CodeStudio（.atc）工程文件。"
   },
   "zh-tw": {
     "gui.menuBar.LanguageSelector": "語言選單",
@@ -47,13 +50,14 @@
     "gui.menuBar.new": "新建專案",
     "gui.menuBar.downloadToComputer": "儲存到電腦",
     "gui.gui.projectTitlePlaceholder": "在這輸入專案名稱",
-    "gui.gui.defaultProjectTitle": "EST Studio 專案",
+    "gui.gui.defaultProjectTitle": "ATC CodeStudio 專案",
     "gui.sharedMessages.loadFromComputerTitle": "從電腦打開",
     "gui.alerts.creating": "正在建立新專案...",
     "gui.alerts.savingError": "專案無法儲存。",
     "gui.alerts.savesuccess": "專案已儲存。",
-    "gui.projectLoader.loadError": "無法打開所選 EST Studio 專案。",
-    "gui.crashMessage.description": "很抱歉，EST Studio 發生故障。這個問題已經自動報告給 EST Studio 開發團隊。請重新載入頁面再試一次。"
+    "gui.projectLoader.loadError": "無法打開所選 ATC CodeStudio 專案。",
+    "gui.crashMessage.description": "很抱歉，ATC CodeStudio 發生故障。這個問題已經自動報告給 ATC CodeStudio 開發團隊。請重新載入頁面再試一次。",
+    "gui.projectLoader.atcOnly": "請選擇 ATC CodeStudio（.atc）專案檔案。"
   },
   "pt-br": {
     "gui.menuBar.LanguageSelector": "Idioma",
@@ -61,12 +65,13 @@
     "gui.menuBar.new": "Novo projeto",
     "gui.menuBar.downloadToComputer": "Salvar no computador",
     "gui.gui.projectTitlePlaceholder": "Nome do projeto",
-    "gui.gui.defaultProjectTitle": "Projeto EST Studio",
+    "gui.gui.defaultProjectTitle": "Projeto ATC CodeStudio",
     "gui.sharedMessages.loadFromComputerTitle": "Abrir do computador",
     "gui.alerts.creating": "Criando novo projeto...",
     "gui.alerts.savingError": "Nao foi possivel salvar o projeto.",
     "gui.alerts.savesuccess": "Projeto salvo.",
-    "gui.projectLoader.loadError": "Nao foi possivel abrir o projeto EST Studio selecionado.",
-    "gui.crashMessage.description": "Lamentamos, mas o EST Studio apresentou uma falha. O problema foi informado automaticamente a equipe do EST Studio. Recarregue a pagina e tente novamente."
+    "gui.projectLoader.loadError": "Nao foi possivel abrir o projeto ATC CodeStudio selecionado.",
+    "gui.crashMessage.description": "Lamentamos, mas o ATC CodeStudio apresentou uma falha. O problema foi informado automaticamente a equipe do ATC CodeStudio. Recarregue a pagina e tente novamente.",
+    "gui.projectLoader.atcOnly": "Selecione um projeto ATC CodeStudio (.atc)."
   }
 }

@@ -9,6 +9,8 @@ import {SPARK_AI_SAMPLE_IR} from '../../src/renderer/spark-ai/ai-spec';
 import {setHardwareContext} from '../../src/renderer/hardware/context';
 import {importEstBlockIrToWorkspace} from '../../src/renderer/est-ai/est-ai-workspace';
 import {makeSparkCoverageCases, makeSparkNativeProgram} from './spark-fixture';
+import {makePikaOperatorsCase, toSparkProgram} from './pika-operators-fixture';
+import {makeNewStatisticsProgram, makeNewListBoundariesProgram} from './new-statistics-fixture';
 
 const delay = () => new Promise(resolve => setTimeout(resolve, 100));
 const clear = workspace => {
@@ -81,6 +83,20 @@ export const runSparkAiUiTests = async ({workspace, panel, until}) => {
     const nativeSource = ScratchBlocks.SparkPython.workspaceToCode(workspace);
     assert.ok(nativeSource.includes('PikaStdData.List()') && /def record\w*\(/.test(nativeSource), nativeSource);
     await ipcRenderer.invoke('test-python', 'spark-ai-assistant-native-symbols', nativeSource, 'spark-ai');
+    const operatorCase = makePikaOperatorsCase('spark-ai');
+    const semanticPrograms = [];
+    for (const [name, ir, expected] of [
+        ['spark-ai-statistics', toSparkProgram(makeNewStatisticsProgram())],
+        ['spark-ai-list-boundaries', toSparkProgram(makeNewListBoundariesProgram())],
+        ['spark-ai-operators', operatorCase.ir, operatorCase.expected]
+    ]) {
+        clear(workspace);
+        importEstBlockIrToWorkspace({ScratchBlocks, workspace, ir});
+        const semanticSource = ScratchBlocks.SparkPython.workspaceToCode(workspace);
+        semanticPrograms.push({name, source: semanticSource});
+        await ipcRenderer.invoke('test-pika-execute', name, semanticSource, expected);
+    }
+    await ipcRenderer.invoke('test-spark-ai-compile', semanticPrograms);
     clear(workspace);
     await ipcRenderer.invoke('test-reply', JSON.stringify({message: 'late', ir: SPARK_AI_SAMPLE_IR}), {hold: true});
     Simulate.change(panel.composer.current, {target: {value: '再生成一个点阵程序'}});

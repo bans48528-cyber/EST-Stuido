@@ -48,6 +48,14 @@ const {makeProgram, makeNewCoverageCases, makeNewNativeProgram} = require('./ai-
     invalid([{type: 'new_matrix_lamp_single', inputs: {x: '9', y: '0', brightness: 50}}], 'INVALID_ENUM_INPUT');
     invalid([{type: 'new_control_break'}], 'BREAK_OUTSIDE_LOOP');
     invalid([{type: 'new_control_wait', inputs: {DURATION: -1}}], 'NUMBER_TOO_SMALL');
+    for (const matrixText of ['总和99', 'sum=99', 'SUM:99', 'SUM 99', 'A'.repeat(32),
+        {type: 'new_operator_join', inputs: {STRING1: 'SUM', STRING2: ':99'}}]) {
+        invalid([{type: 'new_matrix_lamp_text', inputs: {matrix_text: matrixText}}], 'INVALID_MATRIX_TEXT');
+    }
+    assert.ok(validateEstBlockIr(makeProgram([{type: 'new_matrix_lamp_text',
+        inputs: {matrix_text: 'A'.repeat(31)}}]), options).valid);
+    assert.ok(validateEstBlockIr(makeProgram([{type: 'new_matrix_lamp_text',
+        inputs: {matrix_text: {type: 'new_operator_join', inputs: {STRING1: 'SUM=', STRING2: 99}}}}]), options).valid);
     invalid([{type: 'new_sound_play', inputs: {SOUND_MENU: 'arbitrary"code'}}], 'INVALID_ENUM_INPUT');
     invalid([{type: 'spark_motor_stop', inputs: {PORT: 'E'}}], 'UNKNOWN_BLOCK');
     invalid([{type: 'motor_stop', inputs: {PORT: 'A'}}], 'UNKNOWN_BLOCK');
@@ -74,6 +82,8 @@ const {makeProgram, makeNewCoverageCases, makeNewNativeProgram} = require('./ai-
         assert.ok(!prompt.includes('"type":"spark_motor_stop"') && !prompt.includes('"type":"motor_stop"'));
         assert.ok(prompt.includes('physical NEW AI camera') &&
             prompt.includes('PC webcam vision input is not supported'));
+        assert.ok(prompt.includes('uppercase English display labels') && prompt.includes('31 characters'));
+        assert.ok(prompt.includes('do not subtract 1 in the blocks'));
     }
     for (const text of ['摄像头人脸识别', 'physical camera face recognition', 'câmera', 'камера']) {
         assert.ok(selectEstAiRuleCategories([{role: 'user', text}], 'new-ai').includes('vision'));
@@ -108,6 +118,23 @@ const {makeProgram, makeNewCoverageCases, makeNewNativeProgram} = require('./ai-
                     ir: calls === 1 ? {...NEW_AI_SAMPLE_IR, hardwareId: 'spark-ai'} : NEW_AI_SAMPLE_IR})}});
         }});
     assert.equal(calls, 2); assert.equal(reply.ir.hardwareId, 'new-ai');
+    let displayRepairs = 0;
+    const repairedDisplay = await generateEstAiReply({id: 'new-ai-display-repair',
+        hardwareId: 'new-ai',
+        locale: 'zh-cn',
+        messages: [{role: 'user', text: '显示总和99'}],
+        invoke: (channel, request) => {
+            displayRepairs++;
+            if (displayRepairs > 1) assert.ok(request.messages.at(-1).content.includes('点阵'));
+            return Promise.resolve({ok: true,
+                data: {content: JSON.stringify({message: '显示统计结果',
+                    ir: makeProgram([{type: 'new_matrix_lamp_text',
+                        inputs: {
+                            matrix_text: displayRepairs === 1 ? '总和:99' : 'SUM=99'
+                        }}])})}});
+        }});
+    assert.equal(displayRepairs, 2);
+    assert.ok(repairedDisplay.compiled.xml.includes('SUM=99'));
     setHardwareContext('new-ai'); assert.ok(isAiHardwareActive());
     setHardwareContext('new-ai', true); assert.ok(!isAiHardwareActive());
     setHardwareContext('spark-ai');

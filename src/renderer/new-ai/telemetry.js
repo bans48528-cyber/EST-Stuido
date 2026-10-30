@@ -1,4 +1,5 @@
 import {newAiText} from './runtime-messages';
+import {newAiPeripheralSignature} from '../../common/new-ai-peripherals';
 
 const numeric = value => {
     if (typeof value !== 'number' && typeof value !== 'string') return null;
@@ -72,11 +73,15 @@ export const newAiTelemetryFields = (port, locale) => {
 // Only control metadata can rerender the surrounding dialog. Telemetry has its own mounted subscriber.
 export const newAiConnectionChanged = (previous, next, open) => {
     if (['state', 'connected', 'stale', 'busy', 'error', 'warning', 'port', 'memoryError',
-        'connectionMode', 'reconnecting']
+        'connectionMode', 'reconnecting', 'connectionRevision']
         .some(key => previous[key] !== next[key])) return true;
     if (JSON.stringify(previous.discovery) !== JSON.stringify(next.discovery)) return true;
     if (JSON.stringify(previous.bleDevice) !== JSON.stringify(next.bleDevice)) return true;
-    if (open && JSON.stringify(previous.firmware) !== JSON.stringify(next.firmware)) return true;
+    if (JSON.stringify(previous.peripheralUpdate) !== JSON.stringify(next.peripheralUpdate)) return true;
+    if (newAiPeripheralSignature(previous.status) !== newAiPeripheralSignature(next.status)) return true;
+    // The firmware modal stays mounted independently of the hardware inspector.
+    if ((open || (previous.firmware && previous.firmware.active) || (next.firmware && next.firmware.active)) &&
+        JSON.stringify(previous.firmware) !== JSON.stringify(next.firmware)) return true;
     const before = previous.status || {}; const after = next.status || {};
     return ['running', 'version', 'legacyProtocol'].some(key => before[key] !== after[key]);
 };

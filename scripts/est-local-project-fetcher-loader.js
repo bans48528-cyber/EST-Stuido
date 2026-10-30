@@ -1,5 +1,5 @@
 /**
- * Constrain OpenBlock's project fetcher to EST Studio's cached starter project.
+ * Constrain OpenBlock's project fetcher to ATC CodeStudio's cached starter project.
  * Local .ob files are loaded by the desktop file uploader and never need the
  * Scratch project or asset servers.
  * @param {string} source - OpenBlock project fetcher source.
@@ -28,7 +28,7 @@ module.exports = function (source) {
         .replace(/ {8}fetchProject \(projectId, loadingState\) \{\r?\n {12}return storage/, [
             '        fetchProject (projectId, loadingState) {',
             "            if (String(projectId) !== '0') {",
-            "                const error = new Error('EST Studio only opens project files from this computer.');",
+            "                const error = new Error('ATC CodeStudio only opens project files from this computer.');",
             '                this.props.onError(error);',
             '                return Promise.resolve();',
             '            }',

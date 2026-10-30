@@ -1,4 +1,4 @@
-import {getHardwareContext, HARDWARE_CHANGED_EVENT} from './context';
+import {getHardwareContext, HARDWARE_CHANGED_EVENT, HARDWARE_DRAFTS_DISCARDED_EVENT} from './context';
 
 // Switching targets must not reuse EST's manually edited Python in another compiler.
 export const attachHardwareCodeDrafts = editor => {
@@ -22,6 +22,17 @@ export const attachHardwareCodeDrafts = editor => {
         if (editor.props.isCodeEditorLocked !== draft.locked) editor.props.onToggleHardwareCodeLock();
         editor.props.onSetCodeEditorValue(draft.locked ? editor.workspaceToCode() : draft.code);
     };
+    const discarded = () => {
+        drafts.clear();
+        id = getHardwareContext().profile.id;
+        loading = false;
+        if (!editor.props.isCodeEditorLocked) editor.props.onToggleHardwareCodeLock();
+        editor.props.onSetCodeEditorValue(editor.workspaceToCode());
+    };
     window.addEventListener(HARDWARE_CHANGED_EVENT, changed);
-    return () => window.removeEventListener(HARDWARE_CHANGED_EVENT, changed);
+    window.addEventListener(HARDWARE_DRAFTS_DISCARDED_EVENT, discarded);
+    return () => {
+        window.removeEventListener(HARDWARE_CHANGED_EVENT, changed);
+        window.removeEventListener(HARDWARE_DRAFTS_DISCARDED_EVENT, discarded);
+    };
 };

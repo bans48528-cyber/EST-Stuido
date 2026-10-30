@@ -1,3 +1,7 @@
+import release from '../main/spark-ai/firmware-release.json';
+
+export const SPARK_FIRMWARE_VERSION = release.version;
+
 export const sparkFirmwareRecoveryPort = port => port &&
     /^0483$/i.test(String(port.vendorId || '')) && /^5740$/i.test(String(port.productId || '')) &&
     !/^BTH/i.test(port.pnpId || '');
@@ -15,13 +19,18 @@ export const sparkFirmwareBlockers = (device = {}, report = null, {recovery = fa
         return blockers;
     }
     if (!device.connected) blockers.push('SPARK_DISCONNECTED');
-    if (device.connected && (!device.status || device.stale || device.monitoring === false)) {
-        blockers.push('SPARK_FW_STATUS_REQUIRED');
-    }
-    if (device.status && device.status.running) blockers.push('SPARK_STOP_FIRST');
-    if (device.connected && device.status && !device.compatible) blockers.push('SPARK_FW_DEVICE_UNVERIFIED');
+    // RESET_FWLIB enters the bootloader directly, including from older firmware or a
+    // running program. Telemetry freshness and the application version are not update prerequisites.
     if (device.error === 'SPARK_FW_RECOVERY' ||
         (device.discovery && device.discovery.status === 'recovery')) blockers.push('SPARK_FW_RECOVERY');
     if (device.firmware && device.firmware.recoveryRequired) blockers.push('SPARK_FW_RECOVERY');
     return blockers;
+};
+// A cancelled prompt stays dismissed until the connection or reported version changes.
+export const sparkFirmwareMismatchKey = (device = {}) => {
+    const version = device.status && device.status.version;
+    if (!device.connected || device.connectionMode === 'ble' || device.busy || device.stale ||
+        (device.firmware && device.firmware.active) || !Number.isInteger(version) || version <= 0 ||
+        version === SPARK_FIRMWARE_VERSION) return null;
+    return `${device.port || ''}:${version}`;
 };

@@ -4,12 +4,15 @@ const transformDownloader = source => {
     const filenameExpression = ['$', '{filenameTitle.substring(0, 100)}'].join('');
     const filenameMarker = `return \`${filenameExpression}.ob\`;`;
     const fallbackMarker = '        filenameTitle = defaultTitle;';
-    if (!source.includes(filenameMarker) || !source.includes(fallbackMarker)) {
+    const blobMarker = 'downloadBlob(this.props.projectFilename, content);';
+    if (!source.includes(filenameMarker) || !source.includes(fallbackMarker) || !source.includes(blobMarker)) {
         throw new Error('Unable to locate the OpenBlock project download filename logic.');
     }
     return source
-        .replace(filenameMarker, `return \`${filenameExpression}.ests\`;`)
-        .replace(fallbackMarker, "        filenameTitle = defaultTitle || 'EST Studio Project';");
+        .replace(filenameMarker, `return \`${filenameExpression}.atc\`;`)
+        .replace(blobMarker, 'downloadBlob(this.props.projectFilename, ' +
+            "new Blob([content], {type: 'application/x.atc.project'}));")
+        .replace(fallbackMarker, "        filenameTitle = defaultTitle || 'ATC CodeStudio Project';");
 };
 
 const transformUploader = source => {
@@ -20,22 +23,37 @@ const transformUploader = source => {
     const titlePatternMarker =
         '            const matches = fileInputFilename.match(/^(.*)\\.((ob)|(sb[23]))?$/);';
     const titleUpdateMarker = '                            this.props.onSetProjectTitle(uploadedProjectTitle);';
+    const selectionMarker = '                this.fileToUpload = thisFileInput.files[0];';
     if (!source.includes(importMarker) || !source.includes(acceptMarker) || !source.includes(titleCommentMarker) ||
-        !source.includes(titleUpdateMarker) ||
+        !source.includes(titleUpdateMarker) || !source.includes(selectionMarker) ||
         !source.includes(titlePatternMarker)) {
         throw new Error('Unable to locate the OpenBlock project upload extension logic.');
     }
     return source
         .replace(importMarker, `import {ipcRenderer} from 'electron';\n${importMarker}`)
-        .replace(acceptMarker, "this.inputElement.accept = '.ests';")
-        .replace(titleCommentMarker, '            // Parse EST Studio project titles from .ests filenames.')
+        .replace(acceptMarker, "this.inputElement.accept = '.atc';")
+        .replace(selectionMarker, `${selectionMarker}\n` +
+            '                if (!this.fileToUpload) return;\n' +
+            '                if (!/\\.atc$/i.test(this.fileToUpload.name)) {\n' +
+            '                    this.props.onShowMessageBox(MessageBoxType.alert, intl.formatMessage({\n' +
+            "                        id: 'gui.projectLoader.atcOnly',\n" +
+            "                        defaultMessage: 'Please choose an ATC CodeStudio (.atc) project.'\n" +
+            '                    }));\n' +
+            '                    this.removeFileObjects();\n' +
+            '                    this.props.closeFileMenu();\n' +
+            '                    return;\n' +
+            '                }')
+        .replace(titleCommentMarker, '            // Parse ATC CodeStudio project titles from .atc filenames.')
         .replace(
             titlePatternMarker,
-            '            const matches = fileInputFilename.match(/^(.*)\\.ests$/i);'
+            '            const matches = fileInputFilename.match(/^(.*)\\.atc$/i);'
         )
         .replace(
             titleUpdateMarker,
             `${titleUpdateMarker}\n` +
+            "                            window.dispatchEvent(new CustomEvent('est-home-project-opened', {detail: {\n" +
+            '                                hardwareId: this.props.vm.runtime.estStudioHardwareId\n' +
+            '                            }}));\n' +
             '                            if (this.fileToUpload && this.fileToUpload.path) {\n' +
             "                                ipcRenderer.invoke('est-home-remember-project', " +
             'this.fileToUpload.path);\n' +
@@ -55,7 +73,7 @@ const transformDefaultTitle = source => {
         throw new Error('Unable to locate the OpenBlock default project title logic.');
     }
     return source
-        .replace(messagesMarker, messagesMarker.replace('OpenBlock Project', 'EST Studio Project'));
+        .replace(messagesMarker, messagesMarker.replace('OpenBlock Project', 'ATC CodeStudio Project'));
 };
 
 module.exports = function (source) {

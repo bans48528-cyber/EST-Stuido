@@ -1,6 +1,6 @@
 /**
  * Remove Scratch Paint state initialization from the desktop application.
- * EST Studio has no costume editor, while project costume data continues to be
+ * ATC CodeStudio has no costume editor, while project costume data continues to be
  * handled by the VM and storage layers independently of Scratch Paint Redux.
  * @param {string} source - OpenBlock app-state HOC source.
  * @returns {string} app-state HOC without Scratch Paint and player-mode setup.

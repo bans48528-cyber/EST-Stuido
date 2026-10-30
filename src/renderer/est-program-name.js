@@ -28,7 +28,7 @@ export const normalizeEstProgramName = (projectTitle, slot) => {
     const parts = name.split(/[\\/]+/);
     name = (parts[parts.length - 1] || '')
         .trim()
-        .replace(/\.ests$/i, '')
+        .replace(/\.atc$/i, '')
         .trim();
     if (!name) {
         return fallback;

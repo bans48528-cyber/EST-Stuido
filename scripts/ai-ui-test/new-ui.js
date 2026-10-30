@@ -9,6 +9,8 @@ import {NEW_AI_SAMPLE_IR} from '../../src/renderer/new-ai/ai-spec';
 import {setHardwareContext} from '../../src/renderer/hardware/context';
 import {importEstBlockIrToWorkspace} from '../../src/renderer/est-ai/est-ai-workspace';
 import {makeNewCoverageCases, makeNewNativeProgram, makeProgram} from './new-fixture';
+import {makeNewStatisticsProgram, makeNewListBoundariesProgram} from './new-statistics-fixture';
+import {makePikaOperatorsCase} from './pika-operators-fixture';
 
 const delay = () => new Promise(resolve => setTimeout(resolve, 70));
 const clear = workspace => {
@@ -87,6 +89,20 @@ export const runNewAiUiTests = async ({workspace, panel, until}) => {
     assert.ok(workspace.getAllBlocks(false).find(block => block.type === 'new_control_stop')
         .getNextBlock());
     programs.push({name: 'new-ai-stop-other-next', source: ScratchBlocks.NewPython.workspaceToCode(workspace)});
+    for (const [name, ir] of [['new-ai-statistics', makeNewStatisticsProgram()],
+        ['new-ai-list-boundaries', makeNewListBoundariesProgram()]]) {
+        clear(workspace);
+        importEstBlockIrToWorkspace({ScratchBlocks, workspace, ir});
+        const source = ScratchBlocks.NewPython.workspaceToCode(workspace);
+        programs.push({name, source});
+        await ipcRenderer.invoke('test-new-ai-execute', name, source);
+    }
+    clear(workspace);
+    const operatorCase = makePikaOperatorsCase('new-ai');
+    importEstBlockIrToWorkspace({ScratchBlocks, workspace, ir: operatorCase.ir});
+    const operatorSource = ScratchBlocks.NewPython.workspaceToCode(workspace);
+    programs.push({name: 'new-ai-operators', source: operatorSource});
+    await ipcRenderer.invoke('test-pika-execute', 'new-ai-operators', operatorSource, operatorCase.expected);
     await ipcRenderer.invoke('test-new-ai-compile', programs);
     clear(workspace);
     await ipcRenderer.invoke('test-reply', JSON.stringify({message: 'late', ir: NEW_AI_SAMPLE_IR}), {hold: true});

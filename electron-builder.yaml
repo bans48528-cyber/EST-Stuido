@@ -45,15 +45,15 @@ extraResources:
       - '!**/__pycache__/**'
       - '!**/*.pyc'
 
-appId: com.eststudio.desktop
-productName: "EST Studio"
+appId: com.atc.codestudio
+productName: "ATC CodeStudio"
 publish:
   - provider: github
-artifactName: "EST-Studio_v${version}_${os}_${arch}.${ext}"
+artifactName: "ATC-CodeStudio_v${version}_${os}_${arch}.${ext}"
 
 fileAssociations:
-  ext: ests
-  name: EST Studio project file
+  ext: atc
+  name: ATC CodeStudio project file
   role: Editor
   icon: buildResources/OpenBlockFile.ico
 
@@ -77,7 +77,7 @@ mac:
     - dmg
     # - mas
 dmg:
-  title: "EST-Studio_${version}"
+  title: "ATC-CodeStudio_${version}"
   format: UDRO
 # mas:
 #   category: public.app-category.education
@@ -111,8 +111,8 @@ linux:
   desktop:
     entry:
       Encoding: UTF-8
-      Name: EST Studio
-      Icon: openblock-desktop
+      Name: ATC CodeStudio
+      Icon: atc-codestudio
       Type: Application
       Terminal: false
   target:

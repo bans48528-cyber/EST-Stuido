@@ -22,7 +22,13 @@
     "hardwareChoice.HARDWARE_EXTENSION": "这个项目包含与所选硬件不兼容的扩展，当前程序已保留。",
     "hardwareChoice.HARDWARE_DRAFT_INVALID": "硬件草稿无法读取，当前程序已保留。",
     "hardwareChoice.failed": "切换硬件失败，原程序已保留，请重试。",
-    "hardwareChoice.restoreFailed": "自动恢复未完成，原程序仍保存在本机硬件草稿中。"
+    "hardwareChoice.restoreFailed": "自动恢复未完成，原程序仍保存在本机硬件草稿中。",
+    "hardwareChoice.discardSwitch": "切换到 {name} 并丢弃草稿？",
+    "hardwareChoice.discardSwitchDetail": "当前未保存的程序和各设备的临时草稿将被丢弃，目标设备会打开空白工程。请先保存需要保留的程序；已保存的工程文件不会被删除。",
+    "hardwareChoice.discardAndSwitch": "丢弃并切换",
+    "hardwareChoice.HARDWARE_DRAFT_CLEAR": "临时草稿无法清理，已取消切换。",
+    "hardwareChoice.newProject": "新建程序 · 选择设备",
+    "hardwareChoice.create": "创建程序"
   },
   "en": {
     "hardwareChoice.select": "Select hardware",
@@ -47,7 +53,13 @@
     "hardwareChoice.HARDWARE_EXTENSION": "This project contains extensions incompatible with its hardware. Your current program has been preserved.",
     "hardwareChoice.HARDWARE_DRAFT_INVALID": "The hardware draft could not be read. Your current program has been preserved.",
     "hardwareChoice.failed": "Hardware could not be switched. Your original program has been preserved. Try again.",
-    "hardwareChoice.restoreFailed": "Automatic recovery did not finish. Your original program remains in the local hardware draft."
+    "hardwareChoice.restoreFailed": "Automatic recovery did not finish. Your original program remains in the local hardware draft.",
+    "hardwareChoice.discardSwitch": "Discard drafts and switch to {name}?",
+    "hardwareChoice.discardSwitchDetail": "The current unsaved program and all device drafts will be discarded. The selected device will open a blank project. Save anything you want to keep first. Saved project files will not be deleted.",
+    "hardwareChoice.discardAndSwitch": "Discard and switch",
+    "hardwareChoice.HARDWARE_DRAFT_CLEAR": "Device drafts could not be cleared. The switch was cancelled.",
+    "hardwareChoice.newProject": "New program · Choose device",
+    "hardwareChoice.create": "Create program"
   },
   "pt-br": {
     "hardwareChoice.select": "Selecionar hardware",
@@ -72,7 +84,13 @@
     "hardwareChoice.HARDWARE_EXTENSION": "Este projeto contém extensões incompatíveis com seu hardware. Seu programa atual foi preservado.",
     "hardwareChoice.HARDWARE_DRAFT_INVALID": "Não foi possível ler o rascunho do hardware. Seu programa atual foi preservado.",
     "hardwareChoice.failed": "Não foi possível trocar o hardware. Seu programa original foi preservado. Tente novamente.",
-    "hardwareChoice.restoreFailed": "A recuperação automática não foi concluída. Seu programa original permanece no rascunho local do hardware."
+    "hardwareChoice.restoreFailed": "A recuperação automática não foi concluída. Seu programa original permanece no rascunho local do hardware.",
+    "hardwareChoice.discardSwitch": "Descartar rascunhos e mudar para {name}?",
+    "hardwareChoice.discardSwitchDetail": "O programa atual não salvo e os rascunhos de todos os dispositivos serão descartados. O dispositivo selecionado abrirá um projeto em branco. Salve primeiro o que deseja manter. Os arquivos de projeto salvos não serão excluídos.",
+    "hardwareChoice.discardAndSwitch": "Descartar e trocar",
+    "hardwareChoice.HARDWARE_DRAFT_CLEAR": "Não foi possível limpar os rascunhos. A troca foi cancelada.",
+    "hardwareChoice.newProject": "Novo programa · Escolher dispositivo",
+    "hardwareChoice.create": "Criar programa"
   },
   "zh-tw": {
     "hardwareChoice.select": "選擇硬體",
@@ -97,7 +115,13 @@
     "hardwareChoice.HARDWARE_EXTENSION": "此專案包含與所選硬體不相容的擴充，目前程式已保留。",
     "hardwareChoice.HARDWARE_DRAFT_INVALID": "無法讀取硬體草稿，目前程式已保留。",
     "hardwareChoice.failed": "切換硬體失敗，原程式已保留，請重試。",
-    "hardwareChoice.restoreFailed": "自動還原未完成，原程式仍保存在本機硬體草稿中。"
+    "hardwareChoice.restoreFailed": "自動還原未完成，原程式仍保存在本機硬體草稿中。",
+    "hardwareChoice.discardSwitch": "切換到 {name} 並捨棄草稿？",
+    "hardwareChoice.discardSwitchDetail": "目前未儲存的程式和各裝置的暫存草稿將被捨棄，目標裝置會開啟空白專案。請先儲存需要保留的程式；已儲存的專案檔案不會被刪除。",
+    "hardwareChoice.discardAndSwitch": "捨棄並切換",
+    "hardwareChoice.HARDWARE_DRAFT_CLEAR": "無法清除暫存草稿，已取消切換。",
+    "hardwareChoice.newProject": "新增程式 · 選擇裝置",
+    "hardwareChoice.create": "建立程式"
   },
   "ru": {
     "hardwareChoice.select": "Выбрать устройство",
@@ -122,6 +146,12 @@
     "hardwareChoice.HARDWARE_EXTENSION": "Проект содержит расширения, несовместимые с его устройством. Текущая программа сохранена.",
     "hardwareChoice.HARDWARE_DRAFT_INVALID": "Не удалось прочитать черновик устройства. Текущая программа сохранена.",
     "hardwareChoice.failed": "Не удалось сменить устройство. Исходная программа сохранена. Повторите попытку.",
-    "hardwareChoice.restoreFailed": "Автоматическое восстановление не завершено. Исходная программа осталась в локальном черновике устройства."
+    "hardwareChoice.restoreFailed": "Автоматическое восстановление не завершено. Исходная программа осталась в локальном черновике устройства.",
+    "hardwareChoice.discardSwitch": "Удалить черновики и перейти к {name}?",
+    "hardwareChoice.discardSwitchDetail": "Текущая несохранённая программа и черновики всех устройств будут удалены. Для выбранного устройства откроется пустой проект. Сначала сохраните нужные программы. Сохранённые файлы проектов удалены не будут.",
+    "hardwareChoice.discardAndSwitch": "Удалить и переключить",
+    "hardwareChoice.HARDWARE_DRAFT_CLEAR": "Не удалось удалить черновики. Переключение отменено.",
+    "hardwareChoice.newProject": "Новая программа · Выбор устройства",
+    "hardwareChoice.create": "Создать программу"
   }
 }

@@ -183,10 +183,14 @@ async function serviceTests () {
         const start = transport.frames.length;
         await service.downloadProgram({source: 'print(1)', slot: 0});
         assert.deepStrictEqual(transport.frames.slice(start).map(frame => frame[4]), [C.STOP, C.FILE, C.SAVE]);
-        await service.setMonitoring(false); assert.equal(service.getState().monitoring, false);
+        await service.setMonitoring(false);
+        assert.equal(service.getState().monitoring, true, 'legacy pause requests must leave monitoring enabled');
+        assert.ok(!transport.frames.some(frame => frame[4] === C.MONITOR_OFF), 'never send monitor-off');
         service.monitor.timestamp = 0;
+        await assert.rejects(service.downloadProgram({source: 'print(1)', slot: 0}), /SPARK_MONITOR_STALE/);
+        transport.report();
         await service.downloadProgram({source: 'print(1)', slot: 0});
-        assert.equal(service.monitorEnabled, true, 'program upload resumes monitor and waits for fresh JSON');
+        assert.equal(service.monitorEnabled, true, 'monitoring remains on after program upload');
     });
     await withService(async ({service, transport}) => {
         transport.onWrite = command => {
@@ -292,7 +296,7 @@ async function serviceTests () {
     assert.equal(service.publishTimer, null);
     assert.equal(service.listenerCount('monitor'), 0);
     assert.equal(service.listenerCount('lost'), 0);
-    console.log('Spark service: download/run/stop, early run indication, unconfirmed quick programs, pause/resume, cancellation, corrupt ACKs, unplug, concurrency and recovery passed.');
+    console.log('Spark service: download/run/stop, early run indication, unconfirmed quick programs, always-on monitoring, cancellation, corrupt ACKs, unplug, concurrency and recovery passed.');
 }
 
 async function discoveryTests () {

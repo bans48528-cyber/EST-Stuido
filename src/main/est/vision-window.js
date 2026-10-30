@@ -21,7 +21,7 @@ export class VisionWindowManager {
             .replace(/_/g, '-');
         this.locale = Object.prototype.hasOwnProperty.call(cameraMessages, normalized) ? normalized : 'zh-cn';
         if (this.window && !this.window.isDestroyed()) {
-            this.window.setTitle(`EST Studio - ${this.text('camera.title')}`);
+            this.window.setTitle(`ATC CodeStudio - ${this.text('camera.title')}`);
             this.window.webContents.send('est-vision-locale', this.locale);
         }
     }
@@ -36,7 +36,7 @@ export class VisionWindowManager {
         }
         const window = this.createWindow({
             search: `route=vision&locale=${this.locale}`,
-            title: `EST Studio - ${this.text('camera.title')}`,
+            title: `ATC CodeStudio - ${this.text('camera.title')}`,
             width: 500,
             height: 660,
             minWidth: 380,

@@ -75,18 +75,19 @@ const cameraTargets = values => (Array.isArray(values) ? values.slice(0, 16)
         if (learned === 0 || learned === 1) target.learned = learned;
         return target;
     }) : []);
-// Captured from the user's 214 device. This fingerprint permits identification/upgrading only.
+// Identify the legacy product envelope independently of its firmware revision.
 // The legacy report has no trustworthy program running/stopped flag or battery percentage.
 export const normalizeNewAiLegacyMonitor = (message, timestamp = Date.now()) => {
+    const version = numeric(message && message.versionlist && message.versionlist.ver);
     if (!message || !Array.isArray(message.deviceList) || message.deviceList.length !== 8 ||
-        !message.versionlist || message.versionlist.ver !== 214 ||
+        !Number.isInteger(version) || version < 0 || version > 65535 ||
         !message.estlist || typeof message.estlist.est !== 'string' ||
         !message.gyrolist || !message.adclist || !message.flashlist || !message.remotelist ||
         'NewAiState' in message || 'WillAiState' in message) return null;
     const indices = message.deviceList.map(item => item && numeric(item.port));
     if (indices.some(port => !Number.isInteger(port) || port < 0 || port > 7) ||
         new Set(indices).size !== 8) return null;
-    return {version: 214,
+    return {version,
         timestamp,
         legacyProtocol: true,
         running: null,

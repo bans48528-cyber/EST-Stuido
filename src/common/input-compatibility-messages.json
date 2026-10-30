@@ -2,7 +2,7 @@
   "zh-cn": {
     "label": "Windows 输入兼容模式",
     "hint": "缓解输入和拖动卡顿。开启后会关闭本软件的读屏接口；需要屏幕阅读器时请关闭。更改在下次启动时生效。",
-    "saved": "设置已保存，下次启动 EST Studio 时生效。",
+    "saved": "设置已保存，下次启动 ATC CodeStudio 时生效。",
     "restart": "重启生效",
     "error": "无法保存输入兼容设置，请稍后重试。",
     "ok": "知道了"
@@ -10,7 +10,7 @@
   "zh-tw": {
     "label": "Windows 輸入相容模式",
     "hint": "改善輸入和拖曳卡頓。開啟後會關閉本軟體的讀屏介面；需要螢幕閱讀器時請關閉。變更於下次啟動時生效。",
-    "saved": "設定已儲存，下次啟動 EST Studio 時生效。",
+    "saved": "設定已儲存，下次啟動 ATC CodeStudio 時生效。",
     "restart": "重新啟動後生效",
     "error": "無法儲存輸入相容設定，請稍後再試。",
     "ok": "知道了"
@@ -18,7 +18,7 @@
   "en": {
     "label": "Windows input compatibility mode",
     "hint": "Reduces typing and dragging stalls. Enabling this turns off screen-reader access in this app; turn it off if you use a screen reader. Changes apply at the next launch.",
-    "saved": "Setting saved. It will apply the next time you start EST Studio.",
+    "saved": "Setting saved. It will apply the next time you start ATC CodeStudio.",
     "restart": "Restart to apply",
     "error": "Could not save the input compatibility setting. Please try again.",
     "ok": "OK"
@@ -26,7 +26,7 @@
   "pt-br": {
     "label": "Modo de compatibilidade de entrada do Windows",
     "hint": "Reduz travamentos ao digitar e arrastar. Ao ativar, o acesso por leitor de tela neste aplicativo será desativado; desative o modo se usar um leitor de tela. A alteração vale na próxima inicialização.",
-    "saved": "Configuração salva. Ela será aplicada na próxima vez que você iniciar o EST Studio.",
+    "saved": "Configuração salva. Ela será aplicada na próxima vez que você iniciar o ATC CodeStudio.",
     "restart": "Reinicie para aplicar",
     "error": "Não foi possível salvar a configuração de compatibilidade de entrada. Tente novamente.",
     "ok": "OK"
@@ -34,7 +34,7 @@
   "ru": {
     "label": "Режим совместимости ввода Windows",
     "hint": "Уменьшает задержки при вводе и перетаскивании. Включение отключает доступ программ экранного чтения к этому приложению; отключите режим, если используете такую программу. Изменения вступят в силу при следующем запуске.",
-    "saved": "Настройка сохранена и вступит в силу при следующем запуске EST Studio.",
+    "saved": "Настройка сохранена и вступит в силу при следующем запуске ATC CodeStudio.",
     "restart": "Перезапустите для применения",
     "error": "Не удалось сохранить настройку совместимости ввода. Повторите попытку.",
     "ok": "ОК"

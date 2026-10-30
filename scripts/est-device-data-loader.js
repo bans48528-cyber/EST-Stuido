@@ -1,5 +1,5 @@
 /**
- * EST Studio has one fixed HID device and does not use OpenBlock's local
+ * ATC CodeStudio has one fixed HID device and does not use OpenBlock's local
  * resource server or generic device library. Initialise that Redux list as
  * empty so mounting the GUI never requests 127.0.0.1:20112/devices/*.json.
  * @param {string} source - OpenBlock vm-listener HOC source.

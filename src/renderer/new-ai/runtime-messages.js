@@ -2,12 +2,15 @@
 import firmwareMessages from './firmware-messages';
 import telemetryMessages from './telemetry-messages';
 import bleMessages from './ble-messages';
+import peripheralMessages from './peripheral-messages';
 // zh-cn, en, pt-br, zh-tw, ru. Connection UI is localized independently of the phase-1 block audit.
 const locales = ['zh-cn', 'en', 'pt-br', 'zh-tw', 'ru'];
 const messages = {
+
     ...firmwareMessages,
     ...telemetryMessages,
     ...bleMessages,
+    ...peripheralMessages,
     'title': ['NEW AI 连接与状态', 'NEW AI connection and status', 'Conexão e status do NEW AI', 'NEW AI 連線與狀態', 'Подключение и состояние NEW AI'],
     'connected': ['NEW AI 已连接', 'NEW AI connected', 'NEW AI conectado', 'NEW AI 已連線', 'NEW AI подключён'],
     'disconnected': ['NEW AI 未连接', 'NEW AI disconnected', 'NEW AI desconectado', 'NEW AI 未連線', 'NEW AI не подключён'],
@@ -95,12 +98,190 @@ const messages = {
     'NEW_FRAME_INVALID': ['通信数据校验失败，下载已中止。', 'Communication validation failed. Download aborted.', 'Falha na validação dos dados. Transferência interrompida.', '通訊資料驗證失敗，下載已中止。', 'Ошибка проверки данных. Загрузка прервана.'],
     'NEW_WRITE_TIMEOUT': ['USB 发送超时，下载已中止。', 'USB write timed out. Download aborted.', 'O envio USB excedeu o tempo limite. Transferência interrompida.', 'USB 傳送逾時，下載已中止。', 'Время передачи USB истекло. Загрузка прервана.'],
     'NEW_DOWNLOAD_INCOMPLETE': ['上次下载中断，请重新连接后完整下载。', 'The last download was interrupted. Reconnect and download the complete program.', 'A última transferência foi interrompida. Reconecte e transfira o programa completo.', '上次下載中斷，請重新連線後完整下載。', 'Предыдущая загрузка прервана. Переподключитесь и загрузите программу полностью.'],
-    'failure': ['操作未完成，请检查连接后重试。', 'Operation failed. Check the connection and try again.', 'A operação falhou. Verifique a conexão e tente novamente.', '操作未完成，請檢查連線後再試。', 'Операция не выполнена. Проверьте подключение и повторите попытку.']
+    'failure': ['操作未完成，请检查连接后重试。', 'Operation failed. Check the connection and try again.', 'A operação falhou. Verifique a conexão e tente novamente.', '操作未完成，請檢查連線後再試。', 'Операция не выполнена. Проверьте подключение и повторите попытку.'],
+    ...{
+        firmwareClose: [
+            '关闭',
+            'Close',
+            'Fechar',
+            '關閉',
+            'Закрыть'
+        ],
+        firmwareBackgroundHint: [
+            '可以关闭此窗口，软件会在后台等待设备重启并重新连接。请保持设备供电。',
+            'You can close this window. The app will wait for the device to restart and reconnect in the background. Keep the device powered on.',
+            'Você pode fechar esta janela. O aplicativo aguardará a reinicialização e a reconexão em segundo plano. Mantenha o dispositivo ligado.',
+            '可以關閉此視窗，軟體會在背景等待裝置重新啟動並重新連線。請保持裝置供電。',
+            'Можно закрыть это окно. Приложение продолжит ожидать перезапуска и подключения устройства в фоне. Не отключайте питание устройства.'
+        ],
+        firmwareMismatch: [
+            'NEW AI 固件版本为 {current}，与软件需要的版本 {version} 不一致。是否现在更新？',
+            'NEW AI firmware is {current}; this app requires {version}. Update now?',
+            'O firmware do NEW AI é {current}; este aplicativo requer {version}. Atualizar agora?',
+            'NEW AI 韌體版本為 {current}，與軟體需要的版本 {version} 不一致。是否現在更新？',
+            'Версия прошивки NEW AI — {current}, приложению нужна {version}. Обновить сейчас?'
+        ],
+        firmwareQuestion: [
+            '是否将 NEW AI 固件更新为版本 {version}？',
+            'Update NEW AI firmware to version {version}?',
+            'Atualizar o firmware do NEW AI para a versão {version}?',
+            '是否將 NEW AI 韌體更新為版本 {version}？',
+            'Обновить прошивку NEW AI до версии {version}?'
+        ],
+        firmwareCancel: [
+            '取消',
+            'Cancel',
+            'Cancelar',
+            '取消',
+            'Отмена'
+        ],
+        firmwareRetry: [
+            '重试更新',
+            'Retry update',
+            'Tentar atualizar novamente',
+            '重試更新',
+            'Повторить обновление'
+        ],
+        firmwareUpdating: [
+            '正在更新…',
+            'Updating…',
+            'Atualizando…',
+            '正在更新…',
+            'Обновление…'
+        ],
+        firmwareDone: [
+            '更新完成',
+            'Update complete',
+            'Atualização concluída',
+            '更新完成',
+            'Обновление завершено'
+        ],
+        firmwareUpdate: [
+            '固件更新',
+            'Firmware update',
+            'Atualização de firmware',
+            '韌體更新',
+            'Обновление прошивки'
+        ],
+        firmwareResources: [
+            '更新准备',
+            'Update preparation',
+            'Preparação da atualização',
+            '更新準備',
+            'Подготовка обновления'
+        ],
+        firmwareBundleVersion: [
+            '内置资源版本',
+            'Bundled resource version',
+            'Versão dos recursos incluídos',
+            '內建資源版本',
+            'Версия встроенных ресурсов'
+        ],
+        firmwareSource: [
+            '资源来源',
+            'Resource source',
+            'Origem dos recursos',
+            '資源來源',
+            'Источник ресурсов'
+        ],
+        firmwareIntegrityPassed: [
+            '更新资源校验通过。',
+            'Update resources verified.',
+            'Recursos de atualização verificados.',
+            '更新資源驗證通過。',
+            'Ресурсы обновления проверены.'
+        ],
+        firmwareFile: [
+            '文件',
+            'File',
+            'Arquivo',
+            '檔案',
+            'Файл'
+        ],
+        firmwareSize: [
+            '大小',
+            'Size',
+            'Tamanho',
+            '大小',
+            'Размер'
+        ],
+        firmwareCheck: [
+            '校验',
+            'Validation',
+            'Verificação',
+            '驗證',
+            'Проверка'
+        ],
+        firmwareFilePassed: [
+            '通过',
+            'Passed',
+            'Verificado',
+            '通過',
+            'Пройдена'
+        ],
+        firmwareChecking: [
+            '正在检查…',
+            'Checking…',
+            'Verificando…',
+            '正在檢查…',
+            'Проверка…'
+        ],
+        firmwareRecheck: [
+            '重新检查',
+            'Check again',
+            'Verificar novamente',
+            '重新檢查',
+            'Проверить снова'
+        ],
+        firmwareStart: [
+            '开始更新',
+            'Start update',
+            'Iniciar atualização',
+            '開始更新',
+            'Начать обновление'
+        ],
+        firmwareEraseNotice: [
+            '更新会清空 NEW AI 中已保存的用户程序。请保持 USB 连接和设备供电。',
+            'Updating will erase user programs saved on NEW AI. Keep USB connected and the device powered on.',
+            'A atualização apagará os programas do usuário salvos no NEW AI. Mantenha o USB conectado e o dispositivo ligado.',
+            '更新會清除 NEW AI 中已儲存的使用者程式。請保持 USB 連線和裝置供電。',
+            'Обновление удалит пользовательские программы на NEW AI. Не отключайте USB и питание устройства.'
+        ],
+        firmwareEraseConfirm: [
+            '我确认清空设备中已保存的程序并进行更新',
+            'Erase saved device programs and update',
+            'Confirmo apagar os programas do dispositivo e atualizar',
+            '我確認清除裝置中已儲存的程式並更新',
+            'Подтверждаю удаление программ устройства и обновление'
+        ],
+        firmwareRecovery: [
+            '设备已进入升级模式，恢复更新',
+            'Device is in update mode: recover',
+            'Dispositivo em modo de atualização: recuperar',
+            '裝置已進入升級模式，復原更新',
+            'Устройство в режиме обновления: восстановить'
+        ],
+        firmwareRecoveryHelp: [
+            '按住主机中键和右键开机进入升级模式，再连接 USB 并选择对应串口。也可使用原版软件恢复。',
+            'Hold the center and right buttons while powering on to enter update mode, then connect USB and select its port. The original app can also restore the device.',
+            'Segure os botões central e direito ao ligar para entrar no modo de atualização. Conecte o USB e selecione a porta. O aplicativo original também pode restaurar o dispositivo.',
+            '按住主機中鍵和右鍵開機進入升級模式，再連接 USB 並選擇對應序列埠。也可使用原版軟體復原。',
+            'Для режима обновления удерживайте центральную и правую кнопки при включении, затем подключите USB и выберите порт. Можно также использовать исходное приложение.'
+        ],
+        firmware: [
+            '固件版本',
+            'Firmware version',
+            'Versão do firmware',
+            '韌體版本',
+            'Версия прошивки'
+        ]
+    }
 };
 export const NEW_AI_MESSAGE_IDS = Object.keys(messages);
-export const newAiText = (key, locale = 'en') => {
+export const newAiText = (key, locale = 'en', values = {}) => {
     const index = locales.includes(locale) ? locales.indexOf(locale) : 1;
-    return (messages[key] || messages.failure)[index];
+    return (messages[key] || messages.failure)[index].replace(/\{(\w+)\}/g, (match, name) =>
+        (Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : match));
 };
 export const newAiErrorText = (error, locale) => {
     const code = String((error && (error.code || error.message)) || error).match(/NEW_[A-Z_]+/);

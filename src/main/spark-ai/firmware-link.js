@@ -49,9 +49,16 @@ export class SparkFirmwareLink extends EventEmitter {
             if (this.pending) this.pending.reject(error);
         });
     }
-    async open () {
-        await firmwareBounded(this.transport.open(), this.timeouts.open, 'SPARK_CONNECT_TIMEOUT');
+    async open ({alreadyOpen = false} = {}) {
+        if (!alreadyOpen) {
+            await firmwareBounded(this.transport.open(), this.timeouts.open, 'SPARK_CONNECT_TIMEOUT');
+        }
         if (this.failure) throw this.failure;
+    }
+    prepareBootTransfer () {
+        this.monitor = null;
+        this.parser.buffer = Buffer.alloc(0);
+        this.parser.line = Buffer.alloc(0);
     }
     async send (command, payload) {
         if (this.closed || this.failure) throw this.failure || new SparkError('SPARK_DISCONNECTED');
@@ -82,8 +89,8 @@ export class SparkFirmwareLink extends EventEmitter {
             throw error;
         }
     }
-    waitForMonitor (timeout) {
-        if (this.monitor) return Promise.resolve(this.monitor);
+    waitForMonitor (timeout, accept = () => true) {
+        if (this.monitor && accept(this.monitor)) return Promise.resolve(this.monitor);
         if (this.failure || this.closed) return Promise.reject(this.failure || new SparkError('SPARK_DISCONNECTED'));
         return new Promise((resolve, reject) => {
             const finish = (error, value) => {
@@ -92,7 +99,9 @@ export class SparkFirmwareLink extends EventEmitter {
                 this.removeListener('lost', lost);
                 if (error) reject(error); else resolve(value);
             };
-            const monitor = value => finish(null, value);
+            const monitor = value => {
+                if (accept(value)) finish(null, value);
+            };
             const lost = error => finish(error);
             const timer = setTimeout(() => finish(new SparkError('SPARK_MONITOR_TIMEOUT')), timeout);
             this.on('monitor', monitor);

@@ -1,7 +1,7 @@
 /**
  * Lock OpenBlock's GUI state to upload mode. The action creators remain
  * available for upstream compatibility, but realtime-mode and switch-support
- * actions cannot change the EST Studio mode.
+ * actions cannot change the ATC CodeStudio mode.
  * @param {string} source - OpenBlock program-mode reducer source.
  * @returns {string} transformed reducer source.
  */

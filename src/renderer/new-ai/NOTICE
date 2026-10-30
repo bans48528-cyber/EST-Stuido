@@ -15,8 +15,10 @@ described by resources/new-ai/compiler-manifest.json. Original firmware bundle
 provenance and update boundaries are described in resources/new-ai/firmware/NOTICE.
 The programming assistant contract is derived from the same block catalog and
 uses NEW AI's separate generator, A-H port snapshot and workspace import path.
-Sensor firmware flashing is not exposed by the graphical interface. The explicit
-update-new-ai-motor-usb.js maintenance tool targets only the A-port big motor.
+The peripheral update dialog compares reported device/onboard-image versions and
+uses the original 0x32 command for big/small motors, color and gray/gray V2 sensors.
+The host copies its own images; success requires fresh matching version reports.
+The separate update-new-ai-motor-usb.js maintenance tool targets only the A-port big motor.
 Block and dropdown translations in messages.js are EST Studio integration work.
 They are applied when registering block definitions; the imported catalog,
 firmware field values and Python generators remain language-independent.

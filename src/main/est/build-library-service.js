@@ -255,7 +255,7 @@ export class EstBuildLibraryService {
                 manifest.archiveBytes !== EST_BUILD_LIBRARY_REMOTE_SUMMARY.archiveBytes ||
                 manifest.archiveSha256 !== EST_BUILD_LIBRARY_REMOTE_SUMMARY.archiveSha256 ||
                 manifest.itemCount !== EST_BUILD_LIBRARY_REMOTE_SUMMARY.itemCount) {
-                throw new Error('Build library manifest does not match this EST Studio release.');
+                throw new Error('Build library manifest does not match this ATC CodeStudio release.');
             }
             const existing = await this.getInstalledLibrary();
             if (existing && existing.contentVersion === manifest.contentVersion) {

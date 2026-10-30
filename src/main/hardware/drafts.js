@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import {getHardwareProfile} from '../../common/hardware-profiles';
+import {getHardwareProfile, HARDWARE_PROFILES} from '../../common/hardware-profiles';
 
 const MAX_DRAFT_BYTES = 32 * 1024 * 1024;
 
@@ -46,6 +46,17 @@ export class HardwareDraftStore {
         } catch (error) {
             if (error.code === 'ENOENT') return null;
             throw error;
+        }
+    }
+
+    async clear () {
+        // Remove only the three known draft files, never saved projects or the directory tree.
+        for (const profile of HARDWARE_PROFILES) {
+            try {
+                await fs.unlink(this.file(profile.id));
+            } catch (error) {
+                if (error.code !== 'ENOENT') throw new Error('HARDWARE_DRAFT_CLEAR');
+            }
         }
     }
 }

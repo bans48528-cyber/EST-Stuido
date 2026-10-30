@@ -1,5 +1,6 @@
 import path from 'path';
 
+// Retain the existing encrypted API settings when the application brand changes.
 export const getEstAiSettingsPath = app => path.join(app.getPath('appData'), 'EST Studio', 'ai', 'settings.bin');
 
 // The injected Electron safeStorage uses the current OS user's credential protection.
