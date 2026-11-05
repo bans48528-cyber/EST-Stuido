@@ -44,24 +44,24 @@ module.exports = async ({evaluate, pause, window, output, defaultStatus, setSpar
         error: null,
         firmware: null,
         status: defaultStatus};
-    setSpark({...normal, compatible: false, status: {...defaultStatus, version: 109}});
+    setSpark({...normal, compatible: false, status: {...defaultStatus, version: 110}});
     await wait('Boolean(document.querySelector("#spark-firmware-panel"))');
     assert.equal(await exists('#spark-hardware-panel'), false, 'auto prompt must not require the device inspector');
     const text = await evaluate('document.querySelector("#spark-firmware-panel").textContent');
-    assert.ok(text.includes('109') && text.includes('110'));
+    assert.ok(text.includes('110') && text.includes('111'));
     assert.equal(await evaluate('document.querySelectorAll("#spark-firmware-panel input, #spark-firmware-panel select, #spark-firmware-panel table").length'), 0);
     const before = updates().length;
     await capture('spark-firmware-auto.png');
     await click('#spark-firmware-cancel');
     for (let count = 0; count < 4; count++) {
-        setSpark({status: {...defaultStatus, version: 109, timestamp: Date.now()}});
+        setSpark({status: {...defaultStatus, version: 110, timestamp: Date.now()}});
         await pause(70);
     }
     assert.equal(await exists('#spark-firmware-panel'), false, 'cancel does not re-prompt on telemetry');
     assert.equal(updates().length, before, 'cancel never updates');
 
     await manual();
-    assert.ok((await evaluate('document.querySelector("#spark-firmware-panel").textContent')).includes('110'));
+    assert.ok((await evaluate('document.querySelector("#spark-firmware-panel").textContent')).includes('111'));
     await evaluate('document.querySelector("#spark-firmware-start").click(); document.querySelector("#spark-firmware-start").click()');
     await wait('Boolean(document.querySelector("#spark-firmware-panel progress"))');
     assert.equal(updates().length, before + 1, 'one click is enough; duplicate clicks are ignored');
@@ -78,7 +78,7 @@ module.exports = async ({evaluate, pause, window, output, defaultStatus, setSpar
     // A real disconnect and reconnect permits a fresh mismatch prompt.
     setSpark({connected: false, status: null, firmware: null});
     await pause(100);
-    setSpark({...normal, compatible: false, status: {...defaultStatus, version: 111}});
+    setSpark({...normal, compatible: false, status: {...defaultStatus, version: 112}});
     await wait('Boolean(document.querySelector("#spark-firmware-panel"))');
     await click('#spark-firmware-cancel');
     setSpark(normal);

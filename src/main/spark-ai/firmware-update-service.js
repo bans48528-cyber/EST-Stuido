@@ -45,7 +45,7 @@ const checkFile = async (root, file, retainData = false) => {
         if (createHash('sha256').update(data)
             .digest('hex') !== file.sha256) throw new Error('Invalid SHA-256');
         if (file.path === 'app/app.bin' &&
-            (data.readUInt32LE(0) !== 0x2001E408 || data.readUInt32LE(4) !== 0x0801031D)) {
+            (data.readUInt32LE(0) !== 0x2001F980 || data.readUInt32LE(4) !== 0x0801031D)) {
             throw new Error('Invalid APP vector');
         }
         if (file.path.endsWith('.o')) validateSparkBytecode(data);
@@ -69,7 +69,12 @@ export class SparkFirmwareUpdateService {
         this.getRoot = getRoot;
         this.busy = false;
         this.timeouts = {bootDelay: 5000, boot: 25000, application: 45000, poll: 250, ...timeouts};
-        this.state = {active: false, phase: 'idle', bytes: 0, total: 202906, error: null, result: null};
+        this.state = {active: false,
+            phase: 'idle',
+            bytes: 0,
+            total: release.files.reduce((total, file) => total + file.bytes, 0),
+            error: null,
+            result: null};
     }
     update (patch, immediate = false) {
         this.state = {...this.state, ...patch};

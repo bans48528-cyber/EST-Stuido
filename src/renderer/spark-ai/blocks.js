@@ -38,6 +38,7 @@ const nativeKey = id => nativeMessages[id] || (id.startsWith('operator_') ?
     id.replace('operator_', 'OPERATORS_').toUpperCase() : null);
 const mapField = (arg, locale, shadowId) => {
     if (arg.type === 'field_matrix') return {...arg, type: 'field_spark_matrix'};
+    if (arg.type === 'field_image') return {...arg, alt: sparkText(arg.alt, locale)};
     if (arg.type === 'field_slider') return {...arg, type: 'field_number'};
     if (arg.type === 'field_motor') {
         return {type: 'field_dropdown',

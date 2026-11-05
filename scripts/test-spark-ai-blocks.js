@@ -158,13 +158,26 @@ for (const row of catalog.blocks) {
         }
     }
 }
-assert.equal(catalog.blocks.length, 66);
-assert.equal(new Set(catalog.blocks.map(row => row.id)).size, 66);
+assert.equal(catalog.blocks.length, 67);
+assert.equal(new Set(catalog.blocks.map(row => row.id)).size, 67);
+const infrared = catalog.blocks.find(row => row.id === 'sensing_infrared_set_color');
+assert.ok(infrared && infrared.category === 'sensing');
+for (const [port, index] of ['A', 'B', 'C', 'D'].map((name, i) => [name, i])) {
+    for (const state of ['0', '1', '2', '3']) {
+        g.init(workspace);
+        const block = makeRow(infrared);
+        block.fields.STATE = state;
+        block.children.PORT.fields.SENSING_MENU = port;
+        const code = g[block.type](block);
+        assert.equal(code, `_ir_remote.set_color(${index}, ${state})\n`);
+        programs.push({id: `infrared-${port}-${state}`, code});
+    }
+}
 for (const locale of ['zh-cn', 'zh-tw', 'en', 'pt-br', 'ru']) {
     B.ScratchMsgs.locales[locale] = require(`openblock-l10n/editor/blocks/${locale}.json`);
     defineSparkBlocksWithLocale(B, locale);
     const xml = getSparkToolboxCategories(locale);
-    assert.equal((xml.match(/<block /g) || []).length, 66);
+    assert.equal((xml.match(/<block /g) || []).length, 67);
     assert.equal((xml.match(/<category /g) || []).length, 8);
     catalog.blocks.forEach(row => {
         let definition;
@@ -172,6 +185,13 @@ for (const locale of ['zh-cn', 'zh-tw', 'en', 'pt-br', 'ru']) {
             definition = json;
         }});
         assert.ok(definition.message0, row.id);
+        if (row.id === 'sensing_infrared_set_color') {
+            assert.deepStrictEqual(definition.args0.find(arg => arg.name === 'STATE').options.map(option => option[1]),
+                ['0', '1', '2', '3']);
+            if (['en', 'pt-br', 'ru'].includes(locale)) {
+                assert.ok(!/[\u4e00-\u9fff]/.test(JSON.stringify(definition.args0)), `${locale}: infrared fields`);
+            }
+        }
         if (locale === 'en' || locale === 'pt-br' || locale === 'ru') {
             assert.ok(!/[\u4e00-\u9fff]/.test(definition.message0), `${locale} ${row.id}`);
         }
@@ -298,7 +318,7 @@ const dynamicInputs = {VALUE: makeBlock('text', {TEXT: '1'}),
 Object.values(dynamicInputs).forEach(block => {
     block.outputConnection = {};
 });
-fixtures.slice(66, 78).forEach(fixture => {
+fixtures.slice(catalog.blocks.length, catalog.blocks.length + 12).forEach(fixture => {
     const block = makeBlock(fixture.sourceId, {VARIABLE: 'v', LIST: 'l'}, dynamicInputs);
     const output = g[block.type](block);
     assert.ok(output, fixture.sourceId);
@@ -319,7 +339,7 @@ const syntax = spawnSync('python', ['-c',
 assert.equal(syntax.status, 0, syntax.stdout + syntax.stderr);
 assert.ok(!programs.some(program => /est_runtime|rt\.|import est\b/.test(program.code)));
 assert.ok(sparkBlockXml(catalog.blocks[0]).includes('spark_motor_box'));
-console.log('Spark AI passed: 66 fixed mappings, dropdown variants, 13 dynamic mappings, 5 locales, ' +
+console.log('Spark AI passed: 67 fixed mappings, dropdown variants, 13 dynamic mappings, 5 locales, ' +
     'matrix encoding, nested control and Python syntax.');
 if (process.platform === 'win32' && process.arch === 'x64') {
     const directory = fs.mkdtempSync(path.join(require('os').tmpdir(), 'spark-blocks-compile-'));

@@ -1,69 +1,55 @@
-# EST Studio
+# ATC CodeStudio
 
-EST Studio 是基于 [OpenBlock Desktop](https://github.com/openblockcc/openblock-desktop) 构建的 EST 专用图形化编程上位机。
+ATC CodeStudio 是基于 [OpenBlock Desktop](https://github.com/openblockcc/openblock-desktop) 的图形化编程桌面软件，支持 EST、Spark AI 和 NEW AI。工程后缀为 `.atc`，设备归属随工程保存。
 
-当前项目处于开发阶段，目标是让一台电脑自动连接一台 EST 设备，并提供接近 EV3 Classroom 的积木编程体验。
+主页可独立选择查看三款产品的文件、指南和搭建图；开始编程后加载所选设备的积木、代码生成器和通信服务。三款产品共用编辑器、语言设置和 AI 编程助手。
 
-编辑器无需先选择通用硬件即可进入编程。EST Studio 固定使用唯一的上传模式（可编辑代码并上传用户程序），不允许切换到模拟/实时模式；顶部的通用硬件选择和编程模式切换入口已隐藏，EST 连接状态入口继续保留。
+当前开发版本为 **2.8.79**。Spark AI 已同步原版软件 1.1.10 的积木增量、编译器和 111 版内置固件；软件及模拟验证通过，111 版真机升级与红外灯仍待实机验收。具体实现和历史验收见 `docs/`。
 
-## 当前进度
+## 核心目录
 
-- 通过 USB HID 自动发现并连接 EST（VID `0483`，PID `5750`）。
-- 菜单栏直接显示“EST 已连接”或“EST 未连接”，并使用 12 × 12 状态圆点。
-- 已提供 8 个分类、106 个可见 EST 积木。
-- 电机端口、移动端口和事件传感器端口支持下拉选择，也可放入原生变量。
-- 转向积木提供 EV3 Classroom 风格的半圆转盘。
-- 保留 OpenBlock 原生变量、列表和“我的模块”功能。
-- 代码区固定使用 Python；全部 106 个 EST 积木均已具备 MicroPython 代码生成映射，多程序堆按 `stack_1`、`stack_2` 顺序生成。
-- OpenBlock 原生变量、列表和“我的模块”可直接嵌入 EST 程序堆生成代码。
-- `motor_degrees` 已接入设备状态读取；生成代码实际上传运行仍需 EST 重构项目提供对应的 `est` / `est_runtime` 能力。
-
-“终止用户程序”功能需要等待 EST 重构项目提供对应协议，当前暂未实现。
-
-## 目录结构
-
-| 路径 | 用途 |
+| 路径 | 内容 |
 | --- | --- |
-| `src/main/est/` | EST HID 传输、协议解析、设备连接服务 |
-| `src/renderer/est-blocks/` | EST 积木定义、工具箱和运行时入口 |
-| `src/renderer/EstStatusPanel.jsx` | 菜单栏 EST 连接状态 |
-| `scripts/est-*-loader.js` | 将 EST 菜单、积木和运行时接入 OpenBlock |
-| `scripts/test-est-protocol.js` | EST 协议、积木和原生编辑器回归测试 |
-
-## 开发环境
-
-- Windows 10/11
-- Node.js 16 或更高版本
-- npm
-- Git
-
-项目使用 Electron 15 和 Webpack 4。编译脚本会在较新的 Node.js 上自动启用 OpenSSL 兼容参数。
+| `src/` | 主进程、编辑器、三款硬件及 AI/视觉功能 |
+| `resources/` | 打包所需固件、编译器、搭建图等运行资源 |
+| `buildResources/` | 应用图标、文件关联图标及安装配置资源 |
+| `scripts/` | 开发、编译、打包、集成加载器和测试 |
+| `scripts/import-data/` | 可重新生成积木所需的最小原始输入 |
+| `docs/`、`doc/` | 协议、接入说明及上游文档 |
 
 ## 安装与启动
+
+开发环境为 Windows 10/11 x64、Node.js 16 或更高版本、npm 和 Git。项目使用 Electron 15 与 Webpack 4，编译脚本会为较新的 Node.js 设置 OpenSSL 兼容参数。
 
 ```powershell
 git clone https://github.com/bans48528-cyber/EST-Stuido.git
 cd EST-Stuido
-npm install
+npm ci
 npm start
 ```
 
-`npm start` 会在后台启动 EST Studio，开发日志写入 `dist/openblock-dev.log`。
+已安装依赖的工作区直接运行 `npm start`。开发日志和 PID 写入 `dist/`。OpenBlock 的定制通过仓库中的加载器在构建时应用。
 
-## 验证
+## 验证与打包
 
 ```powershell
 npm run test:est
-npm run test:lint
+npm run test:spark
+npm run test:new-ai
 npm run compile
+npm run build:dist
 ```
 
-## 硬件约定
+`test:*` 默认使用模拟设备及编译器样例；`check:*-usb`、`check:vision-*` 等命令可能访问实际硬件或摄像头，应按对应接入文档使用。整库 ESLint 仍有历史问题，不等同于上述功能测试失败。
 
-- 当前只面向单电脑、单 EST 设备场景。
-- 软件启动后自动连接设备，不提供额外的设备选择步骤。
-- 当前 HID 标识为 VID `0483`、PID `5750`。
+## 工作区清理
+
+核心源码、运行资源、测试、必要文档、锁文件及 Git 历史保留在本仓库。`dist/`、`tmp/`、`translations/`、`static/`、`node_modules/.cache/` 均为可重新生成的目录；旧安装包、截图、日志、提取副本及已合入的主页原型可删除。`node_modules/` 中当前开发依赖可保留以继续开发，也可通过 `npm ci` 重装。
+
+积木导入默认读取 `scripts/import-data/`，编译器样例保存在 `scripts/*-compiler-fixtures.json`，不再依赖工作区旁的 `artifacts/` 或原版软件安装路径。固件导入脚本仍可显式指定外部固件目录；正常启动、编译和打包使用已纳入版本控制的 `resources/`。
+
+用户工程、AI 密钥与本机偏好不属于构建产物；维护仓库时不要删除应用数据目录。
 
 ## 上游与许可
 
-本项目基于 OpenBlock Desktop 2.6.3 开发，并保留原项目的 MIT、Scratch Foundation 和商标许可文件。OpenBlock 是其原作者和权利人的商标；EST Studio 的修改内容遵循仓库中的许可文件。
+项目保留 OpenBlock Desktop 的 MIT、Scratch Foundation 和商标许可文件，以及相关导入组件的声明。详见 `LICENSE`、`LICENSE.ScratchFoundation`、`TRADEMARK` 和相应资源目录中的说明。

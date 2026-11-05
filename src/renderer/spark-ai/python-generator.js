@@ -1,4 +1,4 @@
-// Spark AI API mappings originate in the supplied 1.1.9 extraction.
+// Spark AI API mappings follow 1.1.9 plus the verified 1.1.10 infrared addition.
 // Traversal, precedence and value/statement connections use Blockly.Generator.
 import installSourceGenerators from './source-generators';
 import {installEstPythonNameSanitizer} from '../est-blocks/python-names';
@@ -17,10 +17,11 @@ const TYPES = {MOTOR: '_motor',
     ULTRASIONIC: '_ultrasion',
     KEY: '_key',
     TIMER: '_os',
-    MATH: '_math'};
+    MATH: '_math',
+    IR_REMOTE: '_ir_remote'};
 const KEYWORDS = 'False,None,True,and,as,assert,async,await,break,class,continue,def,del,elif,else,' +
     'except,finally,for,from,global,if,import,in,is,lambda,nonlocal,not,or,pass,raise,return,try,while,with,yield,' +
-    '_motor,_matrix,_beep,_touch,_color,_ultrasion,_key,_os,_math,_random,PikaStdData,str,int,len,range';
+    '_motor,_matrix,_beep,_touch,_color,_ultrasion,_key,_os,_math,_random,_ir_remote,PikaStdData,str,int,len,range';
 
 export const registerSparkPythonGenerator = ScratchBlocks => {
     if (ScratchBlocks.SparkPython) return;

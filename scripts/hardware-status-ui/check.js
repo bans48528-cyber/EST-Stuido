@@ -136,7 +136,7 @@ module.exports = async ({evaluate, pause, window, output, setNew, setSpark, newS
         busy: false,
         stale: false,
         state: 'connected',
-        status: {version: 110,
+        status: {version: 111,
             battery: 85,
             running: false,
             flash: {free: '512KB', total: '1024KB'},

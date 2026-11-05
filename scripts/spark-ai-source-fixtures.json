@@ -447,6 +447,36 @@
     "notes": []
   },
   {
+    "id": "spark_sensing_infrared_set_color",
+    "sourceId": "sensing_infrared_set_color",
+    "python": "_ir_remote.set_color(0, 0)\n",
+    "variants": [
+      {
+        "field": "STATE",
+        "value": "0",
+        "code": "_ir_remote.set_color(0, 0)\n"
+      },
+      {
+        "field": "STATE",
+        "value": "1",
+        "code": "_ir_remote.set_color(0, 1)\n"
+      },
+      {
+        "field": "STATE",
+        "value": "2",
+        "code": "_ir_remote.set_color(0, 2)\n"
+      },
+      {
+        "field": "STATE",
+        "value": "3",
+        "code": "_ir_remote.set_color(0, 3)\n"
+      }
+    ],
+    "notes": [
+      "Added to the actual Spark AI 1.1.10 toolbox; A-D map to firmware ports 0-3. Requires firmware 111."
+    ]
+  },
+  {
     "id": "spark_sensing_ultrasonic_judgment",
     "sourceId": "sensing_ultrasonic_judgment",
     "python": "_ultrasion.cmp_value(0, \">\", 10)",

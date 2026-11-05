@@ -1,5 +1,6 @@
 /* eslint-disable max-len, quote-props */
 import {getEstText} from '../est-i18n';
+import firmwareRelease from '../../main/spark-ai/firmware-release.json';
 
 // Simplified Chinese, English, Portuguese, Traditional Chinese, Russian.
 const messages = {
@@ -134,7 +135,7 @@ const messages = {
     SPARK_CONNECT_TIMEOUT: ['连接超时，未收到 Spark AI 的有效监控。', 'Connection timed out without valid Spark AI monitoring.', 'Tempo esgotado sem monitoramento válido do Spark AI.', '連線逾時，未收到 Spark AI 的有效監控。', 'Время подключения истекло без данных Spark AI.'],
     SPARK_MONITOR_TIMEOUT: ['未收到预期的设备状态，请查看设备输出。', 'Expected device status was not received. Check device output.', 'O estado esperado não foi recebido. Verifique a saída do dispositivo.', '未收到預期的裝置狀態，請查看裝置輸出。', 'Ожидаемое состояние не получено. Проверьте вывод устройства.'],
     SPARK_MONITOR_STALE: ['监控已中断，请重新连接后再下载。', 'Monitoring stopped. Reconnect before downloading.', 'Monitoramento interrompido. Reconecte antes de transferir.', '監控已中斷，請重新連線後再下載。', 'Мониторинг прерван. Переподключитесь перед передачей.'],
-    SPARK_FIRMWARE_UNVERIFIED: ['此固件版本尚未核对，暂不允许下载；当前已核对版本为 110。', 'This firmware is unverified; downloading is disabled. Verified version: 110.', 'Firmware não verificado; transferência desativada. Versão verificada: 110.', '此韌體版本尚未核對，暫不允許下載；已核對版本為 110。', 'Прошивка не проверена; передача запрещена. Проверенная версия: 110.'],
+    SPARK_FIRMWARE_UNVERIFIED: ['固件版本不匹配，请更新至 {version} 后下载程序。', 'Firmware version mismatch. Update to {version} to download programs.', 'Versão de firmware incompatível. Atualize para {version} para transferir programas.', '韌體版本不符，請更新至 {version} 後下載程式。', 'Версия прошивки не совпадает. Обновите до {version}, чтобы загружать программы.'],
     SPARK_SOURCE_INVALID: ['程序为空或源码无效，请检查积木或 Python 代码。', 'The program is empty or source is invalid. Check blocks or Python.', 'Programa vazio ou código inválido. Verifique os blocos ou Python.', '程式為空或原始碼無效，請檢查積木或 Python。', 'Программа пуста или код недопустим. Проверьте блоки или Python.'],
     SPARK_NO_START: ['程序中没有有效的启动积木。', 'No active program-start block.', 'Nenhum bloco ativo de início de programa.', '程式中沒有有效的啟動積木。', 'Нет активного блока запуска программы.'],
     SPARK_MOTOR_PAIR_INCOMPLETE: ['请为组合电机选择两个不同的端口：先选左电机，再选右电机。', 'Select two different ports for the motor pair: left motor first, then right motor.', 'Selecione duas portas diferentes: primeiro o motor esquerdo, depois o direito.', '請為組合電機選擇兩個不同的連接埠：先選左電機，再選右電機。', 'Выберите два разных порта: сначала левый мотор, затем правый.'],
@@ -160,7 +161,9 @@ export const sparkRuntimeText = (id, locale, values = {}) => {
     const index = {'zh-cn': 0, 'en': 1, 'pt-br': 2, 'zh-tw': 3, 'ru': 4}[locale];
     const row = messages[id];
     const result = row ? row[typeof index === 'number' ? index : 1] : id;
-    return result.replace(/\{([a-z]+)\}/g, (match, name) => String(typeof values[name] === 'undefined' ? match : values[name]));
+    const replacements = {version: firmwareRelease.version, ...values};
+    return result.replace(/\{([a-z]+)\}/g, (match, name) =>
+        String(typeof replacements[name] === 'undefined' ? match : replacements[name]));
 };
 export const sparkErrorCode = error => (String((error && error.message) || error).match(/SPARK_[A-Z_]+/) || [])[0];
 export const sparkRuntimeError = (error, locale) => {

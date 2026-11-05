@@ -33,7 +33,24 @@ const {makeSparkCoverageCases, makeProgram, makeSparkNativeProgram} = require('.
 (async () => {
     const options = {hardwareId: 'spark-ai'};
     const cases = makeSparkCoverageCases();
-    assert.equal(cases.length, 66);
+    assert.equal(cases.length, 67);
+    for (const port of ['A', 'B', 'C', 'D']) {
+        for (const state of ['0', '1', '2', '3']) {
+            const ir = makeProgram([{type: 'spark_sensing_infrared_set_color',
+                fields: {STATE: state},
+                inputs: {PORT: port}}]);
+            const result = compileEstBlockIrToXml(ir, options);
+            assert.ok(result.xml.includes('spark_sensing_infrared_set_color'));
+        }
+    }
+    for (const node of [
+        {fields: {STATE: '4'}, inputs: {PORT: 'A'}},
+        {fields: {STATE: '1'}, inputs: {PORT: 'E'}}
+    ]) {
+        assert.throws(() => compileEstBlockIrToXml(makeProgram([
+            {type: 'spark_sensing_infrared_set_color', ...node}
+        ]), options));
+    }
     for (const {type, ir} of cases) {
         const result = compileEstBlockIrToXml(ir, options);
         assert.ok(result.xml.includes(`type="${type}"`), type);
@@ -97,7 +114,7 @@ const {makeSparkCoverageCases, makeProgram, makeSparkNativeProgram} = require('.
     assert.ok(isAiHardwareActive());
     assert.throws(() => importEstBlockIrToWorkspace({workspace, ir: SPARK_AI_SAMPLE_IR}));
     setHardwareContext('est');
-    console.log('Spark AI assistant passed: 66 blocks, model-specific ports/pairs/matrix, ' +
+    console.log('Spark AI assistant passed: 67 blocks, model-specific ports/pairs/matrix, ' +
         'prompt repair, snapshots and hardware isolation.');
 })().catch(error => {
     console.error(error); process.exitCode = 1;

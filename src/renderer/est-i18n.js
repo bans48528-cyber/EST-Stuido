@@ -268,7 +268,7 @@ const zhCN = {
         '连接有效时，助手可参考 Spark AI 的实时传感器快照；Spark AI 当前没有电脑摄像头或实体摄像头积木，视觉需求不会被自动替换成其他产品能力。',
     'home.dialog.est.prototype.sparkFirmwareTitle': 'Spark AI 固件升级',
     'home.dialog.est.prototype.sparkFirmware1': '保存项目并停止主机程序，使用 USB 连接 Spark AI；固件更新不支持蓝牙连接。',
-    'home.dialog.est.prototype.sparkFirmware2': '在硬件状态中打开固件更新，先校验软件内置的 110 版固件与资源，再核对目标设备和 USB 端口。',
+    'home.dialog.est.prototype.sparkFirmware2': '在设备信息中点击固件更新，确认后自动更新至软件内置的 111 版固件，无需手动进入更新模式。',
     'home.dialog.est.prototype.sparkFirmware3': '确认清空主机中全部已保存程序后开始更新；传输期间保持 USB、供电和软件开启，过程不能暂停。',
     'home.dialog.est.prototype.sparkFirmware4': '若正常连接不可用，可按面板提示使用恢复更新；完成后等待软件重新连接并核对固件版本。',
     'home.dialog.est.prototype.sparkFirmwareNote': '升级会清空 0–9 槽位中的程序。更新失败时不要反复插拔或同时打开其他串口软件，应保留错误信息并重新执行完整更新。',
@@ -1471,8 +1471,8 @@ const en = {
         'Save the project, stop the device program and connect Spark AI by USB. Firmware update is not ' +
         'available over Bluetooth.',
     'home.dialog.est.prototype.sparkFirmware2':
-        'Open firmware update in Hardware Status, verify the bundled version 110 firmware and resources, ' +
-        'then confirm the target device and USB port.',
+        'Choose Firmware Update in Device Info. Confirm once to update to bundled firmware 111; ' +
+        'the device enters update mode automatically.',
     'home.dialog.est.prototype.sparkFirmware3':
         'Confirm erasing all saved programs, then start. Keep USB, power and the app active; transfer ' +
         'cannot be paused.',
@@ -2963,6 +2963,9 @@ const en = {
 
 const ptBR = {
     ...en,
+    'home.dialog.est.prototype.sparkFirmware2':
+        'Em Informações do dispositivo, clique em Atualização de firmware. Confirme uma vez para atualizar ' +
+        'para a versão 111 incluída; o dispositivo entra automaticamente no modo de atualização.',
     'home.blockGuide.vision_valid': 'Alvo visual válido｜Lê o estado recente da mão esquerda, direita, corpo ou rosto.',
     'home.blockGuide.vision_gesture': 'Comparar gesto｜Lê as duas mãos separadamente no mesmo programa.',
     'home.blockGuide.vision_class': 'Código da classe visual｜Retorna a classe do alvo ou -1 se inválido.',
@@ -3382,6 +3385,8 @@ const ptBR = {
 
 const zhTW = {
     ...zhCN,
+    'home.dialog.est.prototype.sparkFirmware2':
+        '在裝置資訊中點擊韌體更新，確認後自動更新至軟體內建的 111 版韌體，無需手動進入更新模式。',
     'menu.home': '首頁',
     'home.navigation': '首頁導覽',
     'home.nav.files': '檔案',
@@ -3468,6 +3473,9 @@ const zhTW = {
 
 const ru = {
     ...en,
+    'home.dialog.est.prototype.sparkFirmware2':
+        'В разделе сведений об устройстве выберите обновление прошивки. Подтвердите обновление до ' +
+        'встроенной версии 111; устройство автоматически перейдёт в режим обновления.',
     'menu.home': 'Главная',
     'home.navigation': 'Навигация главной страницы',
     'home.nav.files': 'Файлы',

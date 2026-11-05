@@ -3,7 +3,7 @@
   "productName": "ATC CodeStudio",
   "description": "ATC CodeStudio graphical programming desktop application",
   "author": "Openblock.cc Team <contact@openblock.cc> (http://www.openblock.cc/)",
-  "version": "2.8.78",
+  "version": "2.8.79",
   "license": "MIT",
   "scripts": {
     "postinstall": "electron-builder install-app-deps && node scripts/ensure-electron-native-arch.js",

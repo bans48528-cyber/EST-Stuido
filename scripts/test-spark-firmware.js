@@ -97,14 +97,14 @@ class MockFirmwareTransport extends EventEmitter {
             assert.equal(h.files.size, 5, 'commit marker must be the last complete file');
             if (h.lateOldReport) setTimeout(() => this.report(), 2);
             h.timer = setTimeout(() => {
-                h.mode = 'app'; h.version = h.nextVersion || 110;
+                h.mode = 'app'; h.version = h.nextVersion || release.version;
                 this.close();
             }, 8);
         }
     }
 }
 const fixture = (options = {}) => {
-    const hardware = {mode: 'app', version: 110, writes: [], names: [], files: new Map(), frames: 0, ...options};
+    const hardware = {mode: 'app', version: release.version, writes: [], names: [], files: new Map(), frames: 0, ...options};
     const device = new SparkDeviceService({
         listPorts: async () => [portFor(hardware.mode === 'boot' && !hardware.retainUsb ? 'COM_BOOT' : 'COM_APP')],
         createTransport: port => new MockFirmwareTransport(hardware, port),
@@ -137,12 +137,12 @@ async function updateIntegrationTests () {
         assert.throws(() => good.updater.start(request), /SPARK_BUSY/);
         const result = await updating;
         assert.equal(result.reconnected, true);
-        assert.equal(result.version, 110);
+        assert.equal(result.version, release.version);
         assert.equal(result.imageVerified, false, 'version report is not a flash-content hash');
         assert.equal(good.device.busy, false);
         assert.equal(good.device.connected, true);
         assert.equal(good.device.portPath, 'COM_APP');
-        assert.equal(good.hardware.frames, 827);
+        assert.equal(good.hardware.frames, 837);
         assert.deepStrictEqual(good.hardware.names, [
             {command: 0xDA, name: 'app.bin'}, {command: 0xDA, name: 'calibrate.o'},
             {command: 0xDA, name: 'remote.o'}, {command: 0xDD, name: 'version.txt'},
@@ -153,7 +153,7 @@ async function updateIntegrationTests () {
                 .equals(fs.readFileSync(path.join(getSparkFirmwareRoot(), file.path))), file.path);
         }
         assert.ok(progress.includes('waitingBoot') && progress.includes('restarting') && progress.includes('complete'));
-        assert.equal(good.updater.state.bytes, 202906);
+        assert.equal(good.updater.state.bytes, 205466);
         const commands = good.hardware.writes.map(bytes => bytes[4]);
         assert.equal(commands.filter(command => command === 0x6F).length, 1);
         assert.ok(!commands.includes(0xBC) && !commands.includes(0xB9));
@@ -161,7 +161,7 @@ async function updateIntegrationTests () {
         await good.cleanup();
     }
 
-    for (const {version, retainUsb, lateOldReport} of [{version: 109}, {version: 111},
+    for (const {version, retainUsb, lateOldReport} of [{version: 110}, {version: 112},
         {version: 109, retainUsb: true}, {version: 109, lateOldReport: true}]) {
         const mismatch = fixture({version, running: true, retainUsb, lateOldReport});
         try {
@@ -169,7 +169,7 @@ async function updateIntegrationTests () {
             assert.equal(mismatch.device.getState().compatible, false);
             assert.equal(mismatch.device.getState().status.running, true);
             const result = await mismatch.updater.start(request);
-            assert.equal(result.version, 110, 'older and newer application versions can be updated');
+            assert.equal(result.version, release.version, 'older and newer application versions can be updated');
             assert.equal(mismatch.device.getState().status.running, false, 'entering update mode ends the old program');
             assert.equal(mismatch.hardware.writes.filter(bytes => bytes[4] === 0x6F).length, 1,
                 'one confirmation automatically sends RESET_FWLIB and enters update mode');
@@ -204,7 +204,7 @@ async function updateIntegrationTests () {
         await recovery.cleanup();
     }
 
-    for (const options of [{nextVersion: 111}, {noApplication: true}]) {
+    for (const options of [{nextVersion: 112}, {noApplication: true}]) {
         const test = fixture(options);
         try {
             await test.device.connect({path: 'COM_APP'});
@@ -278,13 +278,18 @@ async function updateIntegrationTests () {
         busy: false,
         stale: false,
         compatible: true,
-        status: {version: 110, running: false}};
+        status: {version: release.version, running: false}};
     const service = new SparkFirmwareUpdateService();
     const report = await service.inspect(healthy);
     assert.ok(report.valid, JSON.stringify(report));
     assert.equal(report.files.length, 5);
-    assert.equal(report.totalBytes, 202906);
-    assert.equal(report.version, 110);
+    assert.equal(report.totalBytes, 205466);
+    assert.equal(report.version, release.version);
+    assert.equal(release.version, 111);
+    assert.equal(release.source, 'Spark AI 1.1.10 / LB_FWLIB');
+    assert.equal(service.state.total, report.totalBytes, 'initial progress uses the current release size');
+    assert.equal(report.files[0].bytes, 202496);
+    assert.equal(report.files[0].sha256, 'c05bcd35163a5c71eb47b939ebc2da357f379221bfd2489ef344e5b95b83cc0a');
     assert.equal(report.canUpdate, true);
     assert.deepStrictEqual(report.blockers, []);
     assert.deepStrictEqual(sparkFirmwareBlockers({...healthy, warning: 'SPARK_DOWNLOAD_INCOMPLETE'}, report), [],
@@ -300,7 +305,7 @@ async function updateIntegrationTests () {
         assert.ok(sparkFirmwareBlockers({...healthy, ...change}, report).includes(reason));
     }
     for (const change of [{stale: true}, {monitoring: false}, {status: null},
-        {status: {version: 110, running: true}}, {compatible: false, status: {version: 109}},
+        {status: {version: release.version, running: true}}, {compatible: false, status: {version: 109}},
         {compatible: false, status: {version: 111}}]) {
         assert.deepStrictEqual(sparkFirmwareBlockers({...healthy, ...change}, report), [],
             'status/version checks must not add manual steps to an update');
@@ -371,7 +376,7 @@ async function updateIntegrationTests () {
         const importResult = spawnSync(process.execPath, [path.join(__dirname, 'import-spark-firmware.js'), bundle],
             {encoding: 'utf8', windowsHide: true});
         assert.equal(importResult.status, 0, importResult.stderr);
-        await fs.writeFile(path.join(bundle, 'version/version.txt'), '111');
+        await fs.writeFile(path.join(bundle, 'version/version.txt'), '112');
         const invalidImport = spawnSync(process.execPath, [path.join(__dirname, 'import-spark-firmware.js'), bundle],
             {encoding: 'utf8', windowsHide: true});
         assert.notEqual(invalidImport.status, 0, 'reject unknown release even with a plausible version');
@@ -403,7 +408,7 @@ async function updateIntegrationTests () {
     assert.ok(main.includes("ipcMain.handle('spark-firmware-inspect', event => sparkOperation(event,"));
     assert.ok(main.includes("ipcMain.handle('spark-firmware-update', (event, request) => sparkOperation(event,"));
     await updateIntegrationTests();
-    console.log('Spark firmware passed: pinned resources, integrity failures, 827-frame USB transfer, COM changes, strict ACK/error/timeout/disconnect handling, recovery, exclusive ownership and post-update version verification. No real hardware accessed.');
+    console.log('Spark firmware passed: pinned resources, integrity failures, 837-frame USB transfer, COM changes, strict ACK/error/timeout/disconnect handling, recovery, exclusive ownership and post-update version verification. No real hardware accessed.');
 })().catch(error => {
     console.error(error); process.exitCode = 1;
 });

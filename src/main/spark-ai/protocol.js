@@ -10,7 +10,7 @@ export const SPARK_COMMAND = Object.freeze({FILE: 0xDA,
     ACK: 0xFD});
 export const SPARK_PROGRAM_LIMIT = 32768;
 export const SPARK_USB_CHUNK = 248;
-export const SPARK_VERIFIED_FIRMWARE = 110;
+export const SPARK_VERIFIED_FIRMWARE = 111;
 const HEADER = Buffer.from([0x5A, 0x97, 0x98]);
 const MAX_TEXT = 16384;
 

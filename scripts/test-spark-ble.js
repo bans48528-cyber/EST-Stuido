@@ -58,7 +58,7 @@ const fakeBluetooth = () => {
 };
 function monitorRecoveryTests () {
     const text = JSON.stringify({deviceList: [0, 1, 2, 3].map(port => ({port})),
-        version: 110,
+        version: 111,
         WillAiState: 'stop'});
     const stream = Buffer.concat([Buffer.from(text.slice(0, -2)), sparkFrame(C.ACK, [1]), Buffer.from(text)]);
     for (let split = 0; split <= stream.length; split++) {
@@ -225,7 +225,7 @@ async function integrationTests () {
     const notify = bytes => fake.characteristic.emit('characteristicvaluechanged', {target: {
         value: new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
     }});
-    const report = running => notify(Buffer.from(`${JSON.stringify({version: 110,
+    const report = running => notify(Buffer.from(`${JSON.stringify({version: 111,
         WillAiState: running ? 'run' : 'stop',
         deviceList: [0, 1, 2, 3].map(port => ({port})),
         adc: {bat: '80%'}})}\r\n`));
@@ -306,7 +306,7 @@ async function reconnectTests () {
                 if ([C.FILE, C.DATA, C.SAVE, C.RUN].includes(bytes[4])) {
                     transport.emit('data', sparkFrame(C.ACK, [1])); return;
                 }
-                transport.emit('data', Buffer.from(`${JSON.stringify({version: 110,
+                transport.emit('data', Buffer.from(`${JSON.stringify({version: 111,
                     deviceList: [0, 1, 2, 3].map(port => ({port})),
                     WillAiState: 'stop'})}\r\n`));
             };

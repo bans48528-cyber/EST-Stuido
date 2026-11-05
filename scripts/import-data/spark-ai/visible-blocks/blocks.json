@@ -1,0 +1,4781 @@
+{
+  "software": "Spark-AI 1.1.9",
+  "extraction_date": "2026-10-23",
+  "static_count": 66,
+  "conditional_count": 13,
+  "rows": [
+    {
+      "type": "motor_specifiedunit",
+      "category_id": "motor",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 电机 %3 以 %4 %%功率转动 %5 秒",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/motor_sensing.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "input_value",
+            "name": "POWER"
+          },
+          {
+            "type": "input_value",
+            "name": "COUNT"
+          }
+        ],
+        "category": "motor",
+        "extensions": [
+          "colours_motion",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "motor_box",
+            "fields": {
+              "MOTOR": "E"
+            }
+          }
+        },
+        {
+          "name": "POWER",
+          "shadow": {
+            "type": "math_-100to100_number",
+            "fields": {
+              "NUM": "50"
+            }
+          }
+        },
+        {
+          "name": "COUNT",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE),c=Blockly.Python.valueToCode(a,\"POWER\",Blockly.Python.ORDER_NONE);a=Blockly.Python.valueToCode(a,\"COUNT\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult(\"run_for_power_seconds(\"+b+\", \"+c+\", \"+a+\")\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.run_for_power_seconds(4, 50, 1)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "motor_startWithPower",
+      "category_id": "motor",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 电机 %3 以 %4 %%功率转动",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/motor_sensing.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "input_value",
+            "name": "POWER"
+          }
+        ],
+        "category": "motor",
+        "extensions": [
+          "colours_motion",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "motor_box",
+            "fields": {
+              "MOTOR": "E"
+            }
+          }
+        },
+        {
+          "name": "POWER",
+          "shadow": {
+            "type": "math_-100to100_number",
+            "fields": {
+              "NUM": "50"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE);a=Blockly.Python.valueToCode(a,\"POWER\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult(\"run_power(\"+b+\",\"+a+\")\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.run_power(4,50)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "motor_stop",
+      "category_id": "motor",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 电机%3 关闭电机",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/motor_sensing.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          }
+        ],
+        "category": "motor",
+        "extensions": [
+          "colours_motion",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "motor_box",
+            "fields": {
+              "MOTOR": "E"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){a=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult(\"stop(\"+a+\")\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.stop(4)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "motor_specified_manner",
+      "category_id": "motor",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 电机%3 将电机设置为停止时 %4",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/motor_sensing.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "action",
+            "options": [
+              [
+                "制动",
+                "1"
+              ],
+              [
+                "惯性滑行",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "category": "motor",
+        "extensions": [
+          "colours_motion",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "action": "1"
+      },
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "motor_box",
+            "fields": {
+              "MOTOR": "E"
+            }
+          }
+        },
+        {
+          "name": "action"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE);a=a.getFieldValue(\"action\");a=parseInt(a,10);return Blockly.Python.handleResult(\"stop_module(\"+b+\", \"+a+\")\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.stop_module(4, 1)\n",
+      "variants": [
+        {
+          "field": "action",
+          "label": "制动",
+          "value": "1",
+          "code": "_motor.stop_module(4, 1)\n"
+        },
+        {
+          "field": "action",
+          "label": "惯性滑行",
+          "value": "0",
+          "code": "_motor.stop_module(4, 0)\n"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "type": "combined_motor_starting",
+      "category_id": "combined_motor",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 将组合电机设置为 %3 转动方向为 %4",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/combined_motor.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "STATUS",
+            "options": [
+              [
+                "全部正向",
+                "3"
+              ],
+              [
+                "左电机反向",
+                "0"
+              ],
+              [
+                "右电机反向",
+                "1"
+              ],
+              [
+                "全部反向",
+                "2"
+              ]
+            ]
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "STATUS": "3"
+      },
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "combined_motor_box",
+            "fields": {
+              "MOTOR": "E+F"
+            }
+          }
+        },
+        {
+          "name": "STATUS"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE);b=Blockly.Python.combined_letter_to_number(b);a=a.getFieldValue(\"STATUS\");a=\"pair(\"+b+\",\"+parseInt(a,10)+\")\\n\";return Blockly.Python.handleResult(a,Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.pair(4,5,3)\n",
+      "variants": [
+        {
+          "field": "STATUS",
+          "label": "全部正向",
+          "value": "3",
+          "code": "_motor.pair(4,5,3)\n"
+        },
+        {
+          "field": "STATUS",
+          "label": "左电机反向",
+          "value": "0",
+          "code": "_motor.pair(4,5,0)\n"
+        },
+        {
+          "field": "STATUS",
+          "label": "右电机反向",
+          "value": "1",
+          "code": "_motor.pair(4,5,1)\n"
+        },
+        {
+          "field": "STATUS",
+          "label": "全部反向",
+          "value": "2",
+          "code": "_motor.pair(4,5,2)\n"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "type": "combined_motor_stopping",
+      "category_id": "combined_motor",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 将组合电机设置为停止使 %3",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/combined_motor.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "status",
+            "options": [
+              [
+                "制动",
+                "1"
+              ],
+              [
+                "惯性滑行",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "status": "1"
+      },
+      "inputs": [
+        {
+          "name": "status"
+        }
+      ],
+      "generator_js": "function(a){a=a.getFieldValue(\"status\");a=parseInt(a,10);return Blockly.Python.handleResult(\"mov_set_stop_module(\"+a+\")\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.mov_set_stop_module(1)\n",
+      "variants": [
+        {
+          "field": "status",
+          "label": "制动",
+          "value": "1",
+          "code": "_motor.mov_set_stop_module(1)\n"
+        },
+        {
+          "field": "status",
+          "label": "惯性滑行",
+          "value": "0",
+          "code": "_motor.mov_set_stop_module(0)\n"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "type": "combined_mov_dir_power_seconds",
+      "category_id": "combined_motor",
+      "visibility": "always",
+      "block_definition": {
+        "type": "combined_mov_dir_power_seconds",
+        "message0": "%1 %2 %3 以功率 %4%% 转动 %5 秒",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/combined_motor.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "DIRECTION",
+            "options": [
+              [
+                {
+                  "src": "media/advance.svg",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "前进"
+                },
+                "advance"
+              ],
+              [
+                {
+                  "src": "media/back.svg",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "后退"
+                },
+                "retreat"
+              ],
+              [
+                {
+                  "src": "media/turn-left.svg",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "向左转"
+                },
+                "left"
+              ],
+              [
+                {
+                  "src": "media/turn-right.svg",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "向右转"
+                },
+                "right"
+              ]
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "POWER"
+          },
+          {
+            "type": "input_value",
+            "name": "SECONDS"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "DIRECTION": "advance"
+      },
+      "inputs": [
+        {
+          "name": "DIRECTION"
+        },
+        {
+          "name": "POWER",
+          "shadow": {
+            "type": "math_-100to100_number",
+            "fields": {
+              "NUM": "50"
+            }
+          }
+        },
+        {
+          "name": "SECONDS",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=a.getFieldValue(\"DIRECTION\"),c=Blockly.Python.valueToCode(a,\"POWER\",Blockly.Python.ORDER_NONE);a=Blockly.Python.valueToCode(a,\"SECONDS\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult('mov_dir_power_seconds(\"'+b+'\", '+c+\", \"+a+\")\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.mov_dir_power_seconds(\"advance\", 50, 1)\n",
+      "variants": [
+        {
+          "field": "DIRECTION",
+          "label": "前进",
+          "value": "advance",
+          "code": "_motor.mov_dir_power_seconds(\"advance\", 50, 1)\n"
+        },
+        {
+          "field": "DIRECTION",
+          "label": "后退",
+          "value": "retreat",
+          "code": "_motor.mov_dir_power_seconds(\"retreat\", 50, 1)\n"
+        },
+        {
+          "field": "DIRECTION",
+          "label": "向左转",
+          "value": "left",
+          "code": "_motor.mov_dir_power_seconds(\"left\", 50, 1)\n"
+        },
+        {
+          "field": "DIRECTION",
+          "label": "向右转",
+          "value": "right",
+          "code": "_motor.mov_dir_power_seconds(\"right\", 50, 1)\n"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "type": "combined_mov_dir_power",
+      "category_id": "combined_motor",
+      "visibility": "always",
+      "block_definition": {
+        "type": "combined_mov_dir_power",
+        "message0": "%1 %2 %3 以功率 %4 %% 移动",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/combined_motor.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "DIRECTION",
+            "options": [
+              [
+                {
+                  "src": "media/advance.svg",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "前进"
+                },
+                "advance"
+              ],
+              [
+                {
+                  "src": "media/back.svg",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "后退"
+                },
+                "retreat"
+              ],
+              [
+                {
+                  "src": "media/turn-left.svg",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "向左转"
+                },
+                "left"
+              ],
+              [
+                {
+                  "src": "media/turn-right.svg",
+                  "width": 25,
+                  "height": 25,
+                  "alt": "向右转"
+                },
+                "right"
+              ]
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "POWER"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "DIRECTION": "advance"
+      },
+      "inputs": [
+        {
+          "name": "DIRECTION"
+        },
+        {
+          "name": "POWER",
+          "shadow": {
+            "type": "math_-100to100_number",
+            "fields": {
+              "NUM": "50"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=a.getFieldValue(\"DIRECTION\");a=Blockly.Python.valueToCode(a,\"POWER\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult('mov_dir_power(\"'+b+'\", '+a+\")\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.mov_dir_power(\"advance\", 50)\n",
+      "variants": [
+        {
+          "field": "DIRECTION",
+          "label": "前进",
+          "value": "advance",
+          "code": "_motor.mov_dir_power(\"advance\", 50)\n"
+        },
+        {
+          "field": "DIRECTION",
+          "label": "后退",
+          "value": "retreat",
+          "code": "_motor.mov_dir_power(\"retreat\", 50)\n"
+        },
+        {
+          "field": "DIRECTION",
+          "label": "向左转",
+          "value": "left",
+          "code": "_motor.mov_dir_power(\"left\", 50)\n"
+        },
+        {
+          "field": "DIRECTION",
+          "label": "向右转",
+          "value": "right",
+          "code": "_motor.mov_dir_power(\"right\", 50)\n"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "type": "combined_motor_stop",
+      "category_id": "combined_motor",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 停止运动",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/combined_motor.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){return Blockly.Python.handleResult(\"mov_stop()\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.mov_stop()\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "combined_motor_startWithPowerObj",
+      "category_id": "combined_motor",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 以左功率 %3 %% 和右功率 %4 %%移动 %5 秒",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/combined_motor.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "POWER_ONE"
+          },
+          {
+            "type": "input_value",
+            "name": "POWER_TWO"
+          },
+          {
+            "type": "input_value",
+            "name": "COUNT"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "POWER_ONE",
+          "shadow": {
+            "type": "math_-100to100_number",
+            "fields": {
+              "NUM": "50"
+            }
+          }
+        },
+        {
+          "name": "POWER_TWO",
+          "shadow": {
+            "type": "math_-100to100_number",
+            "fields": {
+              "NUM": "50"
+            }
+          }
+        },
+        {
+          "name": "COUNT",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"POWER_ONE\",Blockly.Python.ORDER_NONE),c=Blockly.Python.valueToCode(a,\"POWER_TWO\",Blockly.Python.ORDER_NONE);a=Blockly.Python.valueToCode(a,\"COUNT\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult(\"mov_for_power_seconds(\"+b+\", \"+c+\", \"+a+\")\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.mov_for_power_seconds(50, 50, 1)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "combined_motor_startWithPower",
+      "category_id": "combined_motor",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 以左功率 %3 %% 右功率 %4 %%移动",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/combined_motor.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "POWER_ONE"
+          },
+          {
+            "type": "input_value",
+            "name": "POWER_TWO"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "POWER_ONE",
+          "shadow": {
+            "type": "math_-100to100_number",
+            "fields": {
+              "NUM": "50"
+            }
+          }
+        },
+        {
+          "name": "POWER_TWO",
+          "shadow": {
+            "type": "math_-100to100_number",
+            "fields": {
+              "NUM": "50"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"POWER_ONE\",Blockly.Python.ORDER_NONE);a=Blockly.Python.valueToCode(a,\"POWER_TWO\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult(\"mov_power(\"+b+\", \"+a+\")\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.mov_power(50, 50)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "combined_linepatrolInit",
+      "category_id": "combined_motor",
+      "visibility": "always",
+      "block_definition": {
+        "type": "combined_linepatrolInit",
+        "message0": "%1 %2 巡线参数初始化",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/combined_motor.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){return Blockly.Python.handleResult(\"mov_find_line_init()\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.mov_find_line_init()\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "combined_linepatrol_ltr",
+      "category_id": "combined_motor",
+      "visibility": "always",
+      "block_definition": {
+        "type": "combined_linepatrol_ltr",
+        "message0": "%1 %2 双巡线 左传感器 %3 右传感器 %4 左功率 %5 右功率 %6 KP %7 KD %8 ",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/combined_motor.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT_ONE"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT_TWO"
+          },
+          {
+            "type": "input_value",
+            "name": "LEFT"
+          },
+          {
+            "type": "input_value",
+            "name": "RIGHT"
+          },
+          {
+            "type": "input_value",
+            "name": "KP"
+          },
+          {
+            "type": "input_value",
+            "name": "KD"
+          }
+        ],
+        "category": "combined_motor",
+        "extensions": [
+          "colours_combined_motor",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "PORT_ONE",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "0"
+            }
+          }
+        },
+        {
+          "name": "PORT_TWO",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "0"
+            }
+          }
+        },
+        {
+          "name": "LEFT",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "80"
+            }
+          }
+        },
+        {
+          "name": "RIGHT",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "80"
+            }
+          }
+        },
+        {
+          "name": "KP",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "0.1"
+            }
+          }
+        },
+        {
+          "name": "KD",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "0.6"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"PORT_ONE\",Blockly.Python.ORDER_NONE),c=Blockly.Python.valueToCode(a,\"PORT_TWO\",Blockly.Python.ORDER_NONE),d=Blockly.Python.valueToCode(a,\"LEFT\",Blockly.Python.ORDER_NONE),e=Blockly.Python.valueToCode(a,\"RIGHT\",Blockly.Python.ORDER_NONE),g=Blockly.Python.valueToCode(a,\"KP\",Blockly.Python.ORDER_NONE);a=Blockly.Python.valueToCode(a,\"KD\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult(\"mov_find_line_run(\"+\r\r\nb+\", \"+c+\", \"+d+\", \"+e+\", \"+g+\", \"+a+\")\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.mov_find_line_run(0, 0, 80, 80, 0.1, 0.6)\n",
+      "variants": [],
+      "notes": [
+        "PORT_ONE/PORT_TWO 实际传入左右灰度读数，不是端口编号；原 UI 用“左传感器/右传感器”标注，适合嵌入灰度数值积木。"
+      ]
+    },
+    {
+      "type": "matrix_lamp",
+      "category_id": "matrix",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 点亮 %3 颜色",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/matrix.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "field_matrix",
+            "name": "lamp",
+            "matrix": "11111111111111111111111111111111111"
+          }
+        ],
+        "category": "matrix",
+        "extensions": [
+          "colours_matrix",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "lamp": "11111111111111111111111111111111111"
+      },
+      "inputs": [
+        {
+          "name": "lamp"
+        }
+      ],
+      "generator_js": "function(a){a=a.getFieldValue(\"lamp\");a=Blockly.Python.stringToHex(a);return Blockly.Python.handleResult(\"show(\"+a+\")\\n\",Blockly.Python.MATRIX_TYPE)}",
+      "python": "_matrix.show(0x1F,0x1F,0x1F,0x1F,0x1F,0x1F,0x1F)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "matrix_lamp_stop",
+      "category_id": "matrix",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 清除显示内容",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/matrix.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "matrix",
+        "colour": "#9966FF",
+        "secondaryColour": "#774DCB",
+        "extensions": [
+          "colours_matrix",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){return Blockly.Python.handleResult(\"clear()\\n\",Blockly.Python.MATRIX_TYPE)}",
+      "python": "_matrix.clear()\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "matrix_lamp_set",
+      "category_id": "matrix",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 将矩阵灯的亮度设置为 %3",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/matrix.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "brightness",
+            "options": [
+              [
+                "0",
+                "0"
+              ],
+              [
+                "1",
+                "1"
+              ],
+              [
+                "2",
+                "2"
+              ],
+              [
+                "3",
+                "3"
+              ],
+              [
+                "4",
+                "4"
+              ],
+              [
+                "5",
+                "5"
+              ],
+              [
+                "6",
+                "6"
+              ],
+              [
+                "7",
+                "7"
+              ]
+            ]
+          }
+        ],
+        "category": "matrix",
+        "colour": "#9966FF",
+        "secondaryColour": "#774DCB",
+        "extensions": [
+          "colours_matrix",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "brightness": "0"
+      },
+      "inputs": [
+        {
+          "name": "brightness"
+        }
+      ],
+      "generator_js": "function(a){a=a.getFieldValue(\"brightness\");a=parseInt(a,10);return Blockly.Python.handleResult(\"set_brightness(\"+a+\")\\n\",Blockly.Python.MATRIX_TYPE)}",
+      "python": "_matrix.set_brightness(0)\n",
+      "variants": [
+        {
+          "field": "brightness",
+          "label": "0",
+          "value": "0",
+          "code": "_matrix.set_brightness(0)\n"
+        },
+        {
+          "field": "brightness",
+          "label": "1",
+          "value": "1",
+          "code": "_matrix.set_brightness(1)\n"
+        },
+        {
+          "field": "brightness",
+          "label": "2",
+          "value": "2",
+          "code": "_matrix.set_brightness(2)\n"
+        },
+        {
+          "field": "brightness",
+          "label": "3",
+          "value": "3",
+          "code": "_matrix.set_brightness(3)\n"
+        },
+        {
+          "field": "brightness",
+          "label": "4",
+          "value": "4",
+          "code": "_matrix.set_brightness(4)\n"
+        },
+        {
+          "field": "brightness",
+          "label": "5",
+          "value": "5",
+          "code": "_matrix.set_brightness(5)\n"
+        },
+        {
+          "field": "brightness",
+          "label": "6",
+          "value": "6",
+          "code": "_matrix.set_brightness(6)\n"
+        },
+        {
+          "field": "brightness",
+          "label": "7",
+          "value": "7",
+          "code": "_matrix.set_brightness(7)\n"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "type": "matrix_lamp_text",
+      "category_id": "matrix",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 显示文字 %3",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/matrix.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "matrix_text"
+          }
+        ],
+        "category": "matrix",
+        "colour": "#9966FF",
+        "secondaryColour": "#774DCB",
+        "extensions": [
+          "colours_matrix",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "matrix_text",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "ABCD"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){a=Blockly.Python.valueToCode(a,\"matrix_text\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult(\"show_roll(str(\"+a+\"))\\n\",Blockly.Python.MATRIX_TYPE)}",
+      "python": "_matrix.show_roll(str('ABCD'))\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "matrix_lamp_single",
+      "category_id": "matrix",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 将 x %3 y %4 %5",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/matrix.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "x"
+          },
+          {
+            "type": "input_value",
+            "name": "y"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "switchOnOff",
+            "options": [
+              [
+                "打开",
+                "1"
+              ],
+              [
+                "熄灭",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "category": "matrix",
+        "colour": "#9966FF",
+        "secondaryColour": "#774DCB",
+        "extensions": [
+          "colours_matrix",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "switchOnOff": "1"
+      },
+      "inputs": [
+        {
+          "name": "x",
+          "shadow": {
+            "type": "matrix_x",
+            "fields": {
+              "X": "0"
+            }
+          }
+        },
+        {
+          "name": "y",
+          "shadow": {
+            "type": "matrix_y",
+            "fields": {
+              "Y": "0"
+            }
+          }
+        },
+        {
+          "name": "switchOnOff"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"x\",Blockly.Python.ORDER_ATOMIC),c=Blockly.Python.valueToCode(a,\"y\",Blockly.Python.ORDER_ATOMIC);a=a.getFieldValue(\"switchOnOff\");return Blockly.Python.handleResult(\"set_pixel_brightness(\"+b+\",\"+c+\",\"+a+\")\\n\",Blockly.Python.MATRIX_TYPE)}",
+      "python": "_matrix.set_pixel_brightness(0,0,1)\n",
+      "variants": [
+        {
+          "field": "switchOnOff",
+          "label": "打开",
+          "value": "1",
+          "code": "_matrix.set_pixel_brightness(0,0,1)\n"
+        },
+        {
+          "field": "switchOnOff",
+          "label": "熄灭",
+          "value": "0",
+          "code": "_matrix.set_pixel_brightness(0,0,0)\n"
+        }
+      ],
+      "notes": [
+        "原界面 x 下拉为 0–9、y 为 0–7；固件只接收 x=0–6、y=0–4，越界不点亮。brightness shadow 留在工具箱 XML，但实际块没有该输入，因此不作为可见参数。",
+        "set_pixel_brightness 的最后参数为开/关 1/0，并非连续单像素亮度。"
+      ]
+    },
+    {
+      "type": "sound_PlayMusic",
+      "category_id": "sound",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2 演奏音符 %3 %4 拍",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/music.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "NOTE"
+          },
+          {
+            "type": "input_value",
+            "name": "BEATS"
+          }
+        ],
+        "category": "sounds",
+        "extensions": [
+          "colours_sounds",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "NOTE",
+          "shadow": {
+            "type": "piano",
+            "fields": {
+              "NOTE": "C"
+            }
+          }
+        },
+        {
+          "name": "BEATS",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "0.25"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"NOTE\",Blockly.Python.ORDER_ATOMIC);console.log(\"note1\",b);b=b[0].toLowerCase()+b.slice(1);console.log(\"note2\",b);a=Blockly.Python.valueToCode(a,\"BEATS\",Blockly.Python.ORDER_ATOMIC);return Blockly.Python.handleResult('play_muic(\"'+b+'\", '+a+\")\\n\",Blockly.Python.SOUND_TYPE)}",
+      "python": "_beep.play_muic(\"c\", 0.25)\n",
+      "variants": [],
+      "notes": [
+        "界面显示“拍”，原生成器直接把 BEATS 传给 _beep.play_muic；固件按秒乘以 1000 转换。音符字符串会先将首字母转为小写。"
+      ]
+    },
+    {
+      "type": "event_whenflagclicked",
+      "category_id": "events",
+      "visibility": "always",
+      "block_definition": {
+        "id": "event_whenflagclicked",
+        "message0": "%1 %2 当程序启动时",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/start_program.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "flag"
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "events",
+        "extensions": [
+          "colours_event",
+          "shape_hat"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){var b=\"\";if(a.nextConnection&&a.nextConnection.targetBlock()){a=[];for(var c in Blockly.Python.variables_)a.push(Blockly.Python.variables_[c].slice(0,Blockly.Python.variables_[c].indexOf(\"=\")-1));0!==a.length&&(b+=\"global \"+a.join(\", \")+\"\\n\")}else b+=Blockly.Python.INDENT+\"\\n\";return b}",
+      "python": "  \n",
+      "variants": [],
+      "notes": [
+        "开始积木本身不生成硬件指令；后续连接的积木依次生成主程序。默认空积木的输出只有空白。"
+      ]
+    },
+    {
+      "type": "control_wait",
+      "category_id": "control",
+      "visibility": "always",
+      "block_definition": {
+        "id": "control_wait",
+        "message0": "等待 %1 秒",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "DURATION"
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "DURATION",
+          "shadow": {
+            "type": "math_positive_number",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){a=Blockly.Python.valueToCode(a,\"DURATION\",Blockly.Python.ORDER_FUNCTION_CALL);return Blockly.Python.handleResult(\"sleep_s(\"+a+\")\\n\",Blockly.Python.TIMER_TYPE)}",
+      "python": "_os.sleep_s(1)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "control_wait_until",
+      "category_id": "control",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "等待 %1",
+        "lastDummyAlign2": "RIGHT",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "CONDITION",
+            "check": "Boolean"
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "CONDITION"
+        }
+      ],
+      "generator_js": "function(a){var b=\"while not (\"+(Blockly.Python.valueToCode(a,\"CONDITION\",Blockly.Python.ORDER_UNARY_POSTFIX)||\"False\")+\"):\\n\"+(Blockly.Python.INDENT+Blockly.Python.INDENT+\"_os.sleep_s(0.001)\\n\");\"event_whenmicrobitbegin\"===a.getRootBlock().type&&(b+=Blockly.Python.INDENT+\"repeat()\\n\");return b}",
+      "python": "while not (False):\n    _os.sleep_s(0.001)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "control_break",
+      "category_id": "control",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "跳出循环",
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_end"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){return\"break\\n\"}",
+      "python": "break\n",
+      "variants": [],
+      "notes": [
+        "原始片段 break 必须位于循环体内；这是上下文要求。"
+      ]
+    },
+    {
+      "type": "control_repeat",
+      "category_id": "control",
+      "visibility": "always",
+      "block_definition": {
+        "id": "control_repeat",
+        "message0": "重复执行 %1 次",
+        "message1": "%1",
+        "message2": "%1",
+        "lastDummyAlign2": "RIGHT",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "TIMES"
+          }
+        ],
+        "args1": [
+          {
+            "type": "input_statement",
+            "name": "SUBSTACK"
+          }
+        ],
+        "args2": [
+          {
+            "type": "field_image",
+            "src": "media/repeat.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flip_rtl": true
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "TIMES",
+          "shadow": {
+            "type": "math_whole_number",
+            "fields": {
+              "NUM": "10"
+            }
+          }
+        },
+        {
+          "name": "SUBSTACK"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"TIMES\",Blockly.Python.ORDER_FUNCTION_CALL),c=Blockly.Python.statementToCode(a,\"SUBSTACK\");c=Blockly.Python.addLoopTrap(c,a.id);a=\"for count in range(\"+b+\"):\\n\";c&&(a+=Blockly.Python.addIndent(c));return a+Blockly.Python.INDENT+Blockly.Python.INDENT+\"_os.sleep_s(0.001)\\n\"}",
+      "python": "for count in range(10):\n    _os.sleep_s(0.001)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "control_forever",
+      "category_id": "control",
+      "visibility": "always",
+      "block_definition": {
+        "id": "control_forever",
+        "message0": "重复执行",
+        "message1": "%1",
+        "message2": "%1",
+        "lastDummyAlign2": "RIGHT",
+        "args1": [
+          {
+            "type": "input_statement",
+            "name": "SUBSTACK"
+          }
+        ],
+        "args2": [
+          {
+            "type": "field_image",
+            "src": "media/repeat.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flip_rtl": true
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "SUBSTACK"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.statementToCode(a,\"SUBSTACK\");b=Blockly.Python.addLoopTrap(b,a.id);var c=\"while True:\\n\";b&&(c+=Blockly.Python.addIndent(b));\"event_whenmicrobitbegin\"===a.getRootBlock().type&&(Blockly.Python.firstLoop=!1,c+=Blockly.Python.INDENT+\"repeat()\\n\");return c+Blockly.Python.INDENT+Blockly.Python.INDENT+\"_os.sleep_s(0.001)\\n\"}",
+      "python": "while True:\n    _os.sleep_s(0.001)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "control_if",
+      "category_id": "control",
+      "visibility": "always",
+      "block_definition": {
+        "type": "control_if",
+        "message0": "如果 %1 那么",
+        "message1": "%1",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "CONDITION",
+            "check": "Boolean"
+          }
+        ],
+        "args1": [
+          {
+            "type": "input_statement",
+            "name": "SUBSTACK"
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "CONDITION"
+        },
+        {
+          "name": "SUBSTACK"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"CONDITION\",Blockly.Python.ORDER_NONE)||\"False\",c=Blockly.Python.statementToCode(a,\"SUBSTACK\");c=Blockly.Python.addLoopTrap(c,a.id);a=\"if \"+b+\":\\n\";return a=c?a+Blockly.Python.addIndent(c):a+(Blockly.Python.INDENT+Blockly.Python.INDENT+\"pass\\n\")}",
+      "python": "if False:\n    pass\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "control_if_else",
+      "category_id": "control",
+      "visibility": "always",
+      "block_definition": {
+        "type": "control_if_else",
+        "message0": "如果 %1 那么",
+        "message1": "%1",
+        "message2": "否则",
+        "message3": "%1",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "CONDITION",
+            "check": "Boolean"
+          }
+        ],
+        "args1": [
+          {
+            "type": "input_statement",
+            "name": "SUBSTACK"
+          }
+        ],
+        "args3": [
+          {
+            "type": "input_statement",
+            "name": "SUBSTACK2"
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "CONDITION"
+        },
+        {
+          "name": "SUBSTACK"
+        },
+        {
+          "name": "SUBSTACK2"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"CONDITION\",Blockly.Python.ORDER_NONE)||\"False\",c=Blockly.Python.statementToCode(a,\"SUBSTACK\");c=Blockly.Python.addLoopTrap(c,a.id);var d=Blockly.Python.statementToCode(a,\"SUBSTACK2\");d=Blockly.Python.addLoopTrap(d,a.id);a=\"if \"+b+\":\\n\";a=c?a+Blockly.Python.addIndent(c):a+(Blockly.Python.INDENT+Blockly.Python.INDENT+\"pass\\n\");a+=\"else:\\n\";return a=d?a+Blockly.Python.addIndent(d):a+(Blockly.Python.INDENT+Blockly.Python.INDENT+\r\r\n\"pass\\n\")}",
+      "python": "if False:\n    pass\nelse:\n    pass\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "control_repeat_until",
+      "category_id": "control",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "重复执行直到 %1",
+        "message1": "%1",
+        "message2": "%1",
+        "lastDummyAlign2": "RIGHT",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "CONDITION",
+            "check": "Boolean"
+          }
+        ],
+        "args1": [
+          {
+            "type": "input_statement",
+            "name": "SUBSTACK"
+          }
+        ],
+        "args2": [
+          {
+            "type": "field_image",
+            "src": "media/repeat.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flip_rtl": true
+          }
+        ],
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "CONDITION"
+        },
+        {
+          "name": "SUBSTACK"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"CONDITION\",Blockly.Python.ORDER_UNARY_POSTFIX)||\"False\",c=Blockly.Python.statementToCode(a,\"SUBSTACK\");c=Blockly.Python.addLoopTrap(c,a.id);b=\"while not (\"+b+\"):\\n\";c&&(b+=Blockly.Python.addIndent(c));\"event_whenmicrobitbegin\"===a.getRootBlock().type&&(b+=Blockly.Python.INDENT+\"repeat()\\n\");return b+Blockly.Python.INDENT+Blockly.Python.INDENT+\"_os.sleep_s(0.001)\\n\"}",
+      "python": "while not (False):\n    _os.sleep_s(0.001)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "control_stop",
+      "category_id": "control",
+      "visibility": "always",
+      "block_definition": {
+        "id": "control_stop",
+        "message0": "停止并且退出程序",
+        "category": "control",
+        "extensions": [
+          "colours_control",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){return Blockly.Python.handleResult(\"stop_exit()\\n\",Blockly.Python.TIMER_TYPE)}",
+      "python": "_os.stop_exit()\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "sensing_key_judgment",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_key_judgment",
+        "message0": "%1 %2 触碰传感器 %3 被按下？",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/touch.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "touching_menu",
+            "fields": {
+              "TOUCHING_MENU": "A"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){a=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE);a=Blockly.Python.sensing_port_to_number(a);return[Blockly.Python.handleResult(\"state(\"+a+\")\",Blockly.Python.TOUCH_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_touch.state(0)",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "sensing_reflected_light_judgment",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_reflected_light_judgment",
+        "message0": "%1 %2 灰度传感器 %3 的反射光 %4 %5",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/gray_scale.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "judgment",
+            "options": [
+              [
+                ">",
+                ">"
+              ],
+              [
+                "<",
+                "<"
+              ],
+              [
+                "=",
+                "="
+              ]
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "value"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {
+        "judgment": ">"
+      },
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "sensing_menu",
+            "fields": {
+              "SENSING_MENU": "A"
+            }
+          }
+        },
+        {
+          "name": "judgment"
+        },
+        {
+          "name": "value",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "50"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE),c=a.getFieldValue(\"judgment\");a=Blockly.Python.valueToCode(a,\"value\",Blockly.Python.ORDER_NONE);b=Blockly.Python.sensing_port_to_number(b);return[Blockly.Python.handleResult(\"cmp_lux(\"+b+', \"'+c+'\", '+a+\")\",Blockly.Python.COLOR_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_color.cmp_lux(0, \">\", 50)",
+      "variants": [
+        {
+          "field": "judgment",
+          "label": ">",
+          "value": ">",
+          "code": "_color.cmp_lux(0, \">\", 50)"
+        },
+        {
+          "field": "judgment",
+          "label": "<",
+          "value": "<",
+          "code": "_color.cmp_lux(0, \"<\", 50)"
+        },
+        {
+          "field": "judgment",
+          "label": "=",
+          "value": "=",
+          "code": "_color.cmp_lux(0, \"=\", 50)"
+        }
+      ],
+      "notes": [
+        "固件 cmp_lux 的“=”分支在差值小于 5 时返回 0，否则返回 1，与通常的相等判断相反；保留原生成器。"
+      ]
+    },
+    {
+      "type": "sensing_reflected_light_detection",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_reflected_light_detection",
+        "message0": "%1 %2 灰度传感器 %3 的数值",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/gray_scale.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "sensing_menu",
+            "fields": {
+              "SENSING_MENU": "A"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){a=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE);a=Blockly.Python.sensing_port_to_number(a);return[Blockly.Python.handleResult(\"lux(\"+a+\")\",Blockly.Python.COLOR_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_color.lux(0)",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "sensing_set_color_threshold_value",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_set_color_threshold_value",
+        "message0": "%1 %2 灰度传感器 %3 阈值设为 %4",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/gray_scale.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "input_value",
+            "name": "THRESHOLD"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "sensing_menu",
+            "fields": {
+              "SENSING_MENU": "A"
+            }
+          }
+        },
+        {
+          "name": "THRESHOLD",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "1000"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE);b=Blockly.Python.sensing_port_to_number(b);a=Blockly.Python.valueToCode(a,\"THRESHOLD\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult(\"set_color_threshold_value(\"+b+\", \"+a+\")\\n\",Blockly.Python.COLOR_TYPE)}",
+      "python": "_color.set_color_threshold_value(0, 1000)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "sensing_grayscale_state",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_grayscale_state",
+        "message0": "%1 %2 灰度传感器 %3 是否触发",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/gray_scale.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "sensing_menu",
+            "fields": {
+              "SENSING_MENU": "A"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){a=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE);a=Blockly.Python.sensing_port_to_number(a);return[Blockly.Python.handleResult(\"lux_state(\"+a+\")\",Blockly.Python.COLOR_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_color.lux_state(0)",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "sensing_one_calibrate",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_one_calibrate",
+        "message0": "%1 %2 校准 %3 的灰度传感器 %4 秒",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/gray_scale.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "input_value",
+            "name": "SECONDS"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "sensing_menu",
+            "fields": {
+              "SENSING_MENU": "A"
+            }
+          }
+        },
+        {
+          "name": "SECONDS",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE);b=Blockly.Python.sensing_port_to_number(b);a=Blockly.Python.valueToCode(a,\"SECONDS\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult(\"one_calibrate(\"+b+\", \"+a+\")\\n\",Blockly.Python.COLOR_TYPE)}",
+      "python": "_color.one_calibrate(0, 1)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "sensing_two_calibrate",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_two_calibrate",
+        "message0": "%1 %2 %3 和 %4 的灰度传感器 %5 秒",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/gray_scale.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT1"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT2"
+          },
+          {
+            "type": "input_value",
+            "name": "SECONDS"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "PORT1",
+          "shadow": {
+            "type": "sensing_menu",
+            "fields": {
+              "SENSING_MENU": "A"
+            }
+          }
+        },
+        {
+          "name": "PORT2",
+          "shadow": {
+            "type": "sensing_menu",
+            "fields": {
+              "SENSING_MENU": "A"
+            }
+          }
+        },
+        {
+          "name": "SECONDS",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"PORT1\",Blockly.Python.ORDER_NONE);b=Blockly.Python.sensing_port_to_number(b);var c=Blockly.Python.valueToCode(a,\"PORT2\",Blockly.Python.ORDER_NONE);c=Blockly.Python.sensing_port_to_number(c);a=Blockly.Python.valueToCode(a,\"SECONDS\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult(\"two_calibrate(\"+b+\", \"+c+\", \"+a+\")\\n\",Blockly.Python.COLOR_TYPE)}",
+      "python": "_color.two_calibrate(0, 0, 1)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "sensing_ultrasonic_judgment",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_ultrasonic_judgment",
+        "message0": "%1 %2 超声波传感器 %3 距离是否 %4 %5 CM",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/ultrasonic.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "judgment",
+            "options": [
+              [
+                ">",
+                ">"
+              ],
+              [
+                "<",
+                "<"
+              ],
+              [
+                "=",
+                "="
+              ]
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "value"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {
+        "judgment": ">"
+      },
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "sensing_menu",
+            "fields": {
+              "SENSING_MENU": "A"
+            }
+          }
+        },
+        {
+          "name": "judgment"
+        },
+        {
+          "name": "value",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "10"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE),c=a.getFieldValue(\"judgment\");a=Blockly.Python.valueToCode(a,\"value\",Blockly.Python.ORDER_NONE);b=Blockly.Python.sensing_port_to_number(b);return[Blockly.Python.handleResult(\"cmp_value(\"+b+', \"'+c+'\", '+a+\")\",Blockly.Python.ULTRASIONIC_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_ultrasion.cmp_value(0, \">\", 10)",
+      "variants": [
+        {
+          "field": "judgment",
+          "label": ">",
+          "value": ">",
+          "code": "_ultrasion.cmp_value(0, \">\", 10)"
+        },
+        {
+          "field": "judgment",
+          "label": "<",
+          "value": "<",
+          "code": "_ultrasion.cmp_value(0, \"<\", 10)"
+        },
+        {
+          "field": "judgment",
+          "label": "=",
+          "value": "=",
+          "code": "_ultrasion.cmp_value(0, \"=\", 10)"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "type": "sensing_ultrasonic_detection",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_ultrasonic_detection",
+        "message0": "%1 %2 超声波传感器 %3 的数值",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/ultrasonic.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "sensing_menu",
+            "fields": {
+              "SENSING_MENU": "A"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){a=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE);a=Blockly.Python.sensing_port_to_number(a);return[Blockly.Python.handleResult(\"value(\"+a+\")\",Blockly.Python.ULTRASIONIC_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_ultrasion.value(0)",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "sensing_isHandling",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_isHandling",
+        "message0": "%1 %2 手柄 %3 是否 %4",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/handleShank.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "PORT"
+          },
+          {
+            "type": "field_dropdown",
+            "name": "BUTTON",
+            "options": [
+              [
+                "被按下",
+                "press"
+              ],
+              [
+                "未按下",
+                "unpress"
+              ]
+            ]
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {
+        "BUTTON": "press"
+      },
+      "inputs": [
+        {
+          "name": "PORT",
+          "shadow": {
+            "type": "handShank_menu",
+            "fields": {
+              "HAND_SHANK": "up"
+            }
+          }
+        },
+        {
+          "name": "BUTTON"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"PORT\",Blockly.Python.ORDER_NONE);a=a.getFieldValue(\"BUTTON\");return[Blockly.Python.handleResult('key_remote(\"'+b+'\",\"'+a+'\")',Blockly.Python.KEY_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_key.key_remote(\"up\",\"press\")",
+      "variants": [
+        {
+          "field": "BUTTON",
+          "label": "被按下",
+          "value": "press",
+          "code": "_key.key_remote(\"up\",\"press\")"
+        },
+        {
+          "field": "BUTTON",
+          "label": "未按下",
+          "value": "unpress",
+          "code": "_key.key_remote(\"up\",\"unpress\")"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "type": "combined_forward_offset",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "combined_forward_offset",
+        "message0": "%1 %2 设置手柄前进偏移量为左 %3 右 %4",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/handleShank.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "LEFT_OFFSET"
+          },
+          {
+            "type": "input_value",
+            "name": "RIGHT_OFFSET"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "LEFT_OFFSET",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "0"
+            }
+          }
+        },
+        {
+          "name": "RIGHT_OFFSET",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "0"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"LEFT_OFFSET\",Blockly.Python.ORDER_NONE);a=Blockly.Python.valueToCode(a,\"RIGHT_OFFSET\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult(\"mov_set_advance_offset(\"+b+\", \"+a+\")\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.mov_set_advance_offset(0, 0)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "combined_backward_offset",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "combined_backward_offset",
+        "message0": "%1 %2 设置手柄后退偏移量为左 %3 右%4",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/handleShank.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          },
+          {
+            "type": "input_value",
+            "name": "LEFT_OFFSET"
+          },
+          {
+            "type": "input_value",
+            "name": "RIGHT_OFFSET"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "LEFT_OFFSET",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "0"
+            }
+          }
+        },
+        {
+          "name": "RIGHT_OFFSET",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "0"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"LEFT_OFFSET\",Blockly.Python.ORDER_NONE);a=Blockly.Python.valueToCode(a,\"RIGHT_OFFSET\",Blockly.Python.ORDER_NONE);return Blockly.Python.handleResult(\"mov_set_retreat_offset(\"+b+\", \"+a+\")\\n\",Blockly.Python.MOTOR_TYPE)}",
+      "python": "_motor.mov_set_retreat_offset(0, 0)\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "read_adcance_left_offset",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "read_adcance_left_offset",
+        "message0": "%1 %2 读取前进左偏移量",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/handleShank.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){return[Blockly.Python.handleResult(\"read_adcance_left_offset()\\n\",Blockly.Python.KEY_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_key.read_adcance_left_offset()",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "read_advance_right_offset",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "read_advance_right_offset",
+        "message0": "%1 %2 读取前进右偏移量",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/handleShank.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){return[Blockly.Python.handleResult(\"read_advance_right_offset()\\n\",Blockly.Python.KEY_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_key.read_advance_right_offset()",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "read_retreat_left_offset",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "read_retreat_left_offset",
+        "message0": "%1 %2 读取后退左偏移量",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/handleShank.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){return[Blockly.Python.handleResult(\"read_retreat_left_offset()\\n\",Blockly.Python.KEY_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_key.read_retreat_left_offset()",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "read_retreat_right_offset",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "read_retreat_right_offset",
+        "message0": "%1 %2 读取后退右偏移量",
+        "args0": [
+          {
+            "type": "field_image",
+            "src": "media/handleShank.svg",
+            "width": 32,
+            "height": 32,
+            "alt": "*",
+            "flipRtl": false
+          },
+          {
+            "type": "field_vertical_separator"
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){return[Blockly.Python.handleResult(\"read_retreat_right_offset()\\n\",Blockly.Python.KEY_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_key.read_retreat_right_offset()",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "sensing_mainIsPress",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_Handling",
+        "message0": "主机 %1 按钮是否 %2",
+        "args0": [
+          {
+            "type": "field_dropdown",
+            "name": "KEYS",
+            "options": [
+              [
+                "左",
+                "left"
+              ],
+              [
+                "右",
+                "right"
+              ]
+            ]
+          },
+          {
+            "type": "field_dropdown",
+            "name": "BUTTON",
+            "options": [
+              [
+                "被按下",
+                "1"
+              ],
+              [
+                "未按下",
+                "0"
+              ]
+            ]
+          }
+        ],
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {
+        "KEYS": "left",
+        "BUTTON": "1"
+      },
+      "inputs": [
+        {
+          "name": "KEYS"
+        },
+        {
+          "name": "BUTTON"
+        }
+      ],
+      "generator_js": "function(a){var b=a.getFieldValue(\"KEYS\");a=a.getFieldValue(\"BUTTON\");return[Blockly.Python.handleResult('key_mast(\"'+b+'\", '+a+\")\",Blockly.Python.KEY_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_key.key_mast(\"left\", 1)",
+      "variants": [
+        {
+          "field": "KEYS",
+          "label": "左",
+          "value": "left",
+          "code": "_key.key_mast(\"left\", 1)"
+        },
+        {
+          "field": "KEYS",
+          "label": "右",
+          "value": "right",
+          "code": "_key.key_mast(\"right\", 1)"
+        },
+        {
+          "field": "BUTTON",
+          "label": "被按下",
+          "value": "1",
+          "code": "_key.key_mast(\"left\", 1)"
+        },
+        {
+          "field": "BUTTON",
+          "label": "未按下",
+          "value": "0",
+          "code": "_key.key_mast(\"left\", 0)"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "type": "sensing_timer",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_timer",
+        "message0": "计时器",
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){return[Blockly.Python.handleResult(\"timer()\",Blockly.Python.TIMER_TYPE).trim(),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "_os.timer()",
+      "variants": [],
+      "notes": [
+        "直接返回 _os.timer()，固件单位为 1 ms tick，未除以 1000。"
+      ]
+    },
+    {
+      "type": "sensing_reset_timer",
+      "category_id": "sensing",
+      "visibility": "always",
+      "block_definition": {
+        "type": "sensing_reset_timer",
+        "message0": "重置计时器",
+        "category": "sensing",
+        "extensions": [
+          "colours_sensing",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){return Blockly.Python.handleResult(\"resetTimer()\\n\",Blockly.Python.TIMER_TYPE)}",
+      "python": "_os.resetTimer()\n",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_add",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 + %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "NUM1"
+          },
+          {
+            "type": "input_value",
+            "name": "NUM2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "NUM1",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": ""
+            }
+          }
+        },
+        {
+          "name": "NUM2",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": ""
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b={operator_add:[\" + \",Blockly.Python.ORDER_ADDITIVE],operator_subtract:[\" - \",Blockly.Python.ORDER_ADDITIVE],operator_multiply:[\" * \",Blockly.Python.ORDER_ADDITIVE],operator_divide:[\" / \",Blockly.Python.ORDER_ADDITIVE]}[a.type],c=b[0];b=b[1];var d=Blockly.Python.valueToCode(a,\"NUM1\",b)||\"0\";a=Blockly.Python.valueToCode(a,\"NUM2\",b)||\"0\";return[d+c+a,b]}",
+      "python": "0 + 0",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_subtract",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 - %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "NUM1"
+          },
+          {
+            "type": "input_value",
+            "name": "NUM2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "NUM1",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": ""
+            }
+          }
+        },
+        {
+          "name": "NUM2",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": ""
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b={operator_add:[\" + \",Blockly.Python.ORDER_ADDITIVE],operator_subtract:[\" - \",Blockly.Python.ORDER_ADDITIVE],operator_multiply:[\" * \",Blockly.Python.ORDER_ADDITIVE],operator_divide:[\" / \",Blockly.Python.ORDER_ADDITIVE]}[a.type],c=b[0];b=b[1];var d=Blockly.Python.valueToCode(a,\"NUM1\",b)||\"0\";a=Blockly.Python.valueToCode(a,\"NUM2\",b)||\"0\";return[d+c+a,b]}",
+      "python": "0 - 0",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_multiply",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 * %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "NUM1"
+          },
+          {
+            "type": "input_value",
+            "name": "NUM2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "NUM1",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": ""
+            }
+          }
+        },
+        {
+          "name": "NUM2",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": ""
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b={operator_add:[\" + \",Blockly.Python.ORDER_ADDITIVE],operator_subtract:[\" - \",Blockly.Python.ORDER_ADDITIVE],operator_multiply:[\" * \",Blockly.Python.ORDER_ADDITIVE],operator_divide:[\" / \",Blockly.Python.ORDER_ADDITIVE]}[a.type],c=b[0];b=b[1];var d=Blockly.Python.valueToCode(a,\"NUM1\",b)||\"0\";a=Blockly.Python.valueToCode(a,\"NUM2\",b)||\"0\";return[d+c+a,b]}",
+      "python": "0 * 0",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_divide",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 / %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "NUM1"
+          },
+          {
+            "type": "input_value",
+            "name": "NUM2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "NUM1",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": ""
+            }
+          }
+        },
+        {
+          "name": "NUM2",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": ""
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b={operator_add:[\" + \",Blockly.Python.ORDER_ADDITIVE],operator_subtract:[\" - \",Blockly.Python.ORDER_ADDITIVE],operator_multiply:[\" * \",Blockly.Python.ORDER_ADDITIVE],operator_divide:[\" / \",Blockly.Python.ORDER_ADDITIVE]}[a.type],c=b[0];b=b[1];var d=Blockly.Python.valueToCode(a,\"NUM1\",b)||\"0\";a=Blockly.Python.valueToCode(a,\"NUM2\",b)||\"0\";return[d+c+a,b]}",
+      "python": "0 / 0",
+      "variants": [],
+      "notes": [
+        "空数字槽默认生成 0，因此默认例子分母为 0；原样提取，实际程序需填写有效的除数。"
+      ]
+    },
+    {
+      "type": "operator_gt",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 > %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "OPERAND1"
+          },
+          {
+            "type": "input_value",
+            "name": "OPERAND2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "OPERAND1",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": ""
+            }
+          }
+        },
+        {
+          "name": "OPERAND2",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "50"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.ORDER_RELATIONAL,c=Blockly.Python.valueToCode(a,\"OPERAND1\",b),d=Blockly.Python.valueToCode(a,\"OPERAND2\",b);parseFloat(c.slice(1,-1))==c.slice(1,-1)?c=parseFloat(c.slice(1,-1)).toString():\"''\"===c&&(c=\"0\");parseFloat(d.slice(1,-1))==d.slice(1,-1)?d=parseFloat(d.slice(1,-1)).toString():\"''\"===d&&(d=\"0\");return[c+{operator_gt:\" > \",operator_equals:\" == \",operator_lt:\" < \"}[a.type]+d,b]}",
+      "python": "0 > 50",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_lt",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 < %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "OPERAND1"
+          },
+          {
+            "type": "input_value",
+            "name": "OPERAND2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "OPERAND1",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": ""
+            }
+          }
+        },
+        {
+          "name": "OPERAND2",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "50"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.ORDER_RELATIONAL,c=Blockly.Python.valueToCode(a,\"OPERAND1\",b),d=Blockly.Python.valueToCode(a,\"OPERAND2\",b);parseFloat(c.slice(1,-1))==c.slice(1,-1)?c=parseFloat(c.slice(1,-1)).toString():\"''\"===c&&(c=\"0\");parseFloat(d.slice(1,-1))==d.slice(1,-1)?d=parseFloat(d.slice(1,-1)).toString():\"''\"===d&&(d=\"0\");return[c+{operator_gt:\" > \",operator_equals:\" == \",operator_lt:\" < \"}[a.type]+d,b]}",
+      "python": "0 < 50",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_equals",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 = %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "OPERAND1"
+          },
+          {
+            "type": "input_value",
+            "name": "OPERAND2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "OPERAND1",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": ""
+            }
+          }
+        },
+        {
+          "name": "OPERAND2",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "50"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.ORDER_RELATIONAL,c=Blockly.Python.valueToCode(a,\"OPERAND1\",b),d=Blockly.Python.valueToCode(a,\"OPERAND2\",b);parseFloat(c.slice(1,-1))==c.slice(1,-1)?c=parseFloat(c.slice(1,-1)).toString():\"''\"===c&&(c=\"0\");parseFloat(d.slice(1,-1))==d.slice(1,-1)?d=parseFloat(d.slice(1,-1)).toString():\"''\"===d&&(d=\"0\");return[c+{operator_gt:\" > \",operator_equals:\" == \",operator_lt:\" < \"}[a.type]+d,b]}",
+      "python": "0 == 50",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_and",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 与 %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "OPERAND1",
+            "check": "Boolean"
+          },
+          {
+            "type": "input_value",
+            "name": "OPERAND2",
+            "check": "Boolean"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "OPERAND1"
+        },
+        {
+          "name": "OPERAND2"
+        }
+      ],
+      "generator_js": "function(a){var b=\"operator_and\"==a.type?Blockly.Python.ORDER_LOGICAL_AND:Blockly.Python.ORDER_LOGICAL_OR,c=Blockly.Python.valueToCode(a,\"OPERAND1\",b)||\"0\",d=Blockly.Python.valueToCode(a,\"OPERAND2\",b)||\"0\";return[c+{operator_and:\" and \",operator_or:\" or \"}[a.type]+d,b]}",
+      "python": "0 and 0",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_or",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 或 %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "OPERAND1",
+            "check": "Boolean"
+          },
+          {
+            "type": "input_value",
+            "name": "OPERAND2",
+            "check": "Boolean"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "OPERAND1"
+        },
+        {
+          "name": "OPERAND2"
+        }
+      ],
+      "generator_js": "function(a){var b=\"operator_and\"==a.type?Blockly.Python.ORDER_LOGICAL_AND:Blockly.Python.ORDER_LOGICAL_OR,c=Blockly.Python.valueToCode(a,\"OPERAND1\",b)||\"0\",d=Blockly.Python.valueToCode(a,\"OPERAND2\",b)||\"0\";return[c+{operator_and:\" and \",operator_or:\" or \"}[a.type]+d,b]}",
+      "python": "0 or 0",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_not",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 不成立",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "OPERAND",
+            "check": "Boolean"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "OPERAND"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.ORDER_LOGICAL_NOT;return[\"not \"+(Blockly.Python.valueToCode(a,\"OPERAND\",b)||\"false\"),b]}",
+      "python": "not false",
+      "variants": [],
+      "notes": [
+        "布尔输入留空时原生成器输出小写 false，得到 not false；未在固件中确认名为 false 的变量。此处原样保留，接入时需处理空布尔输入。"
+      ]
+    },
+    {
+      "type": "operator_contains",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 包含 %2 ?",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "STRING1"
+          },
+          {
+            "type": "input_value",
+            "name": "STRING2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "STRING1",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "apple"
+            }
+          }
+        },
+        {
+          "name": "STRING2",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "a"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.ORDER_FUNCTION_CALL,c=Blockly.Python.valueToCode(a,\"STRING1\",b)||\"''\";a=Blockly.Python.valueToCode(a,\"STRING2\",b)||\"0\";return[\"str(\"+c+\").find(str(\"+a+\")) > -1\",Blockly.Python.ORDER_RELATIONAL]}",
+      "python": "str('apple').find(str('a')) > -1",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_join",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "连接 %1 和 %2",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "STRING1"
+          },
+          {
+            "type": "input_value",
+            "name": "STRING2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_string"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "STRING1",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "apple"
+            }
+          }
+        },
+        {
+          "name": "STRING2",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "banana"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.ORDER_UNARY_PREFIX,c=Blockly.Python.valueToCode(a,\"STRING1\",b)||\"''\";a=Blockly.Python.valueToCode(a,\"STRING2\",b)||\"''\";return[\"str(\"+c+\") + str(\"+a+\")\",Blockly.Python.ORDER_ADDITIVE]}",
+      "python": "str('apple') + str('banana')",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_letter_of",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%2 的第 %1 个字符",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "LETTER"
+          },
+          {
+            "type": "input_value",
+            "name": "STRING"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_string"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "LETTER",
+          "shadow": {
+            "type": "math_whole_number",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        },
+        {
+          "name": "STRING",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "apple"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"STRING\",Blockly.Python.ORDER_UNARY_SIGN)||\"''\";a=Blockly.Python.valueToCode(a,\"LETTER\",Blockly.Python.ORDER_MEMBER)||\"0\";a=parseFloat(a)==a?a-1:a+\" - 1\";return[b+\"[\"+a+\"]\",Blockly.Python.ORDER_MEMBER]}",
+      "python": "'apple'[0]",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_length",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 的字符数",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "STRING"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_string"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "STRING",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "apple"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){return[\"len(\"+(Blockly.Python.valueToCode(a,\"STRING\",Blockly.Python.ORDER_FUNCTION_CALL)||\"''\")+\")\",Blockly.Python.ORDER_FUNCTION_CALL]}",
+      "python": "len('apple')",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_mod",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 除以 %2 的余数",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "NUM1"
+          },
+          {
+            "type": "input_value",
+            "name": "NUM2"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "NUM1",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": ""
+            }
+          }
+        },
+        {
+          "name": "NUM2",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": ""
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.ORDER_MULTIPLICATIVE,c=Blockly.Python.valueToCode(a,\"NUM1\",b)||\"0\";a=Blockly.Python.valueToCode(a,\"NUM2\",b)||\"0\";return[\"_math.fmod(\"+c+\", \"+a+\")\",b]}",
+      "python": "_math.fmod(0, 0)",
+      "variants": [],
+      "notes": [
+        "空数字槽默认生成 0，因此默认例子分母为 0；原样提取，实际程序需填写有效的除数。"
+      ]
+    },
+    {
+      "type": "operator_round",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "四舍五入 %1",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "NUM"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "NUM",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": ""
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){a=Blockly.Python.valueToCode(a,\"NUM\",Blockly.Python.ORDER_UNARY_POSTFIX)||\"0\";return[Blockly.Python.handleResult(\"round(\"+a+\")\",Blockly.Python.MATH_TYPE),Blockly.Python.ORDER_FUNCTION_CALL]}",
+      "python": "_math.round(0)",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "operator_mathop",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "%1 %2",
+        "args0": [
+          {
+            "type": "field_dropdown",
+            "name": "OPERATOR",
+            "options": [
+              [
+                "绝对值",
+                "_abs_"
+              ],
+              [
+                "向下取整",
+                "down_abs"
+              ],
+              [
+                "向上取整",
+                "up_abs"
+              ],
+              [
+                "平方根",
+                "sqrt_abs"
+              ],
+              [
+                "sin",
+                "sin_abs"
+              ],
+              [
+                "cos",
+                "cos_abs"
+              ],
+              [
+                "tan",
+                "tan_abs"
+              ],
+              [
+                "asin",
+                "asin_abs"
+              ],
+              [
+                "acos",
+                "acos_abs"
+              ],
+              [
+                "atan",
+                "atan_abs"
+              ],
+              [
+                "log",
+                "ln_abs"
+              ],
+              [
+                "e ^",
+                "e_abs"
+              ],
+              [
+                "10 ^",
+                "10_abs"
+              ]
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "NUM"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "default_fields": {
+        "OPERATOR": "_abs_"
+      },
+      "inputs": [
+        {
+          "name": "OPERATOR"
+        },
+        {
+          "name": "NUM",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": ""
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=a.getFieldValue(\"OPERATOR\");a=Blockly.Python.valueToCode(a,\"NUM\",Blockly.Python.ORDER_FUNCTION_CALL)||\"0\";var c=\"\",d=Blockly.Python.ORDER_FUNCTION_CALL;switch(b){case \"_abs_\":c=\"_math.fabs(\"+a+\")\";break;case \"down_abs\":c=\"_math.floor(\"+a+\")\";break;case \"up_abs\":c=\"_math.ceil(\"+a+\")\";break;case \"sqrt_abs\":c=\"_math.sqrt(\"+a+\")\";break;case \"sin_abs\":c=\"_math.sin(\"+a+\")\";break;case \"cos_abs\":c=\"_math.cos(\"+a+\")\";break;case \"tan_abs\":c=\"_math.tan(\"+a+\")\";\r\r\nbreak;case \"asin_abs\":c=\"_math.asin(\"+a+\")\";d=Blockly.Python.ORDER_MULTIPLICATIVE;break;case \"acos_abs\":c=\"_math.acos(\"+a+\")\";d=Blockly.Python.ORDER_MULTIPLICATIVE;break;case \"atan_abs\":c=\"_math.atan(\"+a+\")\";d=Blockly.Python.ORDER_MULTIPLICATIVE;break;case \"ln_abs\":c=\"_math.log(\"+a+\")\";break;case \"e_abs\":c=\"_math.exp(\"+a+\")\";break;case \"10_abs\":c=\"_math.pow(10, \"+a+\")\"}return[c,d]}",
+      "python": "_math.fabs(0)",
+      "variants": [
+        {
+          "field": "OPERATOR",
+          "label": "绝对值",
+          "value": "_abs_",
+          "code": "_math.fabs(0)"
+        },
+        {
+          "field": "OPERATOR",
+          "label": "向下取整",
+          "value": "down_abs",
+          "code": "_math.floor(0)"
+        },
+        {
+          "field": "OPERATOR",
+          "label": "向上取整",
+          "value": "up_abs",
+          "code": "_math.ceil(0)"
+        },
+        {
+          "field": "OPERATOR",
+          "label": "平方根",
+          "value": "sqrt_abs",
+          "code": "_math.sqrt(0)"
+        },
+        {
+          "field": "OPERATOR",
+          "label": "sin",
+          "value": "sin_abs",
+          "code": "_math.sin(0)"
+        },
+        {
+          "field": "OPERATOR",
+          "label": "cos",
+          "value": "cos_abs",
+          "code": "_math.cos(0)"
+        },
+        {
+          "field": "OPERATOR",
+          "label": "tan",
+          "value": "tan_abs",
+          "code": "_math.tan(0)"
+        },
+        {
+          "field": "OPERATOR",
+          "label": "asin",
+          "value": "asin_abs",
+          "code": "_math.asin(0)"
+        },
+        {
+          "field": "OPERATOR",
+          "label": "acos",
+          "value": "acos_abs",
+          "code": "_math.acos(0)"
+        },
+        {
+          "field": "OPERATOR",
+          "label": "atan",
+          "value": "atan_abs",
+          "code": "_math.atan(0)"
+        },
+        {
+          "field": "OPERATOR",
+          "label": "log",
+          "value": "ln_abs",
+          "code": "_math.log(0)"
+        },
+        {
+          "field": "OPERATOR",
+          "label": "e ^",
+          "value": "e_abs",
+          "code": "_math.exp(0)"
+        },
+        {
+          "field": "OPERATOR",
+          "label": "10 ^",
+          "value": "10_abs",
+          "code": "_math.pow(10, 0)"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "type": "operator_random",
+      "category_id": "operators",
+      "visibility": "always",
+      "block_definition": {
+        "message0": "在 %1 和 %2 之间取随机数",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "FROM"
+          },
+          {
+            "type": "input_value",
+            "name": "TO"
+          }
+        ],
+        "category": "operators",
+        "extensions": [
+          "colours_operators",
+          "output_number"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [
+        {
+          "name": "FROM",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        },
+        {
+          "name": "TO",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "10"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"FROM\",Blockly.Python.ORDER_FUNCTION_CALL)||\"0\";a=Blockly.Python.valueToCode(a,\"TO\",Blockly.Python.ORDER_FUNCTION_CALL)||\"0\";return[\"_random.randint(\"+b+\", \"+a+\")\",Blockly.Python.ORDER_FUNCTION_CALL]}",
+      "python": "_random.randint(1, 10)",
+      "variants": [],
+      "notes": []
+    },
+    {
+      "type": "data_variable",
+      "category_id": "variables",
+      "visibility": "at_least_one_variable",
+      "block_definition": {
+        "message0": "%1",
+        "lastDummyAlign0": "CENTRE",
+        "args0": [
+          {
+            "type": "field_variable_getter",
+            "text": "",
+            "name": "VARIABLE",
+            "variableType": ""
+          }
+        ],
+        "category": "data",
+        "checkboxInFlyout": true,
+        "extensions": [
+          "contextMenu_getVariableBlock",
+          "colours_data",
+          "output_string"
+        ]
+      },
+      "default_fields": {
+        "VARIABLE": "my_variable"
+      },
+      "inputs": [
+        {
+          "name": "VARIABLE"
+        }
+      ],
+      "generator_js": "function(a){return[Blockly.Python.variableDB_.getName(a.getFieldValue(\"VARIABLE\"),Blockly.Variables.NAME_TYPE),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "my_variable",
+      "variants": [],
+      "notes": [
+        "变量示例名为 my_variable；原生成器在完整程序初始化阶段生成 my_variable = 0。"
+      ]
+    },
+    {
+      "type": "data_setvariableto",
+      "category_id": "variables",
+      "visibility": "at_least_one_variable",
+      "block_definition": {
+        "message0": "将 %1 设为 %2",
+        "args0": [
+          {
+            "type": "field_variable",
+            "name": "VARIABLE"
+          },
+          {
+            "type": "input_value",
+            "name": "VALUE"
+          }
+        ],
+        "category": "data",
+        "extensions": [
+          "colours_data",
+          "shape_statement",
+          "variable_dropdown_scrollable"
+        ]
+      },
+      "default_fields": {
+        "VARIABLE": "my_variable"
+      },
+      "inputs": [
+        {
+          "name": "VARIABLE"
+        },
+        {
+          "name": "VALUE",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "0"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"VALUE\",Blockly.Python.ORDER_ADDITIVE)||\"0\";a=Blockly.Python.variableDB_.getName(a.getFieldValue(\"VARIABLE\"),Blockly.Variables.NAME_TYPE);if(\"unnamed\"===a)return\"\";parseFloat(b.slice(1,-1))==b.slice(1,-1)&&(b=parseFloat(b.slice(1,-1)).toString());return a+\" = \"+b+\"\\n\"}",
+      "python": "my_variable = 0\n",
+      "variants": [],
+      "notes": [
+        "变量示例名为 my_variable；原生成器在完整程序初始化阶段生成 my_variable = 0。"
+      ]
+    },
+    {
+      "type": "data_changevariableby",
+      "category_id": "variables",
+      "visibility": "at_least_one_variable",
+      "block_definition": {
+        "message0": "将 %1 增加 %2",
+        "args0": [
+          {
+            "type": "field_variable",
+            "name": "VARIABLE"
+          },
+          {
+            "type": "input_value",
+            "name": "VALUE"
+          }
+        ],
+        "category": "data",
+        "extensions": [
+          "colours_data",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "VARIABLE": "my_variable"
+      },
+      "inputs": [
+        {
+          "name": "VARIABLE"
+        },
+        {
+          "name": "VALUE",
+          "shadow": {
+            "type": "math_number",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"VALUE\",Blockly.Python.ORDER_ADDITIVE)||\"0\";a=Blockly.Python.variableDB_.getName(a.getFieldValue(\"VARIABLE\"),Blockly.Variables.NAME_TYPE);return\"unnamed\"===a?\"\":a+\" += \"+b+\"\\n\"}",
+      "python": "my_variable += 1\n",
+      "variants": [],
+      "notes": [
+        "变量示例名为 my_variable；原生成器在完整程序初始化阶段生成 my_variable = 0。"
+      ]
+    },
+    {
+      "type": "data_addtolist",
+      "category_id": "variables",
+      "visibility": "at_least_one_list",
+      "block_definition": {
+        "message0": "往 %1 添加 %2",
+        "args0": [
+          {
+            "type": "field_variable",
+            "name": "LIST",
+            "variableTypes": [
+              "list"
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "ITEM"
+          }
+        ],
+        "category": "data-lists",
+        "extensions": [
+          "colours_data_lists",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "LIST": "my_list"
+      },
+      "inputs": [
+        {
+          "name": "LIST"
+        },
+        {
+          "name": "ITEM",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "东西"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"ITEM\",Blockly.Python.ORDER_ADDITIVE)||\"0\";a=Blockly.Python.variableDB_.getName(a.getFieldValue(\"LIST\"),Blockly.Variables.NAME_TYPE);return\"unnamed\"===a?\"\":a+(\".append(\"+b+\")\\n\")}",
+      "python": "my_list.append('东西')\n",
+      "variants": [],
+      "notes": [
+        "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。"
+      ]
+    },
+    {
+      "type": "data_deleteoflist",
+      "category_id": "variables",
+      "visibility": "at_least_one_list",
+      "block_definition": {
+        "message0": "删除 %2 的第 %1 项",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "INDEX"
+          },
+          {
+            "type": "field_variable",
+            "name": "LIST",
+            "variableTypes": [
+              "list"
+            ]
+          }
+        ],
+        "category": "data-lists",
+        "extensions": [
+          "colours_data_lists",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "LIST": "my_list"
+      },
+      "inputs": [
+        {
+          "name": "INDEX",
+          "shadow": {
+            "type": "math_integer",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        },
+        {
+          "name": "LIST"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"INDEX\",Blockly.Python.ORDER_ADDITIVE)||\"0\";a=Blockly.Python.variableDB_.getName(a.getFieldValue(\"LIST\"),Blockly.Variables.NAME_TYPE);return\"unnamed\"===a?\"\":a+(\".remove_index(\"+b+\")\\n\")}",
+      "python": "my_list.remove_index(1)\n",
+      "variants": [],
+      "notes": [
+        "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。",
+        "给定固件仓库的 PikaStdData.List 未提供此生成片段调用的方法，接入时不能直接认定可运行。"
+      ]
+    },
+    {
+      "type": "data_deletealloflist",
+      "category_id": "variables",
+      "visibility": "at_least_one_list",
+      "block_definition": {
+        "message0": "删除 %1 的全部项目",
+        "args0": [
+          {
+            "type": "field_variable",
+            "name": "LIST",
+            "variableTypes": [
+              "list"
+            ]
+          }
+        ],
+        "category": "data-lists",
+        "extensions": [
+          "colours_data_lists",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "LIST": "my_list"
+      },
+      "inputs": [
+        {
+          "name": "LIST"
+        }
+      ],
+      "generator_js": "function(a){a=Blockly.Python.variableDB_.getName(a.getFieldValue(\"LIST\"),Blockly.Variables.NAME_TYPE);return\"unnamed\"===a?\"\":a+\".remove_all()\\n\"}",
+      "python": "my_list.remove_all()\n",
+      "variants": [],
+      "notes": [
+        "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。",
+        "给定固件仓库的 PikaStdData.List 未提供此生成片段调用的方法，接入时不能直接认定可运行。"
+      ]
+    },
+    {
+      "type": "data_insertatlist",
+      "category_id": "variables",
+      "visibility": "at_least_one_list",
+      "block_definition": {
+        "message0": "在 %3 的第 %2 项前插入 %1",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "ITEM"
+          },
+          {
+            "type": "input_value",
+            "name": "INDEX"
+          },
+          {
+            "type": "field_variable",
+            "name": "LIST",
+            "variableTypes": [
+              "list"
+            ]
+          }
+        ],
+        "category": "data-lists",
+        "extensions": [
+          "colours_data_lists",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "LIST": "my_list"
+      },
+      "inputs": [
+        {
+          "name": "ITEM",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "东西"
+            }
+          }
+        },
+        {
+          "name": "INDEX",
+          "shadow": {
+            "type": "math_integer",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        },
+        {
+          "name": "LIST"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"ITEM\",Blockly.Python.ORDER_ADDITIVE)||\"0\",c=Blockly.Python.valueToCode(a,\"INDEX\",Blockly.Python.ORDER_ADDITIVE)||\"0\";a=Blockly.Python.variableDB_.getName(a.getFieldValue(\"LIST\"),Blockly.Variables.NAME_TYPE);return\"unnamed\"===a?\"\":a+(\".insert(\"+c+\", \"+b+\")\\n\")}",
+      "python": "my_list.insert(1, '东西')\n",
+      "variants": [],
+      "notes": [
+        "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。"
+      ]
+    },
+    {
+      "type": "data_replaceitemoflist",
+      "category_id": "variables",
+      "visibility": "at_least_one_list",
+      "block_definition": {
+        "message0": "将 %2 的第 %1 项替换为 %3",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "INDEX"
+          },
+          {
+            "type": "field_variable",
+            "name": "LIST",
+            "variableTypes": [
+              "list"
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "ITEM"
+          }
+        ],
+        "category": "data-lists",
+        "extensions": [
+          "colours_data_lists",
+          "shape_statement"
+        ]
+      },
+      "default_fields": {
+        "LIST": "my_list"
+      },
+      "inputs": [
+        {
+          "name": "INDEX",
+          "shadow": {
+            "type": "math_integer",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        },
+        {
+          "name": "LIST"
+        },
+        {
+          "name": "ITEM",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "东西"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"ITEM\",Blockly.Python.ORDER_ADDITIVE)||\"0\",c=Blockly.Python.valueToCode(a,\"INDEX\",Blockly.Python.ORDER_ADDITIVE)||\"0\";a=Blockly.Python.variableDB_.getName(a.getFieldValue(\"LIST\"),Blockly.Variables.NAME_TYPE);return\"unnamed\"===a?\"\":a+(\".set(\"+c+\", \"+b+\")\\n\")}",
+      "python": "my_list.set(1, '东西')\n",
+      "variants": [],
+      "notes": [
+        "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。"
+      ]
+    },
+    {
+      "type": "data_itemoflist",
+      "category_id": "variables",
+      "visibility": "at_least_one_list",
+      "block_definition": {
+        "message0": "%2 的第 %1 项",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "INDEX"
+          },
+          {
+            "type": "field_variable",
+            "name": "LIST",
+            "variableTypes": [
+              "list"
+            ]
+          }
+        ],
+        "output": null,
+        "category": "data-lists",
+        "extensions": [
+          "colours_data_lists"
+        ],
+        "outputShape": 2
+      },
+      "default_fields": {
+        "LIST": "my_list"
+      },
+      "inputs": [
+        {
+          "name": "INDEX",
+          "shadow": {
+            "type": "math_integer",
+            "fields": {
+              "NUM": "1"
+            }
+          }
+        },
+        {
+          "name": "LIST"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"INDEX\",Blockly.Python.ORDER_ADDITIVE)||\"0\";return[Blockly.Python.variableDB_.getName(a.getFieldValue(\"LIST\"),Blockly.Variables.NAME_TYPE)+(\"[\"+b+\"]\"),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "my_list[1]",
+      "variants": [],
+      "notes": [
+        "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。"
+      ]
+    },
+    {
+      "type": "data_itemnumoflist",
+      "category_id": "variables",
+      "visibility": "at_least_one_list",
+      "block_definition": {
+        "message0": "%2 中第一个 %1 的编号",
+        "args0": [
+          {
+            "type": "input_value",
+            "name": "ITEM"
+          },
+          {
+            "type": "field_variable",
+            "name": "LIST",
+            "variableTypes": [
+              "list"
+            ]
+          }
+        ],
+        "output": null,
+        "category": "data-lists",
+        "extensions": [
+          "colours_data_lists"
+        ],
+        "outputShape": 2
+      },
+      "default_fields": {
+        "LIST": "my_list"
+      },
+      "inputs": [
+        {
+          "name": "ITEM",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "东西"
+            }
+          }
+        },
+        {
+          "name": "LIST"
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"ITEM\",Blockly.Python.ORDER_ADDITIVE)||\"0\";return[Blockly.Python.variableDB_.getName(a.getFieldValue(\"LIST\"),Blockly.Variables.NAME_TYPE)+(\".dataToindex(\"+b+\")\"),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "my_list.dataToindex('东西')",
+      "variants": [],
+      "notes": [
+        "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。",
+        "给定固件仓库的 PikaStdData.List 未提供此生成片段调用的方法，接入时不能直接认定可运行。"
+      ]
+    },
+    {
+      "type": "data_lengthoflist",
+      "category_id": "variables",
+      "visibility": "at_least_one_list",
+      "block_definition": {
+        "message0": "%1 的项目数",
+        "args0": [
+          {
+            "type": "field_variable",
+            "name": "LIST",
+            "variableTypes": [
+              "list"
+            ]
+          }
+        ],
+        "category": "data-lists",
+        "extensions": [
+          "colours_data_lists",
+          "output_number"
+        ]
+      },
+      "default_fields": {
+        "LIST": "my_list"
+      },
+      "inputs": [
+        {
+          "name": "LIST"
+        }
+      ],
+      "generator_js": "function(a){return[Blockly.Python.variableDB_.getName(a.getFieldValue(\"LIST\"),Blockly.Variables.NAME_TYPE)+\".num()\",Blockly.Python.ORDER_ATOMIC]}",
+      "python": "my_list.num()",
+      "variants": [],
+      "notes": [
+        "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。",
+        "给定固件仓库的 PikaStdData.List 未提供此生成片段调用的方法，接入时不能直接认定可运行。"
+      ]
+    },
+    {
+      "type": "data_listcontainsitem",
+      "category_id": "variables",
+      "visibility": "at_least_one_list",
+      "block_definition": {
+        "message0": "%1 包含 %2 ?",
+        "args0": [
+          {
+            "type": "field_variable",
+            "name": "LIST",
+            "variableTypes": [
+              "list"
+            ]
+          },
+          {
+            "type": "input_value",
+            "name": "ITEM"
+          }
+        ],
+        "category": "data-lists",
+        "extensions": [
+          "colours_data_lists",
+          "output_boolean"
+        ]
+      },
+      "default_fields": {
+        "LIST": "my_list"
+      },
+      "inputs": [
+        {
+          "name": "LIST"
+        },
+        {
+          "name": "ITEM",
+          "shadow": {
+            "type": "text",
+            "fields": {
+              "TEXT": "东西"
+            }
+          }
+        }
+      ],
+      "generator_js": "function(a){var b=Blockly.Python.valueToCode(a,\"ITEM\",Blockly.Python.ORDER_ADDITIVE)||\"0\";return[Blockly.Python.variableDB_.getName(a.getFieldValue(\"LIST\"),Blockly.Variables.NAME_TYPE)+(\".list_if_data(\"+b+\")\"),Blockly.Python.ORDER_ATOMIC]}",
+      "python": "my_list.list_if_data('东西')",
+      "variants": [],
+      "notes": [
+        "列表示例名为 my_list；原生成器初始化为 my_list = PikaStdData.List()，列表库兼容性另见提取说明。",
+        "给定固件仓库的 PikaStdData.List 未提供此生成片段调用的方法，接入时不能直接认定可运行。"
+      ]
+    },
+    {
+      "type": "procedures_call",
+      "category_id": "myBlocks",
+      "visibility": "at_least_one_custom_procedure",
+      "block_definition": {
+        "extensions": [
+          "colours_more",
+          "shape_statement",
+          "procedure_call_contextmenu"
+        ]
+      },
+      "default_fields": {},
+      "inputs": [],
+      "generator_js": "function(a){var b=a.getProcCode();b=b.replace(/ /g,\"_\");b=b.replace(/%n/g,\"N\");b=b.replace(/%s/g,\"S\");b=b.replace(/%b/g,\"B\");b=Blockly.Python.variableDB_.getName(b,Blockly.Procedures.NAME_TYPE);for(var c=[],d=0;d<a.inputList.length;d++)if(a.inputList[d].type==Blockly.INPUT_VALUE)if(a.inputList[d].connection.targetBlock()){var e=a.inputList[d].connection.targetBlock();e=Blockly.Python.blockToCode(e);c.push(e[0])}else c.push(\"false\");return b+\"(\"+c.join(\", \")+\")\\n\"}",
+      "python": "my_block()\n",
+      "variants": [],
+      "notes": [
+        "仅在制作自定义积木后出现；示例使用 my_block，实际函数名与参数由用户定义。"
+      ]
+    }
+  ],
+  "input_shadow_definitions": {
+    "motor_box": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_motor",
+              "name": "MOTOR",
+              "motorList": [
+                "null",
+                "null",
+                "null",
+                "null",
+                "E",
+                "F",
+                "G",
+                "H"
+              ]
+            }
+          ],
+          "category": "motor",
+          "colour": "#64c7f0",
+          "colourSecondary": "#00b0f9",
+          "colourTertiary": "#00b0f9",
+          "extensions": [
+            "output_string"
+          ]
+        }
+      },
+      "generator_js": "function(a){a=a.getFieldValue(\"MOTOR\");var b={A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7};return[void 0!==b[a]?b[a]:0,Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "math_-100to100_number": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_slider",
+              "name": "NUM",
+              "value": "0",
+              "min": "-100",
+              "max": "100"
+            }
+          ],
+          "output": "Number",
+          "outputShape": 2,
+          "colour": "#FFFFFF",
+          "colourSecondary": "#FFFFFF",
+          "colourTertiary": "#FFFFFF"
+        }
+      },
+      "generator_js": "function(a){a=parseFloat(a.getFieldValue(\"NUM\"));isNaN(a)&&(a=0);return[a,0>a?Blockly.Python.ORDER_UNARY_SIGN:Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "math_number": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_number",
+              "name": "NUM",
+              "value": "0"
+            }
+          ],
+          "output": "Number",
+          "outputShape": 2,
+          "colour": "#FFFFFF",
+          "colourSecondary": "#FFFFFF",
+          "colourTertiary": "#FFFFFF"
+        }
+      },
+      "generator_js": "function(a){a=parseFloat(a.getFieldValue(\"NUM\"));isNaN(a)&&(a=0);return[a,0>a?Blockly.Python.ORDER_UNARY_SIGN:Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "combined_motor_box": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_combined_motor",
+              "name": "MOTOR",
+              "motorList": [
+                "null",
+                "null",
+                "null",
+                "null",
+                "E",
+                "F",
+                "G",
+                "H"
+              ]
+            }
+          ],
+          "category": "combined_motor",
+          "colour": "#FF4CCD",
+          "colourSecondary": "#FF33A3",
+          "colourTertiary": "#B2248A",
+          "extensions": [
+            "output_string"
+          ]
+        }
+      },
+      "generator_js": "function(a){return[a.getFieldValue(\"MOTOR\"),Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "text": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_input",
+              "name": "TEXT"
+            }
+          ],
+          "output": "String",
+          "outputShape": 2,
+          "colour": "#FFFFFF",
+          "colourSecondary": "#FFFFFF",
+          "colourTertiary": "#FFFFFF"
+        }
+      },
+      "generator_js": "function(a){return[Blockly.Python.quote_(a.getFieldValue(\"TEXT\")),Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "matrix_x": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_dropdown",
+              "name": "X",
+              "options": [
+                [
+                  "0",
+                  "0"
+                ],
+                [
+                  "1",
+                  "1"
+                ],
+                [
+                  "2",
+                  "2"
+                ],
+                [
+                  "3",
+                  "3"
+                ],
+                [
+                  "4",
+                  "4"
+                ],
+                [
+                  "5",
+                  "5"
+                ],
+                [
+                  "6",
+                  "6"
+                ],
+                [
+                  "7",
+                  "7"
+                ],
+                [
+                  "8",
+                  "8"
+                ],
+                [
+                  "9",
+                  "9"
+                ]
+              ]
+            }
+          ],
+          "category": "matrix",
+          "colour": "#7986b8",
+          "colourSecondary": "#855CD6",
+          "colourTertiary": "#6877b3",
+          "extensions": [
+            "output_string"
+          ]
+        }
+      },
+      "generator_js": "function(a){return[a.getFieldValue(\"X\"),Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "matrix_y": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_dropdown",
+              "name": "Y",
+              "options": [
+                [
+                  "0",
+                  "0"
+                ],
+                [
+                  "1",
+                  "1"
+                ],
+                [
+                  "2",
+                  "2"
+                ],
+                [
+                  "3",
+                  "3"
+                ],
+                [
+                  "4",
+                  "4"
+                ],
+                [
+                  "5",
+                  "5"
+                ],
+                [
+                  "6",
+                  "6"
+                ],
+                [
+                  "7",
+                  "7"
+                ]
+              ]
+            }
+          ],
+          "category": "matrix",
+          "colour": "#7986b8",
+          "colourSecondary": "#855CD6",
+          "colourTertiary": "#6877b3",
+          "extensions": [
+            "output_string"
+          ]
+        }
+      },
+      "generator_js": "function(a){return[a.getFieldValue(\"Y\"),Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "piano": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_piano",
+              "name": "NOTE"
+            }
+          ],
+          "outputShape": 2,
+          "output": "String",
+          "colour": "#FFFFFF",
+          "colourSecondary": "#FFFFFF",
+          "colourTertiary": "#FFFFFF"
+        }
+      },
+      "generator_js": "function(a){return[a.getFieldValue(\"NOTE\"),Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "math_positive_number": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_number",
+              "name": "NUM",
+              "min": 0
+            }
+          ],
+          "output": "Number",
+          "outputShape": 2,
+          "colour": "#FFFFFF",
+          "colourSecondary": "#FFFFFF",
+          "colourTertiary": "#FFFFFF"
+        }
+      },
+      "generator_js": "function(a){a=parseFloat(a.getFieldValue(\"NUM\"));isNaN(a)&&(a=0);return[a,0>a?Blockly.Python.ORDER_UNARY_SIGN:Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "math_whole_number": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_number",
+              "name": "NUM",
+              "min": 0,
+              "precision": 1
+            }
+          ],
+          "output": "Number",
+          "outputShape": 2,
+          "colour": "#FFFFFF",
+          "colourSecondary": "#FFFFFF",
+          "colourTertiary": "#FFFFFF"
+        }
+      },
+      "generator_js": "function(a){a=parseFloat(a.getFieldValue(\"NUM\"));isNaN(a)&&(a=0);return[a,0>a?Blockly.Python.ORDER_UNARY_SIGN:Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "touching_menu": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_motor",
+              "name": "TOUCHING_MENU",
+              "motorList": [
+                "A",
+                "B",
+                "C",
+                "D",
+                "null",
+                "null",
+                "null",
+                "null"
+              ]
+            }
+          ],
+          "category": "sensing",
+          "colour": "#34CCF1",
+          "colourSecondary": "#2EBDDA",
+          "colourTertiary": "#27A7C9",
+          "extensions": [
+            "output_string"
+          ]
+        }
+      },
+      "generator_js": "function(a){return['\"'+a.getFieldValue(\"TOUCHING_MENU\")+'\"',Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "sensing_menu": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_motor",
+              "name": "SENSING_MENU",
+              "motorList": [
+                "A",
+                "B",
+                "C",
+                "D",
+                "null",
+                "null",
+                "null",
+                "null"
+              ]
+            }
+          ],
+          "category": "sensing",
+          "colour": "#34CCF1",
+          "colourSecondary": "#2EBDDA",
+          "colourTertiary": "#27A7C9",
+          "extensions": [
+            "output_string"
+          ]
+        }
+      },
+      "generator_js": "function(a){return['\"'+a.getFieldValue(\"SENSING_MENU\")+'\"',Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "handShank_menu": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_handShank",
+              "name": "HAND_SHANK",
+              "handShankValue": [
+                "up",
+                "down",
+                "left",
+                "right",
+                "Y",
+                "A",
+                "B",
+                "X",
+                "L1",
+                "R1"
+              ]
+            }
+          ],
+          "category": "sensing",
+          "colour": "#34CCF1",
+          "colourSecondary": "#2EBDDA",
+          "colourTertiary": "#27A7C9",
+          "extensions": [
+            "output_string"
+          ]
+        }
+      },
+      "generator_js": "function(a){return[a.getFieldValue(\"HAND_SHANK\"),Blockly.Python.ORDER_ATOMIC]}"
+    },
+    "math_integer": {
+      "definition": {
+        "json": {
+          "message0": "%1",
+          "args0": [
+            {
+              "type": "field_number",
+              "name": "NUM",
+              "precision": 1
+            }
+          ],
+          "output": "Number",
+          "outputShape": 2,
+          "colour": "#FFFFFF",
+          "colourSecondary": "#FFFFFF",
+          "colourTertiary": "#FFFFFF"
+        }
+      },
+      "generator_js": "function(a){a=parseFloat(a.getFieldValue(\"NUM\"));isNaN(a)&&(a=0);return[a,0>a?Blockly.Python.ORDER_UNARY_SIGN:Blockly.Python.ORDER_ATOMIC]}"
+    }
+  }
+}

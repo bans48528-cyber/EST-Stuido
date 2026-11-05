@@ -32,6 +32,7 @@ if (!process.versions.electron) {
     let estConnected = true;
     const estConnectionRequests = [];
     let selectedHardware = 'est';
+    let homeHardware = 'est';
     let startupProjectData = null;
     const sparkPorts = [{path: 'COM_TEST', friendlyName: 'Spark AI USB (mock)',
         vendorId: '0483', productId: '5740', serialNumber: 'SPARK_TEST'}];
@@ -80,7 +81,11 @@ if (!process.versions.electron) {
     let firmwareResourceValid = true;
     let firmwareInspectDelay = 0;
     const firmwareRelease = require('../src/main/spark-ai/firmware-release.json');
-    const sparkStatus = {version: 110, battery: 85, heap: 12, running: false,
+    const firmwareTotal = firmwareRelease.files.reduce((sum, file) => sum + file.bytes, 0);
+    const sparkStatus = {version: firmwareRelease.version,
+        battery: 85,
+        heap: 12,
+        running: false,
         flash: {total: '1024 kb', free: '512 kb'}, ports: [
             {port: 0, type: 'color', values: {lux: 100, state: 1, min: 10, max: 900, threadValue: 455}},
             {port: 1, type: 'touch', values: {state: 1}}, {port: 2, type: 'ultrasion', values: {cm: 25}},
@@ -111,7 +116,11 @@ if (!process.versions.electron) {
     const hardwareDrafts = new Map();
     for (const [name, handler] of Object.entries({
         'get-initial-project-data': () => startupProjectData,
-        'est-home-get-startup-state': () => ({hasInitialProject: true}),
+        'est-home-get-startup-state': () => ({hasInitialProject: true, homeHardwareId: homeHardware}),
+        'est-home-set-hardware': (event, {hardwareId}) => {
+            homeHardware = hardwareId;
+            return {homeHardwareId: hardwareId};
+        },
         'est-home-list-recent-projects': () => [],
         'est-home-get-build-library-state': () => ({}),
         'hardware-state': () => ({hardwareId: selectedHardware, busy: false, running: false}),
@@ -235,12 +244,23 @@ if (!process.versions.electron) {
             if (!request.confirmedErase) throw new Error('SPARK_FW_ERASE_CONFIRM');
             sparkRequests.push({action: 'firmware', ...request});
             sparkState = {...sparkState, busy: true,
-                firmware: {active: true, phase: 'transferring', bytes: 100000, total: 202906, file: 'app/app.bin'}};
+                firmware: {active: true,
+                    phase: 'transferring',
+                    bytes: 100000,
+                    total: firmwareTotal,
+                    file: 'app/app.bin'}};
             sendSpark(event);
             await new Promise(resolve => setTimeout(resolve, 350));
-            const result = {transferComplete: true, reconnected: true, versionMatched: true, version: 110};
+            const result = {transferComplete: true,
+                reconnected: true,
+                versionMatched: true,
+                version: firmwareRelease.version};
             sparkState = {...sparkState, busy: false, connected: true, compatible: true, status: sparkStatus,
-                firmware: {active: false, phase: 'complete', bytes: 202906, total: 202906, result}};
+                firmware: {active: false,
+                    phase: 'complete',
+                    bytes: firmwareTotal,
+                    total: firmwareTotal,
+                    result}};
             sendSpark(event); return result;
         },
         'spark-list-devices': () => sparkPorts,
@@ -389,6 +409,23 @@ if (!process.versions.electron) {
             assert.equal(await evaluate('document.documentElement.lang'), 'zh-cn');
             assert.equal(await evaluate("localStorage.getItem('est-studio-locale')"), 'zh-cn');
             console.log('Fresh-profile startup: Simplified Chinese selected and saved without manual language switching.');
+            if (process.argv.includes('--spark-release-only')) {
+                await require('./spark-release-ui/check')({evaluate,
+                    pause,
+                    window,
+                    output,
+                    defaultStatus: sparkStatus,
+                    requests: () => sparkRequests,
+                    setSpark: patch => {
+                        sparkState = {...sparkState, ...patch};
+                        window.webContents.send('spark-state-change', sparkState);
+                    },
+                    resource: (valid, delay = 0) => {
+                        firmwareResourceValid = valid; firmwareInspectDelay = delay;
+                    }});
+                assert.deepStrictEqual(unhandledRejections, []);
+                clearTimeout(timeout); app.exit(0); return;
+            }
             const loadedExtensions = () => evaluate('window.findLocaleTestBlocks().props.vm.runtime.getLoadedDeviceExtension()');
             assert.deepStrictEqual(await loadedExtensions(), [], 'new projects must not load vision');
             assert.strictEqual(await evaluate(`window.findLocaleTestBlocks().workspace.getFlyout().getWorkspace()
@@ -736,9 +773,37 @@ if (!process.versions.electron) {
                         ports: test.getAllBlocks().find(b => b.type === 'spark_motor_box').getFieldValue('MOTOR')};
                 } finally { test.dispose(); }
             })()`);
-            assert.equal(sparkUi.fixed, 66);
+            assert.equal(sparkUi.fixed, 67);
             assert.deepStrictEqual(sparkUi.errors, []);
             assert.equal(sparkUi.ports, 'E');
+            const infraredUi = await evaluate(`(() => {
+                const B = window.findLocaleTestBlocks().ScratchBlocks, test = new B.Workspace();
+                try {
+                    const xml = document.createElement('xml');
+                    xml.appendChild(Array.from(sparkUiFixtureXml.children).find(node =>
+                        node.getAttribute('type') === 'spark_sensing_infrared_set_color').cloneNode(true));
+                    B.Xml.domToWorkspace(xml, test);
+                    const block = test.getTopBlocks()[0], port = block.getInputTargetBlock('PORT');
+                    const outputs = [];
+                    for (const name of ['A', 'B', 'C', 'D']) {
+                        port.setFieldValue(name, 'SENSING_MENU');
+                        for (const state of ['0', '1', '2', '3']) {
+                            block.setFieldValue(state, 'STATE'); B.SparkPython.init(test);
+                            outputs.push(B.SparkPython[block.type](block));
+                        }
+                    }
+                    const saved = B.Xml.workspaceToDom(test);
+                    test.clear(); B.Xml.domToWorkspace(saved, test);
+                    const restored = test.getTopBlocks()[0];
+                    return {outputs, state: restored.getFieldValue('STATE'),
+                        port: restored.getInputTargetBlock('PORT').getFieldValue('SENSING_MENU')};
+                } finally { test.dispose(); }
+            })()`);
+            assert.deepStrictEqual(infraredUi.outputs, [0, 1, 2, 3].flatMap(port =>
+                [0, 1, 2, 3].map(state => `_ir_remote.set_color(${port}, ${state})\n`)));
+            assert.equal(infraredUi.state, '3');
+            assert.equal(infraredUi.port, 'D');
+            console.log('Spark infrared UI: actual Blockly fields, A-D / four colours and XML round-trip passed.');
             await pause(200);
             const shadowContrast = await evaluate(`(() => {
                 const blocks = window.findLocaleTestBlocks().workspace.getFlyout().getWorkspace().getAllBlocks();
@@ -770,7 +835,7 @@ if (!process.versions.electron) {
             fs.writeFileSync(path.join(output, 'spark-matrix-editor.png'),
                 (await window.webContents.capturePage()).toPNG());
             await evaluate('window.findLocaleTestBlocks().ScratchBlocks.DropDownDiv.hideWithoutAnimation()');
-            console.log('Spark UI: 66 real block instances and native 5-column, 7-row matrix editor passed.');
+            console.log('Spark UI: 67 real block instances and native 5-column, 7-row matrix editor passed.');
             const portColours = await evaluate(`(() => {
                 const editor = window.findLocaleTestBlocks(), B = editor.ScratchBlocks;
                 const xml = document.createElement('xml');

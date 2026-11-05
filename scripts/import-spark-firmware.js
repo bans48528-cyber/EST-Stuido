@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const {createHash} = require('crypto');
 const release = require('../src/main/spark-ai/firmware-release.json');
-const source = path.resolve(process.argv[2] || 'E:/Spark AI 1.1.9/Spark-AI/resources/LB_FWLIB');
+const source = path.resolve(process.argv[2] || 'D:/Spark AI/resources/LB_FWLIB');
 const output = path.resolve(__dirname, '../resources/spark-ai/firmware', release.id);
 const matches = (data, file) => data.length === file.bytes &&
     createHash('sha256').update(data)

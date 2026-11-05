@@ -16,14 +16,14 @@ Module._extensions['.js'] = (module, filename) => {
     }).code, filename);
 };
 const {sparkFrame, sparkDownloadFrames, validateSparkBytecode, normalizeSparkMonitor,
-    SparkStreamParser, SparkError, SPARK_COMMAND: C} = require('../src/main/spark-ai/protocol');
+    SparkStreamParser, SparkError, SPARK_COMMAND: C, SPARK_VERIFIED_FIRMWARE} = require('../src/main/spark-ai/protocol');
 const {SparkDeviceService} = require('../src/main/spark-ai/device-service');
 const {SparkCompiler} = require('../src/main/spark-ai/compiler');
 const {chooseSparkPort, sparkPortIdentity, sortSparkPorts} = require('../src/main/spark-ai/discovery');
 const {SPARK_RUNTIME_MESSAGE_IDS, sparkRuntimeText} = require('../src/renderer/spark-ai/runtime-messages');
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const ack = sparkFrame(C.ACK, [1]);
-const monitor = (running = false, version = 110) => ({deviceList: [
+const monitor = (running = false, version = SPARK_VERIFIED_FIRMWARE) => ({deviceList: [
     {port: 0, color: {lux: '100', state: '1', min: '10', max: '900', threadValue: '455'}},
     {port: 1, touch: {state: 1}}, {port: 2, ultrasion: {cm: '25'}}, {port: 3, ir_remote: {state: 2}}
 ],
@@ -42,7 +42,7 @@ const bytecode = (size = 110) => {
 };
 class FakeTransport extends EventEmitter {
     constructor () {
-        super(); this.frames = []; this.closed = false; this.onWrite = null; this.version = 110;
+        super(); this.frames = []; this.closed = false; this.onWrite = null; this.version = SPARK_VERIFIED_FIRMWARE;
     }
     async open () {
         this.opened = true;
@@ -161,11 +161,26 @@ async function protocolTests () {
     parser.push(Buffer.alloc(65537)); assert.equal(faults, 3);
     for (const locale of ['zh-cn', 'en', 'pt-br', 'zh-tw', 'ru']) {
         for (const id of SPARK_RUNTIME_MESSAGE_IDS) assert.notEqual(sparkRuntimeText(id, locale), id);
+        const mismatch = sparkRuntimeText('SPARK_FIRMWARE_UNVERIFIED', locale);
+        assert.ok(mismatch.includes('111') && !mismatch.includes('{version}') && !mismatch.includes('110'));
     }
     console.log('Spark protocol: exact frames, 248-byte chunks, strict ACKs, bytecode validation, all stream split points and five locales passed.');
 }
 
 async function serviceTests () {
+    assert.equal(SPARK_VERIFIED_FIRMWARE, 111);
+    for (const version of [0, 109, 110, 112, 65535]) {
+        const transport = new FakeTransport();
+        transport.version = version;
+        await withService(async ({service}) => {
+            assert.equal(service.connected, true, `firmware ${version} connects before prompting for update`);
+            assert.equal(service.getState().status.version, version);
+            assert.equal(service.getState().compatible, false);
+            await assert.rejects(service.downloadProgram({source: 'print(1)', slot: 0}), /FIRMWARE_UNVERIFIED/);
+            assert.deepStrictEqual(fileCommands(transport), [], 'mismatched version does not receive bytecode');
+            assert.equal((await service.stopCurrentProgram()).stopObserved, true);
+        }, {transport});
+    }
     await withService(async ({service, transport}) => {
         assert.equal(service.getState().compatible, true);
         const result = await service.downloadProgram({source: 'print(1)', slot: 9});
@@ -284,7 +299,7 @@ async function serviceTests () {
         service.monitor.timestamp = 0;
         await assert.rejects(service.downloadProgram({source: 'print(1)', slot: 0}), /MONITOR_STALE/);
         assert.equal((await service.stopCurrentProgram()).stopObserved, true, 'stale monitor must not disable stop');
-        service.monitor.version = 111;
+        service.monitor.version = SPARK_VERIFIED_FIRMWARE + 1;
         await assert.rejects(service.downloadProgram({source: 'print(1)', slot: 0}), /FIRMWARE_UNVERIFIED/);
         assert.equal((await service.stopCurrentProgram()).stopObserved, true, 'stop remains available on unverified firmware');
     });
@@ -476,6 +491,10 @@ async function compilerTests () {
     try {
         const tempRoot = path.join(directory, '中文 编译路径');
         const samples = require('./spark-ai-compiler-fixtures.json');
+        const manifest = require('../resources/spark-ai/compiler-manifest.json');
+        assert.equal(manifest.source, 'Spark AI 1.1.10');
+        assert.equal(manifest.firmwareVersion, SPARK_VERIFIED_FIRMWARE);
+        assert.equal(manifest.sha256, '2a71476cf3449252d209d5c6002edf63ea04f052b4d87baef8abe8040fc01d76');
         const executables = [process.execPath, require('electron')];
         for (const executable of executables) {
             const compiler = new SparkCompiler({executable, tempRoot});
@@ -487,6 +506,7 @@ async function compilerTests () {
             await assert.rejects(compiler.compile('if :\n @@@'), /COMPILE_/);
             await assert.rejects(compiler.compile(''), /SOURCE_INVALID/);
             validateSparkBytecode(await compiler.compile('pass'));
+            validateSparkBytecode(await compiler.compile('_ir_remote.set_color(3, 2)'));
             const controller = new AbortController(); controller.abort();
             await assert.rejects(compiler.compile('print(1)', {signal: controller.signal}), /CANCELLED/);
             const results = await Promise.all([compiler.compile('print(1)'), compiler.compile('print(2)')]);

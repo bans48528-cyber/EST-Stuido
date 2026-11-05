@@ -1,6 +1,12 @@
 /* eslint-disable max-len */
 // Column order: English, Portuguese (Brazil), Traditional Chinese, Russian.
 const messages = {
+    'sensing_infrared_set_color': ['%1 %2 set infrared sensor %3 light to %4', '%1 %2 definir a luz do sensor infravermelho %3 para %4', '%1 %2 設定紅外傳感器 %3 燈光顏色為 %4', '%1 %2 цвет подсветки ИК-датчика %3 %4'],
+    '关闭': ['off', 'desligado', '關閉', 'выкл.'],
+    '红色': ['red', 'vermelho', '紅色', 'красный'],
+    '绿色': ['green', 'verde', '綠色', 'зелёный'],
+    '蓝色': ['blue', 'azul', '藍色', 'синий'],
+    '红外传感器': ['infrared sensor', 'sensor infravermelho', '紅外傳感器', 'ИК-датчик'],
     'motor_specifiedunit': ['%1 %2 motor %3 at %4 %% power for %5 seconds', '%1 %2 motor %3 a %4 %% de potência por %5 segundos', '%1 %2 電機 %3 以 %4 %%功率轉動 %5 秒', '%1 %2 мотор %3 мощность %4 %% на %5 секунд'],
     'motor_startWithPower': ['%1 %2 start motor %3 at %4 %% power', '%1 %2 iniciar motor %3 a %4 %% de potência', '%1 %2 電機 %3 以 %4 %%功率轉動', '%1 %2 запустить мотор %3 с мощностью %4 %%'],
     'motor_stop': ['%1 %2 stop motor %3', '%1 %2 parar motor %3', '%1 %2 關閉電機 %3', '%1 %2 остановить мотор %3'],

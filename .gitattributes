@@ -12,6 +12,9 @@
 *.pdf binary
 *.png binary
 
+# Imports embed the original SVG bytes; keep them stable across Windows checkouts.
+scripts/import-data/**/media/*.svg binary
+
 # Prefer LF for most file types
 *.css text eol=lf
 *.htm text eol=lf

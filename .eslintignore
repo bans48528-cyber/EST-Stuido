@@ -1,2 +1,4 @@
 node_modules/*
 dist/*
+# Audited upstream source retained for reproducible imports.
+scripts/import-data/**
